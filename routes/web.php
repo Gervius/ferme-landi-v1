@@ -14,7 +14,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
 require __DIR__.'/settings.php';
 
 use App\Http\Controllers\SiteController;
+use App\Http\Controllers\CompanyController;
+use App\Http\Controllers\UnitController;
+use App\Http\Controllers\CategoryController;
+use App\Http\Controllers\GenerationController;
 
 Route::middleware(['auth', 'verified'])->group(function () {
+    Route::resource('companies', CompanyController::class)->only(['show', 'edit', 'update']);
     Route::resource('sites', SiteController::class);
+    Route::resource('units', UnitController::class);
+    Route::resource('categories', CategoryController::class);
+    Route::resource('generations', GenerationController::class)->only(['index', 'create', 'store']);
 });
