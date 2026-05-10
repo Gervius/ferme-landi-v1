@@ -12,3 +12,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
 });
 
 require __DIR__.'/settings.php';
+
+use App\Http\Controllers\SiteController;
+
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::resource('sites', SiteController::class);
+});
