@@ -15,8 +15,12 @@
         "laravel/framework": "^13.7",
         "laravel/tinker": "^3.0",
         "laravel/wayfinder": "^0.1.14",
+<<<<<<< HEAD
         "spatie/laravel-permission": "^6.0",
         "symfony/var-dumper": "^7.0"
+=======
+        "spatie/laravel-permission": "^7.4"
+>>>>>>> 052c904 (modified:   composer.json)
     },
     "require-dev": {
         "fakerphp/faker": "^1.24",
