@@ -17,6 +17,7 @@ class UpdateUnitAction
         }
 
         $unit->update($data);
+
         return $unit;
     }
 }

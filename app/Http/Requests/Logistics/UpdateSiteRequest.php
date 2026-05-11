@@ -2,9 +2,10 @@
 
 namespace App\Http\Requests\Logistics;
 
+use App\Models\Site;
+use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
-use App\Models\Site;
 
 class UpdateSiteRequest extends FormRequest
 {
@@ -13,13 +14,13 @@ class UpdateSiteRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return $this->user()->can('update', $this->route('site') ?? new Site());
+        return $this->user()->can('update', $this->route('site') ?? new Site);
     }
 
     /**
      * Get the validation rules that apply to the request.
      *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     * @return array<string, ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {

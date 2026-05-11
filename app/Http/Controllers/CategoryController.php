@@ -8,10 +8,10 @@ use App\Http\Requests\Logistics\StoreCategoryRequest;
 use App\Http\Requests\Logistics\UpdateCategoryRequest;
 use App\Models\Category;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 use Inertia\Response;
-use Illuminate\Http\Request;
 
 class CategoryController extends Controller
 {
@@ -46,6 +46,7 @@ class CategoryController extends Controller
     public function store(StoreCategoryRequest $request, CreateCategoryAction $createAction): RedirectResponse
     {
         $createAction->execute($request->validated());
+
         return redirect()->route('categories.index')->with('success', 'Category created successfully.');
     }
 
@@ -63,6 +64,7 @@ class CategoryController extends Controller
     public function update(UpdateCategoryRequest $request, Category $category, UpdateCategoryAction $updateAction): RedirectResponse
     {
         $updateAction->execute($category, $request->validated());
+
         return redirect()->route('categories.index')->with('success', 'Category updated successfully.');
     }
 
@@ -70,6 +72,7 @@ class CategoryController extends Controller
     {
         Gate::authorize('delete', $category);
         $category->delete();
+
         return redirect()->route('categories.index')->with('success', 'Category deleted successfully.');
     }
 }

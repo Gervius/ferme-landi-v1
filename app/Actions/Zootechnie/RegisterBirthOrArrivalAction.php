@@ -14,23 +14,31 @@ class RegisterBirthOrArrivalAction
     {
         $startDate = Carbon::parse($data['start_date']);
 
-        // Generate code: PP-AAAA-MM-001
+        // Generate code: PREFIX-AAAA-MM-001
         if (empty($data['code'])) {
             $year = $startDate->format('Y');
             $month = $startDate->format('m');
-            $prefix = "PP-{$year}-{$month}-";
+
+            $typePrefix = match ($data['type']) {
+                'pondeuse' => 'PP',
+                'chair' => 'PC',
+                'porc' => 'PO',
+                default => 'XX',
+            };
+
+            $prefix = "{$typePrefix}-{$year}-{$month}-";
 
             $count = Generation::where('code', 'like', "{$prefix}%")->count();
-            $sequence = str_pad((string)($count + 1), 3, '0', STR_PAD_LEFT);
+            $sequence = str_pad((string) ($count + 1), 3, '0', STR_PAD_LEFT);
             $data['code'] = "{$prefix}{$sequence}";
         }
 
         // initial quantity becomes current quantity at the start
-        if (!isset($data['current_quantity'])) {
+        if (! isset($data['current_quantity'])) {
             $data['current_quantity'] = $data['initial_quantity'];
         }
 
-        if (!isset($data['status'])) {
+        if (! isset($data['status'])) {
             $data['status'] = 'actif';
         }
 

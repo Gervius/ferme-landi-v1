@@ -2,8 +2,8 @@
 
 namespace App\Http\Requests\Zootechnie;
 
-use Illuminate\Foundation\Http\FormRequest;
 use App\Models\Generation;
+use Illuminate\Foundation\Http\FormRequest;
 
 class StoreGenerationRequest extends FormRequest
 {
@@ -20,6 +20,7 @@ class StoreGenerationRequest extends FormRequest
             'type' => ['required', 'string', 'in:pondeuse,chair,porc'],
             'start_date' => ['required', 'date'],
             'initial_quantity' => ['required', 'integer', 'min:1'],
+            'observation' => ['required', 'string'],
         ];
     }
 }
