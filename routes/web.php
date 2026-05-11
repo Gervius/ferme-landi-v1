@@ -21,7 +21,14 @@ use App\Http\Controllers\UnitController;
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::resource('companies', CompanyController::class)->only(['show', 'edit', 'update']);
-    Route::resource('sites', SiteController::class);
+    Route::resource('sites', SiteController::class)->names([
+        'index' => 'sitesIndex',
+        'create' => 'sitesCreate',
+        'store' => 'sitesStore',
+        'edit' => 'sitesEdit',
+        'update' => 'sitesUpdate',
+        'destroy' => 'sitesDestroy'
+    ]);
     Route::resource('units', UnitController::class);
     Route::resource('categories', CategoryController::class);
     Route::resource('generations', GenerationController::class)->only(['index', 'create', 'store']);
