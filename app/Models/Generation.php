@@ -3,8 +3,8 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Generation extends Model
 {
@@ -19,6 +19,7 @@ class Generation extends Model
         'initial_quantity',
         'current_quantity',
         'status',
+        'observation',
     ];
 
     protected $casts = [

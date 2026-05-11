@@ -3,7 +3,6 @@
 namespace Tests\Feature\Logistics;
 
 use App\Models\Company;
-use App\Models\Site;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithoutMiddleware;

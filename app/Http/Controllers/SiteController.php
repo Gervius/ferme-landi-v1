@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Actions\Logistics\CreateSiteAction;
 use App\Http\Requests\Logistics\StoreSiteRequest;
 use App\Http\Requests\Logistics\UpdateSiteRequest;
+use App\Models\Company;
 use App\Models\Site;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Gate;
@@ -34,7 +35,7 @@ class SiteController extends Controller
     {
         Gate::authorize('create', Site::class);
 
-        $companies = \App\Models\Company::select('id', 'name')->get();
+        $companies = Company::select('id', 'name')->get();
 
         return Inertia::render('Sites/Create', [
             'companies' => $companies,
@@ -61,7 +62,7 @@ class SiteController extends Controller
         Gate::authorize('update', $site);
 
         $site->load('company');
-        $companies = \App\Models\Company::select('id', 'name')->get();
+        $companies = Company::select('id', 'name')->get();
 
         return Inertia::render('Sites/Edit', [
             'site' => $site,

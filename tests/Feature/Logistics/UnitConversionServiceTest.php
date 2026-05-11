@@ -25,7 +25,7 @@ class UnitConversionServiceTest extends TestCase
             'conversion_rate' => 30.0,
         ]);
 
-        $service = new UnitConversionService();
+        $service = new UnitConversionService;
 
         // 2 Plateaux of 30 should be 60 base units
         $result = $service->toBase(2, $derivedUnit);
@@ -47,7 +47,7 @@ class UnitConversionServiceTest extends TestCase
             'conversion_rate' => 30.0,
         ]);
 
-        $service = new UnitConversionService();
+        $service = new UnitConversionService;
 
         // 60 base units should be 2 Plateaux of 30
         $result = $service->fromBase(60, $derivedUnit);

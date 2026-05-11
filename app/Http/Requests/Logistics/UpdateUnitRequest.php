@@ -2,15 +2,15 @@
 
 namespace App\Http\Requests\Logistics;
 
+use App\Models\Unit;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
-use App\Models\Unit;
 
 class UpdateUnitRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()->can('update', $this->route('unit') ?? new Unit());
+        return $this->user()->can('update', $this->route('unit') ?? new Unit);
     }
 
     public function rules(): array

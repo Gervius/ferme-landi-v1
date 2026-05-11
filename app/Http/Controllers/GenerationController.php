@@ -4,7 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Actions\Zootechnie\RegisterBirthOrArrivalAction;
 use App\Http\Requests\Zootechnie\StoreGenerationRequest;
+use App\Models\Breed;
 use App\Models\Generation;
+use App\Models\Site;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
@@ -27,8 +29,8 @@ class GenerationController extends Controller
     {
         Gate::authorize('create', Generation::class);
 
-        $sites = \App\Models\Site::select('id', 'name')->get();
-        $breeds = \App\Models\Breed::select('id', 'name')->get();
+        $sites = Site::select('id', 'name')->get();
+        $breeds = Breed::select('id', 'name')->get();
 
         return Inertia::render('Generations/Create', [
             'sites' => $sites,
@@ -39,6 +41,7 @@ class GenerationController extends Controller
     public function store(StoreGenerationRequest $request, RegisterBirthOrArrivalAction $createAction): RedirectResponse
     {
         $createAction->execute($request->validated());
+
         return redirect()->route('generations.index')->with('success', 'Generation registered successfully.');
     }
 }

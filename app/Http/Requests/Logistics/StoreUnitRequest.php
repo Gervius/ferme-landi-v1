@@ -2,8 +2,8 @@
 
 namespace App\Http\Requests\Logistics;
 
-use Illuminate\Foundation\Http\FormRequest;
 use App\Models\Unit;
+use Illuminate\Foundation\Http\FormRequest;
 
 class StoreUnitRequest extends FormRequest
 {

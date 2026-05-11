@@ -21,7 +21,7 @@ class RegisterBirthOrArrivalActionTest extends TestCase
         $species = Species::create(['name' => 'Poulet']);
         $breed = Breed::create(['species_id' => $species->id, 'name' => 'Leghorn']);
 
-        $action = new RegisterBirthOrArrivalAction();
+        $action = new RegisterBirthOrArrivalAction;
 
         $generation = $action->execute([
             'site_id' => $site->id,
@@ -38,11 +38,21 @@ class RegisterBirthOrArrivalActionTest extends TestCase
         $generation2 = $action->execute([
             'site_id' => $site->id,
             'breed_id' => $breed->id,
-            'type' => 'pondeuse',
+            'type' => 'chair',
             'start_date' => '2026-05-15',
             'initial_quantity' => 500,
         ]);
 
-        $this->assertEquals('PP-2026-05-002', $generation2->code);
+        $this->assertEquals('PC-2026-05-001', $generation2->code);
+
+        $generation3 = $action->execute([
+            'site_id' => $site->id,
+            'breed_id' => $breed->id,
+            'type' => 'porc',
+            'start_date' => '2026-05-15',
+            'initial_quantity' => 500,
+        ]);
+
+        $this->assertEquals('PO-2026-05-001', $generation3->code);
     }
 }

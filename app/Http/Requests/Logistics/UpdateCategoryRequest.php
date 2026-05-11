@@ -2,15 +2,15 @@
 
 namespace App\Http\Requests\Logistics;
 
+use App\Models\Category;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
-use App\Models\Category;
 
 class UpdateCategoryRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()->can('update', $this->route('category') ?? new Category());
+        return $this->user()->can('update', $this->route('category') ?? new Category);
     }
 
     public function rules(): array

@@ -11,7 +11,7 @@ class UnitConversionService
      */
     public function toBase(float $value, Unit $unit): float
     {
-        if ($unit->is_base_unit || !$unit->base_unit_id) {
+        if ($unit->is_base_unit || ! $unit->base_unit_id) {
             return $value;
         }
 
@@ -27,7 +27,7 @@ class UnitConversionService
      */
     public function fromBase(float $value, Unit $unit): float
     {
-        if ($unit->is_base_unit || !$unit->base_unit_id) {
+        if ($unit->is_base_unit || ! $unit->base_unit_id) {
             return $value;
         }
 

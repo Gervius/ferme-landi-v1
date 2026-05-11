@@ -16,7 +16,7 @@ class CreateSiteActionTest extends TestCase
     {
         $company = Company::factory()->create();
 
-        $action = new CreateSiteAction();
+        $action = new CreateSiteAction;
         $site = $action->execute([
             'company_id' => $company->id,
             'name' => 'Ferme Avicole Beta',
@@ -36,7 +36,7 @@ class CreateSiteActionTest extends TestCase
     {
         $company = Company::factory()->create();
 
-        $action = new CreateSiteAction();
+        $action = new CreateSiteAction;
 
         $site1 = $action->execute([
             'company_id' => $company->id,

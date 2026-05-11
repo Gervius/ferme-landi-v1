@@ -26,6 +26,7 @@ class UpdateCategoryAction
         }
 
         $category->update($data);
+
         return $category;
     }
 }
