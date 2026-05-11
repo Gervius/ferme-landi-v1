@@ -46,8 +46,7 @@ class CategoryController extends Controller
     public function store(StoreCategoryRequest $request, CreateCategoryAction $createAction): RedirectResponse
     {
         $createAction->execute($request->validated());
-
-        return redirect()->route('categories.index')->with('success', 'Category created successfully.');
+        return redirect()->route('categoriesIndex')->with('success', 'Category created successfully.');
     }
 
     public function edit(Category $category): Response
@@ -64,15 +63,13 @@ class CategoryController extends Controller
     public function update(UpdateCategoryRequest $request, Category $category, UpdateCategoryAction $updateAction): RedirectResponse
     {
         $updateAction->execute($category, $request->validated());
-
-        return redirect()->route('categories.index')->with('success', 'Category updated successfully.');
+        return redirect()->route('categoriesIndex')->with('success', 'Category updated successfully.');
     }
 
     public function destroy(Category $category): RedirectResponse
     {
         Gate::authorize('delete', $category);
         $category->delete();
-
-        return redirect()->route('categories.index')->with('success', 'Category deleted successfully.');
+        return redirect()->route('categoriesIndex')->with('success', 'Category deleted successfully.');
     }
 }

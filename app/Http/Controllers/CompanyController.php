@@ -42,6 +42,6 @@ class CompanyController extends Controller
     {
         $company->update($request->validated());
 
-        return redirect()->route('companies.show', $company)->with('success', 'Company updated successfully.');
+        return redirect()->route('companiesShow', $company)->with('success', 'Company updated successfully.');
     }
 }

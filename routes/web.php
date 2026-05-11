@@ -29,7 +29,24 @@ Route::middleware(['auth', 'verified'])->group(function () {
         'update' => 'sitesUpdate',
         'destroy' => 'sitesDestroy'
     ]);
-    Route::resource('units', UnitController::class);
-    Route::resource('categories', CategoryController::class);
+    Route::resource('units', UnitController::class)->names([
+        'index' => 'unitsIndex',
+        'create' => 'unitsCreate',
+        'store' => 'unitsStore',
+        'edit' => 'unitsEdit',
+        'update' => 'unitsUpdate',
+        'destroy' => 'unitsDestroy'
+    ]);
+
+
+    Route::resource('categories', CategoryController::class)->names([
+        'index' => 'categoriesIndex',
+        'create' => 'categoriesCreate',
+        'store' => 'categoriesStore',
+        'edit' => 'categoriesEdit',
+        'update' => 'categoriesUpdate',
+        'destroy' => 'categoriesDestroy']);
+
+        
     Route::resource('generations', GenerationController::class)->only(['index', 'create', 'store']);
 });

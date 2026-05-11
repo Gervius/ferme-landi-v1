@@ -38,8 +38,7 @@ class UnitController extends Controller
     public function store(StoreUnitRequest $request, CreateUnitAction $createAction): RedirectResponse
     {
         $createAction->execute($request->validated());
-
-        return redirect()->route('units.index')->with('success', 'Unit created successfully.');
+        return redirect()->route('unitsIndex')->with('success', 'Unit created successfully.');
     }
 
     public function edit(Unit $unit): Response
@@ -56,15 +55,13 @@ class UnitController extends Controller
     public function update(UpdateUnitRequest $request, Unit $unit, UpdateUnitAction $updateAction): RedirectResponse
     {
         $updateAction->execute($unit, $request->validated());
-
-        return redirect()->route('units.index')->with('success', 'Unit updated successfully.');
+        return redirect()->route('unitsIndex')->with('success', 'Unit updated successfully.');
     }
 
     public function destroy(Unit $unit): RedirectResponse
     {
         Gate::authorize('delete', $unit);
         $unit->delete();
-
-        return redirect()->route('units.index')->with('success', 'Unit deleted successfully.');
+        return redirect()->route('unitsIndex')->with('success', 'Unit deleted successfully.');
     }
 }

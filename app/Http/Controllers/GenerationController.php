@@ -41,7 +41,6 @@ class GenerationController extends Controller
     public function store(StoreGenerationRequest $request, RegisterBirthOrArrivalAction $createAction): RedirectResponse
     {
         $createAction->execute($request->validated());
-
-        return redirect()->route('generations.index')->with('success', 'Generation registered successfully.');
+        return redirect()->route('generationsIndex')->with('success', 'Generation registered successfully.');
     }
 }
