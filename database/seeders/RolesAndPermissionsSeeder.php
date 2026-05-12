@@ -37,7 +37,6 @@ class RolesAndPermissionsSeeder extends Seeder
         }
 
         // Example Roles
-        $superadmin = Role::findOrCreate('Super Admin');
         $admin = Role::findOrCreate('admin');
         $admin->givePermissionTo(Permission::all());
 
