@@ -14,8 +14,10 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
          $this->call([
-            RolesAndPermissionsSeeder::class, // déjà existant
-            AdminUserSeeder::class,           // déjà existant
+            RolesAndPermissionsSeeder::class, 
+            AdminUserSeeder::class,
+            UnitSeeder::class,
+            BreedSeeder::class,           
         ]);
     }
 }

@@ -2,6 +2,11 @@
 
 use Illuminate\Support\Facades\Route;
 use Laravel\Fortify\Features;
+use App\Http\Controllers\CategoryController;
+use App\Http\Controllers\CompanyController;
+use App\Http\Controllers\Zootechnie\GenerationController;
+use App\Http\Controllers\SiteController;
+use App\Http\Controllers\UnitController;
 
 Route::inertia('/', 'welcome', [
     'canRegister' => Features::enabled(Features::registration()),
@@ -13,11 +18,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
 require __DIR__.'/settings.php';
 
-use App\Http\Controllers\CategoryController;
-use App\Http\Controllers\CompanyController;
-use App\Http\Controllers\GenerationController;
-use App\Http\Controllers\SiteController;
-use App\Http\Controllers\UnitController;
+
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::resource('companies', CompanyController::class)->only(['show', 'edit', 'update']);
@@ -50,7 +51,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         
     // Zootechnie Endpoints
     Route::prefix('zootechnie')->group(function () {
-        Route::resource('generations', \App\Http\Controllers\Zootechnie\GenerationController::class)->names([
+        Route::resource('generations', GenerationController::class)->names([
             'index'   => 'generationsIndex',
             'create'  => 'generationsCreate',
             'store'   => 'generationsStore',
