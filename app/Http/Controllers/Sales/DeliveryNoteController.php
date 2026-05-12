@@ -1,0 +1,40 @@
+<?php
+
+namespace App\Http\Controllers\Sales;
+
+use App\Actions\Sales\ApproveDeliveryNoteAction;
+use App\Actions\Sales\LogDeliveryNoteAction;
+use App\Http\Controllers\Controller;
+use App\Http\Requests\Sales\StoreDeliveryNoteRequest;
+use App\Models\DeliveryNote;
+use Illuminate\Support\Facades\Gate;
+use Inertia\Inertia;
+
+class DeliveryNoteController extends Controller
+{
+    public function index()
+    {
+        Gate::authorize('viewAny', DeliveryNote::class);
+        $data = DeliveryNote::with('saleOrder.customer')->paginate(15);
+        return Inertia::render('Sales/DeliveryNote/Index', ['data' => $data]);
+    }
+
+    public function create()
+    {
+        Gate::authorize('create', DeliveryNote::class);
+        return Inertia::render('Sales/DeliveryNote/Create');
+    }
+
+    public function store(StoreDeliveryNoteRequest $request, LogDeliveryNoteAction $action)
+    {
+        $action->execute($request->validated(), $request->user()->id);
+        return redirect()->route('deliveryNotesIndex')->with('success', 'Delivery note created in draft.');
+    }
+
+    public function approve(DeliveryNote $deliveryNote, ApproveDeliveryNoteAction $action)
+    {
+        Gate::authorize('manage sales');
+        $action->execute($deliveryNote, request()->user()->id);
+        return redirect()->route('deliveryNotesIndex')->with('success', 'Delivery note approved and stock updated.');
+    }
+}
