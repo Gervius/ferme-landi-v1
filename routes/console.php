@@ -8,3 +8,4 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 \Illuminate\Support\Facades\Schedule::command('app:check-prophylaxis-alerts')->daily();
+\Illuminate\Support\Facades\Schedule::command('app:calculate-daily-metrics')->dailyAt('23:59');

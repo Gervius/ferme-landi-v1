@@ -86,5 +86,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
             'store'   => 'flockCullingsStore',
         ]);
         Route::post('flock-cullings/{flock_culling}/approve', [\App\Http\Controllers\Zootechnie\FlockCullingController::class, 'approve'])->name('flockCullingsApprove');
+
+        Route::resource('breed-standards', \App\Http\Controllers\Zootechnie\BreedStandardController::class)->names([
+            'index'   => 'breedStandardsIndex',
+            'create'  => 'breedStandardsCreate',
+            'store'   => 'breedStandardsStore',
+            'edit'    => 'breedStandardsEdit',
+            'update'  => 'breedStandardsUpdate',
+            'destroy' => 'breedStandardsDestroy',
+        ]);
     });
 });
