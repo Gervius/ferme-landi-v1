@@ -22,6 +22,8 @@ class Generation extends Model
         'observation',
     ];
 
+    protected $appends = ['capabilities'];
+
     protected $casts = [
         'start_date' => 'date',
         'initial_quantity' => 'integer',
@@ -36,5 +38,13 @@ class Generation extends Model
     public function breed(): BelongsTo
     {
         return $this->belongsTo(Breed::class);
+    }
+
+    public function getCapabilitiesAttribute(): array
+    {
+        return [
+            'can_produce_eggs' => $this->type === 'pondeuse',
+            'can_be_weighed' => in_array($this->type, ['chair', 'porc']),
+        ];
     }
 }

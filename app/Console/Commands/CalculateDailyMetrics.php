@@ -76,6 +76,16 @@ class CalculateDailyMetrics extends Command
                 $fcr = $feedConsumed / $eggsProduced;
             }
 
+            // Average Weight (from latest approved weighing up to this date)
+            $latestWeighing = \App\Models\FlockWeighing::where('generation_id', $generation->id)
+                ->where('date', '<=', $date->format('Y-m-d'))
+                ->approved()
+                ->orderByDesc('date')
+                ->orderByDesc('id')
+                ->first();
+
+            $averageWeight = $latestWeighing ? $latestWeighing->average_weight : null;
+
             // Upsert the metric
             DailyFlockMetric::updateOrCreate(
                 [
@@ -89,6 +99,7 @@ class CalculateDailyMetrics extends Command
                     'mortality_count' => $mortalityCount,
                     'laying_rate' => $layingRate,
                     'feed_conversion_ratio' => $fcr,
+                    'average_weight' => $averageWeight,
                 ]
             );
 

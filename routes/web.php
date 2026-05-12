@@ -95,5 +95,19 @@ Route::middleware(['auth', 'verified'])->group(function () {
             'update'  => 'breedStandardsUpdate',
             'destroy' => 'breedStandardsDestroy',
         ]);
+
+        Route::resource('flock-weighings', \App\Http\Controllers\Zootechnie\FlockWeighingController::class)->only(['index', 'create', 'store'])->names([
+            'index'   => 'flockWeighingsIndex',
+            'create'  => 'flockWeighingsCreate',
+            'store'   => 'flockWeighingsStore',
+        ]);
+        Route::post('flock-weighings/{flock_weighing}/approve', [\App\Http\Controllers\Zootechnie\FlockWeighingController::class, 'approve'])->name('flockWeighingsApprove');
+
+        Route::resource('health-treatments', \App\Http\Controllers\Zootechnie\HealthTreatmentController::class)->only(['index', 'create', 'store'])->names([
+            'index'   => 'healthTreatmentsIndex',
+            'create'  => 'healthTreatmentsCreate',
+            'store'   => 'healthTreatmentsStore',
+        ]);
+        Route::post('health-treatments/{health_treatment}/approve', [\App\Http\Controllers\Zootechnie\HealthTreatmentController::class, 'approve'])->name('healthTreatmentsApprove');
     });
 });

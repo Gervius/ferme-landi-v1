@@ -2,24 +2,22 @@
 
 namespace App\Models;
 
+use App\Traits\HasApprovalWorkflow;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
-class DailyFlockMetric extends Model
+class FlockWeighing extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes, HasApprovalWorkflow;
 
     protected $guarded = ['id'];
 
     protected $casts = [
         'date' => 'date',
-        'live_quantity' => 'integer',
-        'eggs_produced' => 'decimal:2',
-        'feed_consumed' => 'decimal:2',
-        'mortality_count' => 'integer',
-        'laying_rate' => 'decimal:2',
-        'feed_conversion_ratio' => 'decimal:2',
         'average_weight' => 'decimal:2',
+        'weighed_subjects_count' => 'integer',
+        'approved_at' => 'datetime',
     ];
 
     public function generation()
