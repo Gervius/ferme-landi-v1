@@ -24,18 +24,20 @@ class ApproveFeedConsumptionAction
             throw new \InvalidArgumentException("Only draft feed consumption records can be approved.");
         }
 
-        // Calculate total base quantity
-        $totalBaseQuantity = $this->unitConversionService->toBase($consumption->quantity, $consumption->unit);
+        return \Illuminate\Support\Facades\DB::transaction(function () use ($consumption, $approverId) {
+            // Calculate total base quantity
+            $totalBaseQuantity = $this->unitConversionService->toBase($consumption->quantity, $consumption->unit);
 
-        // Update total base quantity
-        $consumption->total_base_quantity = $totalBaseQuantity;
-        $consumption->save();
+            // Update total base quantity
+            $consumption->total_base_quantity = $totalBaseQuantity;
+            $consumption->save();
 
-        // Approve the record
-        $consumption->approve($approverId);
+            // Approve the record
+            $consumption->approve($approverId);
 
-        // TODO: Convertir la quantité en unité de base et faire un mouvement de stock SORTANT sur la catégorie de l'aliment.
+            // TODO: Convertir la quantité en unité de base et faire un mouvement de stock SORTANT sur la catégorie de l'aliment.
 
-        return $consumption;
+            return $consumption;
+        });
     }
 }
