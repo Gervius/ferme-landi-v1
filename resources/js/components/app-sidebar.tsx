@@ -23,7 +23,7 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
-import { categoriesIndex, dashboard, sitesIndex, unitsIndex, generationsIndex } from '@/routes';
+import { categoriesIndex, dashboard, sitesIndex, unitsIndex, generationsIndex, dailyProductionsIndex } from '@/routes';
 import type { NavItem } from '@/types';
 
 // Regroupement par Domaines Métier
@@ -49,7 +49,7 @@ const mainNavItems: NavItem[] = [
         href: '#',
         children: [
             { title: 'Générations (Lots)', href: generationsIndex(), icon: Layers }, // Remplacer par route() dès que prêt
-            { title: 'Suivi Quotidien', href: '#', icon: Activity },
+            { title: 'Suivi Quotidien', href: dailyProductionsIndex(), icon: Activity },
             { title: 'Approbations', href: '#', icon: ClipboardCheck },
         ],
     },
