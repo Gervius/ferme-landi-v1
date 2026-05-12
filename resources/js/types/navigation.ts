@@ -11,4 +11,6 @@ export type NavItem = {
     href: NonNullable<InertiaLinkProps['href']>;
     icon?: LucideIcon | null;
     isActive?: boolean;
+    // Ajout de la récursivité pour supporter les sous-menus de l'ERP
+    children?: NavItem[]; 
 };

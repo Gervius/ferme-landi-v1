@@ -1,7 +1,17 @@
 import { Link } from '@inertiajs/react';
-import { BatteryIcon, BookOpen, FolderGit2, LayoutGrid, Magnet, Table2 } from 'lucide-react';
+import { 
+    LayoutGrid, 
+    Layers, 
+    Bird, 
+    Package, 
+    ClipboardCheck, 
+    Settings2, 
+    MapPin,
+    Scale,
+    Tags,
+    Activity
+} from 'lucide-react';
 import AppLogo from '@/components/app-logo';
-import { NavFooter } from '@/components/nav-footer';
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
 import {
@@ -16,39 +26,49 @@ import {
 import { categoriesIndex, dashboard, sitesIndex, unitsIndex } from '@/routes';
 import type { NavItem } from '@/types';
 
+// Regroupement par Domaines Métier
 const mainNavItems: NavItem[] = [
     {
-        title: 'Dashboard',
+        title: 'Tableau de Bord',
         href: dashboard(),
         icon: LayoutGrid,
     },
     {
-        title: 'Sites',
-        href: sitesIndex(),
-        icon: BatteryIcon
+        title: 'Exploitation',
+        icon: MapPin,
+        href: '#', // Parent de groupe
+        children: [
+            { title: 'Sites de production', href: sitesIndex(), icon: MapPin },
+            { title: 'Unités de mesure', href: unitsIndex(), icon: Scale },
+            { title: 'Catégories articles', href: categoriesIndex(), icon: Tags },
+        ],
     },
     {
-        title: 'Unites',
-        href: unitsIndex(),
-        icon: Magnet
+        title: 'Zootechnie',
+        icon: Bird,
+        href: '#',
+        children: [
+            { title: 'Générations (Lots)', href: '#', icon: Layers }, // Remplacer par route() dès que prêt
+            { title: 'Suivi Quotidien', href: '#', icon: Activity },
+            { title: 'Approbations', href: '#', icon: ClipboardCheck },
+        ],
     },
     {
-        title: 'Categories',
-        href: categoriesIndex(),
-        icon: Table2
-    }
+        title: 'Stocks & Inventaire',
+        icon: Package,
+        href: '#',
+        children: [
+            { title: 'Mouvements Stock', href: '#', icon: Package },
+            { title: 'État des stocks', href: '#', icon: LayoutGrid },
+        ],
+    },
 ];
 
-const footerNavItems: NavItem[] = [
+const settingsNavItems: NavItem[] = [
     {
-        title: 'Repository',
-        href: 'https://github.com/laravel/react-starter-kit',
-        icon: FolderGit2,
-    },
-    {
-        title: 'Documentation',
-        href: 'https://laravel.com/docs/starter-kits#react',
-        icon: BookOpen,
+        title: 'Configuration',
+        href: '#',
+        icon: Settings2,
     },
 ];
 
@@ -68,11 +88,16 @@ export function AppSidebar() {
             </SidebarHeader>
 
             <SidebarContent>
+                {/* Section Principale : Métier */}
                 <NavMain items={mainNavItems} />
+                
+                {/* Séparation visuelle pour la configuration si nécessaire */}
+                <div className="mt-auto">
+                    <NavMain items={settingsNavItems} />
+                </div>
             </SidebarContent>
 
             <SidebarFooter>
-                <NavFooter items={footerNavItems} className="mt-auto" />
                 <NavUser />
             </SidebarFooter>
         </Sidebar>
