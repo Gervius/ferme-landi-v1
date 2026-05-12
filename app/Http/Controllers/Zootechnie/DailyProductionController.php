@@ -38,7 +38,7 @@ class DailyProductionController extends Controller
     {
         $action->execute($request->validated(), $request->user()->id);
 
-        return redirect()->route('zootechnie.daily-productions.index')
+        return redirect()->route('dailyProductionsIndex')
             ->with('success', 'Production recorded in draft status.');
     }
 
@@ -49,7 +49,7 @@ class DailyProductionController extends Controller
 
         $action->execute($dailyProduction, request()->user()->id);
 
-        return redirect()->route('zootechnie.daily-productions.index')
+        return redirect()->route('dailyProductionsIndex')
             ->with('success', 'Production approved successfully.');
     }
 }
