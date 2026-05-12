@@ -49,14 +49,11 @@ class CheckProphylaxisAlerts extends Command
                 // Log the alert
                 Log::info("Prophylaxis Alert: Treatment {$treatment->id} (Generation: {$treatment->generation->code}) requires attention soon. Scheduled on {$treatment->scheduled_date->format('Y-m-d')}.");
 
-                // Ideally send to users with a specific role
-                // Since roles aren't fully configured, we'll notify all admins or just keep it logged
-                $adminUsers = User::whereHas('roles', function($q) {
-                    $q->where('name', 'admin')->orWhere('name', 'gestionnaire');
-                })->get();
+                // Les utilisateurs qui ont le droit de recevoir ces alertes
+                $usersToNotify = User::permission('receive prophylaxis alerts')->get();
 
-                foreach ($adminUsers as $admin) {
-                    $admin->notify(new ProphylaxisAlertNotification($treatment));
+                foreach ($usersToNotify as $user) {
+                    $user->notify(new ProphylaxisAlertNotification($treatment));
                 }
 
                 $alertsSent++;

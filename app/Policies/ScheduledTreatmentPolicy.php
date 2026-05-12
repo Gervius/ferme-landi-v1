@@ -12,26 +12,26 @@ class ScheduledTreatmentPolicy
 
     public function viewAny(User $user)
     {
-        return true;
+        return $user->hasPermissionTo('view prophylaxis');
     }
 
     public function view(User $user, ScheduledTreatment $treatment)
     {
-        return true;
+        return $user->hasPermissionTo('view prophylaxis');
     }
 
     public function create(User $user)
     {
-        return true;
+        return $user->hasPermissionTo('manage prophylaxis');
     }
 
     public function update(User $user, ScheduledTreatment $treatment)
     {
-        return true;
+        return $user->hasPermissionTo('manage prophylaxis');
     }
 
     public function delete(User $user, ScheduledTreatment $treatment)
     {
-        return true;
+        return $user->hasPermissionTo('manage prophylaxis');
     }
 }
