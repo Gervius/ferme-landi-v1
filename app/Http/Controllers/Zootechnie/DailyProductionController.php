@@ -23,8 +23,14 @@ class DailyProductionController extends Controller
 
     public function create()
     {
+        $generations = \App\Models\Generation::where('status', 'actif')->get(['id', 'code', 'type']);
+        $units = \App\Models\Unit::where('is_active', true)->get(['id', 'name', 'symbol']);
+        $categories = \App\Models\Category::where('scope', 'inventory')->get(['id', 'name']);
+
         return Inertia::render('Zootechnie/DailyProduction/Create', [
-            // Add reference data here if needed (generations, units)
+            'generations' => $generations,
+            'units' => $units,
+            'categories' => $categories,
         ]);
     }
 

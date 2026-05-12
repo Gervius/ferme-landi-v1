@@ -8,7 +8,7 @@ class StoreFlockCullingRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true;
+        return $this->user()->hasPermissionTo('create generations');
     }
 
     public function rules(): array

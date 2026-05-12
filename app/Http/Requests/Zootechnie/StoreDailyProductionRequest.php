@@ -8,7 +8,7 @@ class StoreDailyProductionRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true; // We use Gate in controller
+        return $this->user()->hasPermissionTo('create generations'); // Or specific permission like 'create daily_productions'
     }
 
     public function rules(): array

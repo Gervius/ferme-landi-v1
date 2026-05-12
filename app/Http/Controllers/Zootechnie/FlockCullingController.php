@@ -23,7 +23,11 @@ class FlockCullingController extends Controller
 
     public function create()
     {
-        return Inertia::render('Zootechnie/FlockCulling/Create');
+        $generations = \App\Models\Generation::where('status', 'actif')->get(['id', 'code', 'type', 'current_quantity']);
+
+        return Inertia::render('Zootechnie/FlockCulling/Create', [
+            'generations' => $generations,
+        ]);
     }
 
     public function store(StoreFlockCullingRequest $request, LogCullingAction $action)
