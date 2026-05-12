@@ -38,7 +38,7 @@ class FeedConsumptionController extends Controller
     {
         $action->execute($request->validated(), $request->user()->id);
 
-        return redirect()->route('zootechnie.feed-consumptions.index')
+        return redirect()->route('feedConsumptionsIndex')
             ->with('success', 'Feed consumption recorded in draft status.');
     }
 
@@ -48,7 +48,7 @@ class FeedConsumptionController extends Controller
 
         $action->execute($feedConsumption, request()->user()->id);
 
-        return redirect()->route('zootechnie.feed-consumptions.index')
+        return redirect()->route('feedConsumptionsIndex')
             ->with('success', 'Feed consumption approved successfully.');
     }
 }

@@ -48,20 +48,43 @@ Route::middleware(['auth', 'verified'])->group(function () {
         'destroy' => 'categoriesDestroy']);
 
         
-    Route::resource('generations', GenerationController::class)->only(['index', 'create', 'store']);
-
     // Zootechnie Endpoints
-    Route::prefix('zootechnie')->name('zootechnie.')->group(function () {
-        Route::resource('daily-productions', \App\Http\Controllers\Zootechnie\DailyProductionController::class)->only(['index', 'create', 'store']);
-        Route::post('daily-productions/{daily_production}/approve', [\App\Http\Controllers\Zootechnie\DailyProductionController::class, 'approve'])->name('daily-productions.approve');
+    Route::prefix('zootechnie')->group(function () {
+        Route::resource('generations', \App\Http\Controllers\Zootechnie\GenerationController::class)->names([
+            'index'   => 'generationsIndex',
+            'create'  => 'generationsCreate',
+            'store'   => 'generationsStore',
+            'edit'    => 'generationsEdit',
+            'update'  => 'generationsUpdate',
+            'destroy' => 'generationsDestroy',
+        ]);
 
-        Route::resource('feed-consumptions', \App\Http\Controllers\Zootechnie\FeedConsumptionController::class)->only(['index', 'create', 'store']);
-        Route::post('feed-consumptions/{feed_consumption}/approve', [\App\Http\Controllers\Zootechnie\FeedConsumptionController::class, 'approve'])->name('feed-consumptions.approve');
+        Route::resource('daily-productions', \App\Http\Controllers\Zootechnie\DailyProductionController::class)->only(['index', 'create', 'store'])->names([
+            'index'   => 'dailyProductionsIndex',
+            'create'  => 'dailyProductionsCreate',
+            'store'   => 'dailyProductionsStore',
+        ]);
+        Route::post('daily-productions/{daily_production}/approve', [\App\Http\Controllers\Zootechnie\DailyProductionController::class, 'approve'])->name('dailyProductionsApprove');
 
-        Route::resource('flock-mortalities', \App\Http\Controllers\Zootechnie\FlockMortalityController::class)->only(['index', 'create', 'store']);
-        Route::post('flock-mortalities/{flock_mortality}/approve', [\App\Http\Controllers\Zootechnie\FlockMortalityController::class, 'approve'])->name('flock-mortalities.approve');
+        Route::resource('feed-consumptions', \App\Http\Controllers\Zootechnie\FeedConsumptionController::class)->only(['index', 'create', 'store'])->names([
+            'index'   => 'feedConsumptionsIndex',
+            'create'  => 'feedConsumptionsCreate',
+            'store'   => 'feedConsumptionsStore',
+        ]);
+        Route::post('feed-consumptions/{feed_consumption}/approve', [\App\Http\Controllers\Zootechnie\FeedConsumptionController::class, 'approve'])->name('feedConsumptionsApprove');
 
-        Route::resource('flock-cullings', \App\Http\Controllers\Zootechnie\FlockCullingController::class)->only(['index', 'create', 'store']);
-        Route::post('flock-cullings/{flock_culling}/approve', [\App\Http\Controllers\Zootechnie\FlockCullingController::class, 'approve'])->name('flock-cullings.approve');
+        Route::resource('flock-mortalities', \App\Http\Controllers\Zootechnie\FlockMortalityController::class)->only(['index', 'create', 'store'])->names([
+            'index'   => 'flockMortalitiesIndex',
+            'create'  => 'flockMortalitiesCreate',
+            'store'   => 'flockMortalitiesStore',
+        ]);
+        Route::post('flock-mortalities/{flock_mortality}/approve', [\App\Http\Controllers\Zootechnie\FlockMortalityController::class, 'approve'])->name('flockMortalitiesApprove');
+
+        Route::resource('flock-cullings', \App\Http\Controllers\Zootechnie\FlockCullingController::class)->only(['index', 'create', 'store'])->names([
+            'index'   => 'flockCullingsIndex',
+            'create'  => 'flockCullingsCreate',
+            'store'   => 'flockCullingsStore',
+        ]);
+        Route::post('flock-cullings/{flock_culling}/approve', [\App\Http\Controllers\Zootechnie\FlockCullingController::class, 'approve'])->name('flockCullingsApprove');
     });
 });

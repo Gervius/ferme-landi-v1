@@ -34,7 +34,7 @@ class FlockMortalityController extends Controller
     {
         $action->execute($request->validated(), $request->user()->id);
 
-        return redirect()->route('zootechnie.flock-mortalities.index')
+        return redirect()->route('flockMortalitiesIndex')
             ->with('success', 'Mortality recorded in draft status.');
     }
 
@@ -44,7 +44,7 @@ class FlockMortalityController extends Controller
 
         $action->execute($flockMortality, request()->user()->id);
 
-        return redirect()->route('zootechnie.flock-mortalities.index')
+        return redirect()->route('flockMortalitiesIndex')
             ->with('success', 'Mortality approved successfully.');
     }
 }

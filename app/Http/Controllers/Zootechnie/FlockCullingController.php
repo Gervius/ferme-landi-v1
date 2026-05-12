@@ -34,7 +34,7 @@ class FlockCullingController extends Controller
     {
         $action->execute($request->validated(), $request->user()->id);
 
-        return redirect()->route('zootechnie.flock-cullings.index')
+        return redirect()->route('flockCullingsIndex')
             ->with('success', 'Culling recorded in draft status.');
     }
 
@@ -44,7 +44,7 @@ class FlockCullingController extends Controller
 
         $action->execute($flockCulling, request()->user()->id);
 
-        return redirect()->route('zootechnie.flock-cullings.index')
+        return redirect()->route('flockCullingsIndex')
             ->with('success', 'Culling approved successfully.');
     }
 }
