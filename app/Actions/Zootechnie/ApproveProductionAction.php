@@ -24,19 +24,21 @@ class ApproveProductionAction
             throw new \InvalidArgumentException("Only draft production records can be approved.");
         }
 
-        // Calculate total base quantity
-        $totalQuantity = $production->good_quantity + $production->broken_quantity;
-        $totalBaseQuantity = $this->unitConversionService->toBase($totalQuantity, $production->unit);
+        return \Illuminate\Support\Facades\DB::transaction(function () use ($production, $approverId) {
+            // Calculate total base quantity
+            $totalQuantity = $production->good_quantity + $production->broken_quantity;
+            $totalBaseQuantity = $this->unitConversionService->toBase($totalQuantity, $production->unit);
 
-        // Update total base quantity
-        $production->total_base_quantity = $totalBaseQuantity;
-        $production->save();
+            // Update total base quantity
+            $production->total_base_quantity = $totalBaseQuantity;
+            $production->save();
 
-        // Approve the record
-        $production->approve($approverId);
+            // Approve the record
+            $production->approve($approverId);
 
-        // TODO: Mouvement de stock ENTRANT pour les bons œufs dans l'inventaire des produits finis.
+            // TODO: Mouvement de stock ENTRANT pour les bons œufs dans l'inventaire des produits finis.
 
-        return $production;
+            return $production;
+        });
     }
 }

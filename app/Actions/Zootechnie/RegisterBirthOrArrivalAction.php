@@ -42,6 +42,24 @@ class RegisterBirthOrArrivalAction
             $data['status'] = 'actif';
         }
 
-        return Generation::create($data);
+        $generation = Generation::create($data);
+
+        // Schedule prophylaxis treatments if an active program exists for this animal type
+        $program = \App\Models\ProphylaxisProgram::where('animal_type', $generation->type)
+            ->where('is_active', true)
+            ->first();
+
+        if ($program) {
+            foreach ($program->steps as $step) {
+                \App\Models\ScheduledTreatment::create([
+                    'generation_id' => $generation->id,
+                    'prophylaxis_step_id' => $step->id,
+                    'scheduled_date' => $generation->start_date->copy()->addDays($step->day_offset),
+                    'status' => 'pending',
+                ]);
+            }
+        }
+
+        return $generation;
     }
 }
