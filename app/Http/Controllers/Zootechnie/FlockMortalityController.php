@@ -23,7 +23,11 @@ class FlockMortalityController extends Controller
 
     public function create()
     {
-        return Inertia::render('Zootechnie/FlockMortality/Create');
+        $generations = \App\Models\Generation::where('status', 'actif')->get(['id', 'code', 'type', 'current_quantity']);
+
+        return Inertia::render('Zootechnie/FlockMortality/Create', [
+            'generations' => $generations,
+        ]);
     }
 
     public function store(StoreFlockMortalityRequest $request, LogMortalityAction $action)
