@@ -3,12 +3,15 @@
 namespace App\Actions\Zootechnie;
 
 use App\Models\DailyProduction;
+use App\Services\Inventory\StockService;
 use App\Services\Logistics\UnitConversionService;
 
 class ApproveProductionAction
 {
-    public function __construct(private readonly UnitConversionService $unitConversionService)
-    {
+    public function __construct(
+        private readonly UnitConversionService $unitConversionService,
+        private readonly StockService $stockService
+    ) {
     }
 
     /**
@@ -36,7 +39,18 @@ class ApproveProductionAction
             // Approve the record
             $production->approve($approverId);
 
-            // TODO: Mouvement de stock ENTRANT pour les bons œufs dans l'inventaire des produits finis.
+            // Mouvement de stock ENTRANT pour les œufs
+            if ($production->item_category_id) {
+                $goodBaseQuantity = $this->unitConversionService->toBase($production->good_quantity, $production->unit);
+                $this->stockService->recordMovement(
+                    $production->item_category_id,
+                    'in',
+                    $goodBaseQuantity,
+                    $production,
+                    $production->date->format('Y-m-d'),
+                    $approverId
+                );
+            }
 
             return $production;
         });

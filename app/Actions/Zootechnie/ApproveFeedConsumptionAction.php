@@ -3,12 +3,15 @@
 namespace App\Actions\Zootechnie;
 
 use App\Models\FeedConsumption;
+use App\Services\Inventory\StockService;
 use App\Services\Logistics\UnitConversionService;
 
 class ApproveFeedConsumptionAction
 {
-    public function __construct(private readonly UnitConversionService $unitConversionService)
-    {
+    public function __construct(
+        private readonly UnitConversionService $unitConversionService,
+        private readonly StockService $stockService
+    ) {
     }
 
     /**
@@ -35,7 +38,15 @@ class ApproveFeedConsumptionAction
             // Approve the record
             $consumption->approve($approverId);
 
-            // TODO: Convertir la quantité en unité de base et faire un mouvement de stock SORTANT sur la catégorie de l'aliment.
+            // Mouvement de stock SORTANT sur la catégorie de l'aliment.
+            $this->stockService->recordMovement(
+                $consumption->item_category_id,
+                'out',
+                $totalBaseQuantity,
+                $consumption,
+                $consumption->date->format('Y-m-d'),
+                $approverId
+            );
 
             return $consumption;
         });

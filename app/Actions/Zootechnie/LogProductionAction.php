@@ -19,6 +19,7 @@ class LogProductionAction
         $production->generation_id = $data['generation_id'];
         $production->date = $data['date'];
         $production->unit_id = $data['unit_id'];
+        $production->item_category_id = $data['item_category_id'] ?? null;
         $production->good_quantity = $data['good_quantity'];
         $production->broken_quantity = $data['broken_quantity'];
         $production->prepared_by = $userId;

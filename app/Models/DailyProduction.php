@@ -30,4 +30,9 @@ class DailyProduction extends Model
     {
         return $this->belongsTo(Unit::class);
     }
+
+    public function category()
+    {
+        return $this->belongsTo(Category::class, 'item_category_id');
+    }
 }

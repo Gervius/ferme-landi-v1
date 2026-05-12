@@ -1,0 +1,46 @@
+<?php
+
+namespace App\Http\Controllers\Zootechnie;
+
+use App\Actions\Zootechnie\ApproveCullingAction;
+use App\Actions\Zootechnie\LogCullingAction;
+use App\Http\Controllers\Controller;
+use App\Http\Requests\Zootechnie\StoreFlockCullingRequest;
+use App\Models\FlockCulling;
+use Illuminate\Support\Facades\Gate;
+use Inertia\Inertia;
+
+class FlockCullingController extends Controller
+{
+    public function index()
+    {
+        $data = FlockCulling::with('generation')->paginate(15);
+
+        return Inertia::render('Zootechnie/FlockCulling/Index', [
+            'data' => $data,
+        ]);
+    }
+
+    public function create()
+    {
+        return Inertia::render('Zootechnie/FlockCulling/Create');
+    }
+
+    public function store(StoreFlockCullingRequest $request, LogCullingAction $action)
+    {
+        $action->execute($request->validated(), $request->user()->id);
+
+        return redirect()->route('zootechnie.flock-cullings.index')
+            ->with('success', 'Culling recorded in draft status.');
+    }
+
+    public function approve(FlockCulling $flockCulling, ApproveCullingAction $action)
+    {
+        Gate::authorize('manage generations');
+
+        $action->execute($flockCulling, request()->user()->id);
+
+        return redirect()->route('zootechnie.flock-cullings.index')
+            ->with('success', 'Culling approved successfully.');
+    }
+}
