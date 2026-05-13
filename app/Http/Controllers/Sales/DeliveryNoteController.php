@@ -49,4 +49,12 @@ class DeliveryNoteController extends Controller
         $action->execute($deliveryNote, request()->user()->id);
         return redirect()->route('deliveryNotesIndex')->with('success', 'Delivery note approved and stock updated.');
     }
+
+    public function showApi(DeliveryNote $deliveryNote)
+    {
+        Gate::authorize('view', $deliveryNote);
+
+        // On charge les relations nécessaires pour le Frontend
+        return response()->json($deliveryNote->load(['items.category', 'items.unit']));
+    }
 }

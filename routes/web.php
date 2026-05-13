@@ -75,6 +75,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             'store'   => 'deliveryNotesStore',
         ]);
         Route::post('delivery-notes/{delivery_note}/approve', [\App\Http\Controllers\Sales\DeliveryNoteController::class, 'approve'])->name('deliveryNotesApprove');
+        Route::get('api/delivery-notes/{delivery_note}', [\App\Http\Controllers\Sales\DeliveryNoteController::class, 'showApi'])->name('apiDeliveryNotesShow');
 
         Route::resource('product-donations', \App\Http\Controllers\Sales\ProductDonationController::class)->only(['index', 'create', 'store'])->names([
             'index'   => 'productDonationsIndex',
