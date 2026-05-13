@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Zootechnie;
 
 use App\Http\Controllers\Controller;
 use App\Models\ScheduledTreatment;
+use App\Models\Generation;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -25,9 +26,12 @@ class ScheduledTreatmentController extends Controller
 
         $treatments = $query->orderBy('scheduled_date', 'asc')->paginate(20);
 
+        $generations = Generation::where('status', 'actif')->get(['id', 'code', 'type']);
+
         return Inertia::render('Zootechnie/ScheduledTreatment/Index', [
             'treatments' => $treatments,
             'filters' => $request->only('generation_id'),
+            'generations' => $generations,
         ]);
     }
 

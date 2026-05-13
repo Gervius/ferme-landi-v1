@@ -7,6 +7,7 @@ use App\Actions\Sales\LogCustomerPaymentAction;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Sales\StoreCustomerPaymentRequest;
 use App\Models\CustomerPayment;
+use App\Models\Customer;
 use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 
@@ -22,7 +23,12 @@ class CustomerPaymentController extends Controller
     public function create()
     {
         Gate::authorize('create', CustomerPayment::class);
-        return Inertia::render('Sales/CustomerPayment/Create');
+
+        $customers = Customer::where('is_active', true)->get(['id', 'name']);
+
+        return Inertia::render('Sales/CustomerPayment/Create', [
+            'customers' => $customers,
+        ]);
     }
 
     public function store(StoreCustomerPaymentRequest $request, LogCustomerPaymentAction $action)

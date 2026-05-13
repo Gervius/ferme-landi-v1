@@ -7,6 +7,8 @@ use App\Http\Requests\Sales\StoreSaleOrderRequest;
 use App\Http\Requests\Sales\UpdateSaleOrderRequest;
 use App\Models\Customer;
 use App\Models\SaleOrder;
+use App\Models\Category;
+use App\Models\Unit;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
@@ -24,7 +26,13 @@ class SaleOrderController extends Controller
     {
         Gate::authorize('create', SaleOrder::class);
         $customers = Customer::where('is_active', true)->get(['id', 'name']);
-        return Inertia::render('Sales/SaleOrder/Create', ['customers' => $customers]);
+        $categories = Category::where('scope', 'sales')->get(['id', 'name']);
+        $units = Unit::where('is_active', true)->get(['id', 'name', 'symbol']);
+        return Inertia::render('Sales/SaleOrder/Create', [
+            'customers' => $customers,
+            'categories' => $categories,
+            'units' => $units,
+        ]);
     }
 
     public function store(StoreSaleOrderRequest $request)

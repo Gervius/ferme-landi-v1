@@ -7,6 +7,8 @@ use App\Actions\Sales\LogInvoiceAction;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Sales\StoreInvoiceRequest;
 use App\Models\Invoice;
+use App\Models\Customer;
+use App\Models\DeliveryNote;
 use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 
@@ -22,7 +24,14 @@ class InvoiceController extends Controller
     public function create()
     {
         Gate::authorize('create', Invoice::class);
-        return Inertia::render('Sales/Invoice/Create');
+
+        $customers = Customer::where('is_active', true)->get(['id', 'name']);
+        $deliveryNotes = DeliveryNote::where('status', 'approved')->whereDoesntHave('invoice')->get(['id', 'reference']);
+
+        return Inertia::render('Sales/Invoice/Create', [
+            'customers' => $customers,
+            'deliveryNotes' => $deliveryNotes,
+        ]);
     }
 
     public function store(StoreInvoiceRequest $request, LogInvoiceAction $action)
