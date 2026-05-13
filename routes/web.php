@@ -145,5 +145,37 @@ Route::middleware(['auth', 'verified'])->group(function () {
             'store'   => 'healthTreatmentsStore',
         ]);
         Route::post('health-treatments/{health_treatment}/approve', [\App\Http\Controllers\Zootechnie\HealthTreatmentController::class, 'approve'])->name('healthTreatmentsApprove');
+
+        Route::resource('prophylaxis-programs', \App\Http\Controllers\Zootechnie\ProphylaxisProgramController::class)->names([
+            'index'   => 'prophylaxisProgramsIndex',
+            'create'  => 'prophylaxisProgramsCreate',
+            'store'   => 'prophylaxisProgramsStore',
+            'edit'    => 'prophylaxisProgramsEdit',
+            'update'  => 'prophylaxisProgramsUpdate',
+            'destroy' => 'prophylaxisProgramsDestroy',
+        ]);
+
+        Route::get('scheduled-treatments', [\App\Http\Controllers\Zootechnie\ScheduledTreatmentController::class, 'index'])->name('scheduledTreatmentsIndex');
+        Route::post('scheduled-treatments/{scheduled_treatment}/mark-as-done', [\App\Http\Controllers\Zootechnie\ScheduledTreatmentController::class, 'markAsDone'])->name('scheduledTreatmentsMarkAsDone');
+
+        Route::resource('species', \App\Http\Controllers\Zootechnie\SpeciesController::class)->names([
+            'index'   => 'speciesIndex',
+            'create'  => 'speciesCreate',
+            'store'   => 'speciesStore',
+            'edit'    => 'speciesEdit',
+            'update'  => 'speciesUpdate',
+            'destroy' => 'speciesDestroy',
+        ]);
+
+        Route::resource('breeds', \App\Http\Controllers\Zootechnie\BreedController::class)->names([
+            'index'   => 'breedsIndex',
+            'create'  => 'breedsCreate',
+            'store'   => 'breedsStore',
+            'edit'    => 'breedsEdit',
+            'update'  => 'breedsUpdate',
+            'destroy' => 'breedsDestroy',
+        ]);
+
+        Route::get('stats/{generation}/metrics', [\App\Http\Controllers\Zootechnie\ZootechnieStatsController::class, 'getMetrics'])->name('metricsGetMetrics');
     });
 });

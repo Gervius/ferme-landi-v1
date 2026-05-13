@@ -28,7 +28,7 @@ class UnitController extends Controller
     public function create(): Response
     {
         Gate::authorize('create', Unit::class);
-        $baseUnits = Unit::where('is_base_unit', true)->get();
+        $baseUnits = Unit::where('is_base_unit', true)->where('is_active', true)->get();
 
         return Inertia::render('Units/Create', [
             'baseUnits' => $baseUnits,
@@ -44,7 +44,7 @@ class UnitController extends Controller
     public function edit(Unit $unit): Response
     {
         Gate::authorize('update', $unit);
-        $baseUnits = Unit::where('is_base_unit', true)->where('id', '!=', $unit->id)->get();
+        $baseUnits = Unit::where('is_base_unit', true)->where('is_active', true)->where('id', '!=', $unit->id)->get();
 
         return Inertia::render('Units/Edit', [
             'unit' => $unit,
