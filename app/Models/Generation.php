@@ -47,4 +47,9 @@ class Generation extends Model
             'can_be_weighed' => in_array($this->type, ['chair', 'porc']),
         ];
     }
+
+    public function dailyFlockMetrics()
+    {
+        return $this->hasMany(DailyFlockMetric::class);
+    }
 }

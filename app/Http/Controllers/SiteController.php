@@ -35,7 +35,7 @@ class SiteController extends Controller
     {
         Gate::authorize('create', Site::class);
 
-        $companies = Company::select('id', 'name')->get();
+        $companies = Company::where('is_active', true)->select('id', 'name')->get();
 
         return Inertia::render('Sites/Create', [
             'companies' => $companies,
@@ -62,7 +62,7 @@ class SiteController extends Controller
         Gate::authorize('update', $site);
 
         $site->load('company');
-        $companies = Company::select('id', 'name')->get();
+        $companies = Company::where('is_active', true)->select('id', 'name')->get();
 
         return Inertia::render('Sites/Edit', [
             'site' => $site,
