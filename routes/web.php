@@ -82,6 +82,20 @@ Route::middleware(['auth', 'verified'])->group(function () {
             'store'   => 'productDonationsStore',
         ]);
         Route::post('product-donations/{product_donation}/approve', [\App\Http\Controllers\Sales\ProductDonationController::class, 'approve'])->name('productDonationsApprove');
+
+        Route::resource('invoices', \App\Http\Controllers\Sales\InvoiceController::class)->only(['index', 'create', 'store'])->names([
+            'index'   => 'invoicesIndex',
+            'create'  => 'invoicesCreate',
+            'store'   => 'invoicesStore',
+        ]);
+        Route::post('invoices/{invoice}/approve', [\App\Http\Controllers\Sales\InvoiceController::class, 'approve'])->name('invoicesApprove');
+
+        Route::resource('customer-payments', \App\Http\Controllers\Sales\CustomerPaymentController::class)->only(['index', 'create', 'store'])->names([
+            'index'   => 'customerPaymentsIndex',
+            'create'  => 'customerPaymentsCreate',
+            'store'   => 'customerPaymentsStore',
+        ]);
+        Route::post('customer-payments/{customer_payment}/approve', [\App\Http\Controllers\Sales\CustomerPaymentController::class, 'approve'])->name('customerPaymentsApprove');
     });
 
     // Zootechnie Endpoints
