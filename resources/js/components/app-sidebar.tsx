@@ -23,7 +23,8 @@ import {
     Gift,
     ArrowRightLeft,
     CalendarCheck,
-    Dna
+    Dna,
+    Component
 } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { NavMain } from '@/components/nav-main';
@@ -38,7 +39,7 @@ import {
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
 
-// Importation de toutes tes routes générées (Assure-toi qu'elles sont dans ton fichier routes.ts)
+// Importation de toutes tes routes générées (Assure-toi que route.ts est à jour)
 import { 
     dashboard, 
     sitesIndex, 
@@ -55,7 +56,11 @@ import {
     customersIndex,
     saleOrdersIndex,
     deliveryNotesIndex,
-    productDonationsIndex
+    productDonationsIndex,
+    scheduledTreatmentsIndex, // NOUVEAU
+    speciesIndex,             // NOUVEAU
+    breedsIndex,              // NOUVEAU
+    prophylaxisProgramsIndex  // NOUVEAU
 } from '@/routes';
 import type { NavItem } from '@/types';
 
@@ -78,7 +83,7 @@ const mainNavItems: NavItem[] = [
             { title: 'Production d\'Œufs', href: dailyProductionsIndex(), icon: Egg },
             { title: 'Pesée & Croissance', href: flockWeighingsIndex(), icon: Activity },
             { title: 'Santé & Soins', href: healthTreatmentsIndex(), icon: Stethoscope },
-            { title: 'Calendrier Sanitaire', href: '#', icon: CalendarCheck }, // En attente du contrôleur
+            { title: 'Calendrier Sanitaire', href: scheduledTreatmentsIndex(), icon: CalendarCheck }, // CORRIGÉ
             { title: 'Mortalité', href: flockMortalitiesIndex(), icon: Skull },
             { title: 'Réforme & Sorties', href: flockCullingsIndex(), icon: TrendingDown },
         ],
@@ -99,8 +104,8 @@ const mainNavItems: NavItem[] = [
         icon: Package,
         href: '#',
         children: [
-            { title: 'Mouvements Stock', href: '#', icon: ArrowRightLeft }, // En attente
-            { title: 'État des stocks', href: '#', icon: LayoutGrid }, // En attente
+            { title: 'Mouvements Stock', href: '#', icon: ArrowRightLeft }, // En attente du contrôleur de stock
+            { title: 'État des stocks', href: '#', icon: LayoutGrid }, // En attente du contrôleur de stock
         ],
     },
 ];
@@ -115,13 +120,14 @@ const configNavItems: NavItem[] = [
         href: '#',
         children: [
             // Structure
-            { title: 'Entreprises & Filiales', href: '#', icon: Building2 }, // En attente route index
+            { title: 'Entreprises & Filiales', href: '#', icon: Building2 }, // En attente
             { title: 'Sites & Bâtiments', href: sitesIndex(), icon: MapPin },
             
             // Référentiel Zootechnique
-            { title: 'Espèces & Races', href: '#', icon: Dna }, // En attente SpecieController
+            { title: 'Espèces', href: speciesIndex(), icon: Dna }, // CORRIGÉ
+            { title: 'Races / Souches', href: breedsIndex(), icon: Component }, // CORRIGÉ
             { title: 'Standards de Race', href: breedStandardsIndex(), icon: Target },
-            { title: 'Prog. Prophylactiques', href: '#', icon: ShieldPlus }, // En attente
+            { title: 'Prog. Prophylactiques', href: prophylaxisProgramsIndex(), icon: ShieldPlus }, // CORRIGÉ
             
             // Système
             { title: 'Unités de mesure', href: unitsIndex(), icon: Scale },
