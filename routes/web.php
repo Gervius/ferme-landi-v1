@@ -49,6 +49,41 @@ Route::middleware(['auth', 'verified'])->group(function () {
         'destroy' => 'categoriesDestroy']);
 
         
+    // Sales Endpoints
+    Route::prefix('sales')->group(function () {
+        Route::resource('customers', \App\Http\Controllers\Sales\CustomerController::class)->names([
+            'index'   => 'customersIndex',
+            'create'  => 'customersCreate',
+            'store'   => 'customersStore',
+            'edit'    => 'customersEdit',
+            'update'  => 'customersUpdate',
+            'destroy' => 'customersDestroy',
+        ]);
+
+        Route::resource('sale-orders', \App\Http\Controllers\Sales\SaleOrderController::class)->names([
+            'index'   => 'saleOrdersIndex',
+            'create'  => 'saleOrdersCreate',
+            'store'   => 'saleOrdersStore',
+            'edit'    => 'saleOrdersEdit',
+            'update'  => 'saleOrdersUpdate',
+            'destroy' => 'saleOrdersDestroy',
+        ]);
+
+        Route::resource('delivery-notes', \App\Http\Controllers\Sales\DeliveryNoteController::class)->only(['index', 'create', 'store'])->names([
+            'index'   => 'deliveryNotesIndex',
+            'create'  => 'deliveryNotesCreate',
+            'store'   => 'deliveryNotesStore',
+        ]);
+        Route::post('delivery-notes/{delivery_note}/approve', [\App\Http\Controllers\Sales\DeliveryNoteController::class, 'approve'])->name('deliveryNotesApprove');
+
+        Route::resource('product-donations', \App\Http\Controllers\Sales\ProductDonationController::class)->only(['index', 'create', 'store'])->names([
+            'index'   => 'productDonationsIndex',
+            'create'  => 'productDonationsCreate',
+            'store'   => 'productDonationsStore',
+        ]);
+        Route::post('product-donations/{product_donation}/approve', [\App\Http\Controllers\Sales\ProductDonationController::class, 'approve'])->name('productDonationsApprove');
+    });
+
     // Zootechnie Endpoints
     Route::prefix('zootechnie')->group(function () {
         Route::resource('generations', GenerationController::class)->names([
