@@ -126,6 +126,21 @@ Route::middleware(['auth', 'verified'])->group(function () {
             'store'   => 'purchaseReceiptsStore',
         ]);
         Route::post('purchase-receipts/{purchase_receipt}/approve', [\App\Http\Controllers\Purchases\PurchaseReceiptController::class, 'approve'])->name('purchaseReceiptsApprove');
+        Route::get('api/purchase-receipts/{purchase_receipt}', [\App\Http\Controllers\Purchases\PurchaseReceiptController::class, 'showApi'])->name('apiPurchaseReceiptsShow');
+
+        Route::resource('supplier-invoices', \App\Http\Controllers\Purchases\SupplierInvoiceController::class)->only(['index', 'create', 'store'])->names([
+            'index'   => 'supplierInvoicesIndex',
+            'create'  => 'supplierInvoicesCreate',
+            'store'   => 'supplierInvoicesStore',
+        ]);
+        Route::post('supplier-invoices/{supplier_invoice}/approve', [\App\Http\Controllers\Purchases\SupplierInvoiceController::class, 'approve'])->name('supplierInvoicesApprove');
+
+        Route::resource('supplier-payments', \App\Http\Controllers\Purchases\SupplierPaymentController::class)->only(['index', 'create', 'store'])->names([
+            'index'   => 'supplierPaymentsIndex',
+            'create'  => 'supplierPaymentsCreate',
+            'store'   => 'supplierPaymentsStore',
+        ]);
+        Route::post('supplier-payments/{supplier_payment}/approve', [\App\Http\Controllers\Purchases\SupplierPaymentController::class, 'approve'])->name('supplierPaymentsApprove');
     });
 
     // Zootechnie Endpoints

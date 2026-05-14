@@ -9,29 +9,31 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class PurchaseReceipt extends Model
+class SupplierInvoice extends Model
 {
     use HasFactory, SoftDeletes, HasApprovalWorkflow;
 
     protected $guarded = ['id'];
 
     protected $casts = [
-        'receipt_date' => 'date',
+        'invoice_date' => 'date',
+        'due_date' => 'date',
+        'total_amount' => 'decimal:2',
         'approved_at' => 'datetime',
     ];
 
-    public function purchaseOrder(): BelongsTo
+    public function supplier(): BelongsTo
     {
-        return $this->belongsTo(PurchaseOrder::class);
+        return $this->belongsTo(Supplier::class);
+    }
+
+    public function purchaseReceipt(): BelongsTo
+    {
+        return $this->belongsTo(PurchaseReceipt::class);
     }
 
     public function items(): HasMany
     {
-        return $this->hasMany(PurchaseReceiptItem::class);
-    }
-
-    public function supplierInvoice()
-    {
-        return $this->hasOne(SupplierInvoice::class);
+        return $this->hasMany(SupplierInvoiceItem::class);
     }
 }
