@@ -49,4 +49,11 @@ class PurchaseReceiptController extends Controller
         $action->execute($purchaseReceipt, request()->user()->id);
         return redirect()->route('purchaseReceiptsIndex')->with('success', 'Purchase receipt approved and stock updated.');
     }
+
+    public function showApi(PurchaseReceipt $purchaseReceipt)
+    {
+        Gate::authorize('view', $purchaseReceipt);
+
+        return response()->json($purchaseReceipt->load(['items.category', 'items.unit']));
+    }
 }
