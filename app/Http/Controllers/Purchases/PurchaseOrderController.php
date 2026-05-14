@@ -73,4 +73,11 @@ class PurchaseOrderController extends Controller
         $action->execute($purchaseOrder);
         return redirect()->route('purchaseOrdersIndex')->with('success', 'Purchase order deleted.');
     }
+
+    public function showApi(PurchaseOrder $purchaseOrder)
+    {
+        Gate::authorize('view', $purchaseOrder);
+
+        return response()->json($purchaseOrder->load(['items.category', 'items.unit']));
+    }
 }

@@ -118,6 +118,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
             'update'  => 'purchaseOrdersUpdate',
             'destroy' => 'purchaseOrdersDestroy',
         ]);
+        Route::get('api/purchase-orders/{purchase_order}', [\App\Http\Controllers\Purchases\PurchaseOrderController::class, 'showApi'])->name('apiPurchaseOrdersShow');
+
+        Route::resource('purchase-receipts', \App\Http\Controllers\Purchases\PurchaseReceiptController::class)->only(['index', 'create', 'store'])->names([
+            'index'   => 'purchaseReceiptsIndex',
+            'create'  => 'purchaseReceiptsCreate',
+            'store'   => 'purchaseReceiptsStore',
+        ]);
+        Route::post('purchase-receipts/{purchase_receipt}/approve', [\App\Http\Controllers\Purchases\PurchaseReceiptController::class, 'approve'])->name('purchaseReceiptsApprove');
     });
 
     // Zootechnie Endpoints
