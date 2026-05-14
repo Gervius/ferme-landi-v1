@@ -16,7 +16,7 @@ class StoreFlockCullingRequest extends FormRequest
         return [
             'generation_id' => ['required', 'exists:generations,id'],
             'date' => ['required', 'date'],
-            'quantity' => ['required', 'integer', 'min:1'],
+            'quantity_culled' => ['required', 'numeric', 'min:1'],
             'reason' => ['nullable', 'string', 'max:255'],
         ];
     }

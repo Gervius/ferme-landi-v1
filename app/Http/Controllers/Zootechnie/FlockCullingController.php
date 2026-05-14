@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Zootechnie;
 
 use App\Actions\Zootechnie\ApproveCullingAction;
-use App\Actions\Zootechnie\LogCullingAction;
+use App\Actions\Zootechnie\LogFlockCullingAction;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Zootechnie\StoreFlockCullingRequest;
 use App\Models\FlockCulling;
@@ -30,7 +30,7 @@ class FlockCullingController extends Controller
         ]);
     }
 
-    public function store(StoreFlockCullingRequest $request, LogCullingAction $action)
+    public function store(StoreFlockCullingRequest $request, LogFlockCullingAction $action)
     {
         $action->execute($request->validated(), $request->user()->id);
 

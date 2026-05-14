@@ -4,7 +4,7 @@ namespace App\Actions\Zootechnie;
 
 use App\Models\FlockCulling;
 
-class LogCullingAction
+class LogFlockCullingAction
 {
     /**
      * Logs culling to a draft status.
@@ -13,6 +13,11 @@ class LogCullingAction
     {
         $data['status'] = 'draft';
         $data['prepared_by'] = $preparedById;
+
+        // S'assurer d'injecter quantity_culled (même si ça vient du FormRequest validé)
+        if (!isset($data['quantity_culled']) && isset($data['quantity'])) {
+            $data['quantity_culled'] = $data['quantity'];
+        }
 
         return FlockCulling::create($data);
     }
