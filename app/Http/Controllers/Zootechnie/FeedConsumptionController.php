@@ -30,7 +30,10 @@ class FeedConsumptionController extends Controller
         $units = \App\Models\Unit::where('is_active', true)->get(['id', 'name', 'symbol']);
 
         // CORRECTION ICI : On utilise whereIn pour ratisser plus large
-        $categories = \App\Models\Category::whereIn('scope', ['inventory', 'purchases'])->get(['id', 'name']);
+        $categories = \App\Models\Category::whereIn('scope', [
+            \App\Enums\CategoryScope::INVENTORY->value,
+            \App\Enums\CategoryScope::PURCHASES->value
+        ])->get(['id', 'name']);
 
         return Inertia::render('Zootechnie/FeedConsumption/Create', [
             'generations' => $generations,

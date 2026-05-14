@@ -26,6 +26,7 @@ class Category extends Model
 
     protected $casts = [
         'is_active' => 'boolean',
+        'scope' => \App\Enums\CategoryScope::class,
     ];
 
     public function parent(): BelongsTo
