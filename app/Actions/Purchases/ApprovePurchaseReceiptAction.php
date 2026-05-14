@@ -4,7 +4,7 @@ namespace App\Actions\Purchases;
 
 use App\Models\PurchaseReceipt;
 use App\Services\Inventory\StockService;
-use App\Services\Inventory\UnitConversionService;
+use App\Services\Logistics\UnitConversionService;
 use Illuminate\Support\Facades\DB;
 
 class ApprovePurchaseReceiptAction
@@ -28,13 +28,15 @@ class ApprovePurchaseReceiptAction
             ]);
 
             foreach ($receipt->items as $item) {
-                $baseQuantity = $this->conversionService->convertToBase($item->received_quantity, $item->unit_id);
+                $baseQuantity = $this->conversionService->toBase($item->received_quantity, $item->unit);
 
                 $this->stockService->recordMovement(
-                    reference: $receipt,
-                    categoryId: $item->category_id,
-                    quantity: $baseQuantity,
-                    direction: 'in'
+                    $item->category_id,
+                    'in', // C'est bien une entrée de stock
+                    $baseQuantity,
+                    $receipt,
+                    $receipt->receipt_date->format('Y-m-d'),
+                    $userId
                 );
             }
 
