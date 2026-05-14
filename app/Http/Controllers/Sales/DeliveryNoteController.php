@@ -27,7 +27,10 @@ class DeliveryNoteController extends Controller
         Gate::authorize('create', DeliveryNote::class);
 
         $saleOrders = SaleOrder::whereIn('status', ['validated', 'partially_delivered'])->get(['id', 'reference']);
-        $categories = Category::where('scope', \App\Enums\CategoryScope::SALES->value)->get(['id', 'name']);
+        $categories = Category::whereIn('scope', [
+            \App\Enums\CategoryScope::PRODUCT->value,
+            \App\Enums\CategoryScope::ANIMAL->value,
+        ])->get(['id', 'name']);
         $units = Unit::where('is_active', true)->get(['id', 'name', 'symbol']);
 
         return Inertia::render('Sales/DeliveryNote/Create', [

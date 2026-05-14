@@ -26,7 +26,7 @@ class DailyProductionController extends Controller
         Gate::authorize('create', DailyProduction::class);
 
         $generations = \App\Models\Generation::where('status', 'actif')->get(['id', 'code']);
-        $categories = \App\Models\Category::where('scope', \App\Enums\CategoryScope::SALES->value)->get(['id', 'name']);
+        $categories = \App\Models\Category::where('scope', \App\Enums\CategoryScope::PRODUCT->value)->get(['id', 'name']);
 
         return Inertia::render('Zootechnie/DailyProduction/Create', [
             'generations' => $generations,

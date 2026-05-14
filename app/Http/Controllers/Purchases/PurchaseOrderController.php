@@ -29,7 +29,12 @@ class PurchaseOrderController extends Controller
         Gate::authorize('create', PurchaseOrder::class);
 
         $suppliers = Supplier::where('is_active', true)->get(['id', 'name']);
-        $categories = Category::all(['id', 'name']);
+        $categories = Category::whereIn('scope', [
+            \App\Enums\CategoryScope::FEED->value,
+            \App\Enums\CategoryScope::ANIMAL->value,
+            \App\Enums\CategoryScope::MEDICATION->value,
+            \App\Enums\CategoryScope::EQUIPMENT->value,
+        ])->get(['id', 'name']);
         $units = Unit::where('is_active', true)->get(['id', 'name', 'symbol']);
 
         return Inertia::render('Purchases/PurchaseOrder/Create', [
@@ -50,7 +55,12 @@ class PurchaseOrderController extends Controller
         Gate::authorize('update', $purchaseOrder);
 
         $suppliers = Supplier::where('is_active', true)->get(['id', 'name']);
-        $categories = Category::all(['id', 'name']);
+        $categories = Category::whereIn('scope', [
+            \App\Enums\CategoryScope::FEED->value,
+            \App\Enums\CategoryScope::ANIMAL->value,
+            \App\Enums\CategoryScope::MEDICATION->value,
+            \App\Enums\CategoryScope::EQUIPMENT->value,
+        ])->get(['id', 'name']);
         $units = Unit::where('is_active', true)->get(['id', 'name', 'symbol']);
 
         return Inertia::render('Purchases/PurchaseOrder/Edit', [
