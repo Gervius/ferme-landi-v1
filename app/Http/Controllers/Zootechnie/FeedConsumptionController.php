@@ -23,9 +23,14 @@ class FeedConsumptionController extends Controller
 
     public function create()
     {
+        // C'est toujours mieux de rajouter la sécurité Gate ici !
+        \Illuminate\Support\Facades\Gate::authorize('create', \App\Models\FeedConsumption::class);
+
         $generations = \App\Models\Generation::where('status', 'actif')->get(['id', 'code', 'type']);
         $units = \App\Models\Unit::where('is_active', true)->get(['id', 'name', 'symbol']);
-        $categories = \App\Models\Category::where('scope', 'inventory')->get(['id', 'name']);
+
+        // CORRECTION ICI : On utilise whereIn pour ratisser plus large
+        $categories = \App\Models\Category::whereIn('scope', ['inventory', 'purchases'])->get(['id', 'name']);
 
         return Inertia::render('Zootechnie/FeedConsumption/Create', [
             'generations' => $generations,
