@@ -99,6 +99,27 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('customer-payments/{customer_payment}/approve', [\App\Http\Controllers\Sales\CustomerPaymentController::class, 'approve'])->name('customerPaymentsApprove');
     });
 
+    // Purchases Endpoints
+    Route::prefix('purchases')->group(function () {
+        Route::resource('suppliers', \App\Http\Controllers\Purchases\SupplierController::class)->names([
+            'index'   => 'suppliersIndex',
+            'create'  => 'suppliersCreate',
+            'store'   => 'suppliersStore',
+            'edit'    => 'suppliersEdit',
+            'update'  => 'suppliersUpdate',
+            'destroy' => 'suppliersDestroy',
+        ]);
+
+        Route::resource('purchase-orders', \App\Http\Controllers\Purchases\PurchaseOrderController::class)->names([
+            'index'   => 'purchaseOrdersIndex',
+            'create'  => 'purchaseOrdersCreate',
+            'store'   => 'purchaseOrdersStore',
+            'edit'    => 'purchaseOrdersEdit',
+            'update'  => 'purchaseOrdersUpdate',
+            'destroy' => 'purchaseOrdersDestroy',
+        ]);
+    });
+
     // Zootechnie Endpoints
     Route::prefix('zootechnie')->group(function () {
         Route::resource('generations', GenerationController::class)->names([
