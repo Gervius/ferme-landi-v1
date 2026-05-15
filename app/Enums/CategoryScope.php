@@ -4,8 +4,9 @@ namespace App\Enums;
 
 enum CategoryScope: string
 {
-    case SALES = 'sales';
-    case PURCHASES = 'purchases';
-    case INVENTORY = 'inventory';
+    case FEED = 'feed';
+    case ANIMAL = 'animal';
     case MEDICATION = 'medication';
+    case PRODUCT = 'product';
+    case EQUIPMENT = 'equipment';
 }
