@@ -27,7 +27,12 @@ class PurchaseReceiptController extends Controller
         Gate::authorize('create', PurchaseReceipt::class);
 
         $purchaseOrders = PurchaseOrder::whereIn('status', ['validated', 'partially_received'])->get(['id', 'reference']);
-        $categories = Category::all(['id', 'name']);
+        $categories = Category::whereIn('scope', [
+            \App\Enums\CategoryScope::FEED->value,
+            \App\Enums\CategoryScope::ANIMAL->value,
+            \App\Enums\CategoryScope::MEDICATION->value,
+            \App\Enums\CategoryScope::EQUIPMENT->value,
+        ])->get(['id', 'name']);
         $units = Unit::where('is_active', true)->get(['id', 'name', 'symbol']);
 
         return Inertia::render('Purchases/PurchaseReceipt/Create', [

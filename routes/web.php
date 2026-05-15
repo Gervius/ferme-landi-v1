@@ -99,6 +99,25 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('customer-payments/{customer_payment}/approve', [\App\Http\Controllers\Sales\CustomerPaymentController::class, 'approve'])->name('customerPaymentsApprove');
     });
 
+    // HR Endpoints
+    Route::prefix('hr')->group(function () {
+        Route::resource('employees', \App\Http\Controllers\HR\EmployeeController::class)->names([
+            'index'   => 'employeesIndex',
+            'create'  => 'employeesCreate',
+            'store'   => 'employeesStore',
+            'edit'    => 'employeesEdit',
+            'update'  => 'employeesUpdate',
+            'destroy' => 'employeesDestroy',
+        ]);
+
+        Route::resource('payroll-records', \App\Http\Controllers\HR\PayrollRecordController::class)->only(['index', 'create', 'store'])->names([
+            'index'   => 'payrollRecordsIndex',
+            'create'  => 'payrollRecordsCreate',
+            'store'   => 'payrollRecordsStore',
+        ]);
+        Route::post('payroll-records/{payroll_record}/approve', [\App\Http\Controllers\HR\PayrollRecordController::class, 'approve'])->name('payrollRecordsApprove');
+    });
+
     // Purchases Endpoints
     Route::prefix('purchases')->group(function () {
         Route::resource('suppliers', \App\Http\Controllers\Purchases\SupplierController::class)->names([

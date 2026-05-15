@@ -31,7 +31,7 @@ class ProphylaxisProgramController extends Controller
         Gate::authorize('create', ProphylaxisProgram::class);
 
         $medicationCategories = Category::where('is_active', true)
-            // Ideally scoped to 'medication' or whatever the business logic dictates
+            ->where('scope', \App\Enums\CategoryScope::MEDICATION->value)
             ->get(['id', 'name']);
 
         return Inertia::render('Zootechnie/ProphylaxisProgram/Create', [
@@ -63,7 +63,9 @@ class ProphylaxisProgramController extends Controller
         Gate::authorize('update', $prophylaxisProgram);
 
         $prophylaxisProgram->load('steps');
-        $medicationCategories = Category::where('is_active', true)->get(['id', 'name']);
+        $medicationCategories = Category::where('is_active', true)
+            ->where('scope', \App\Enums\CategoryScope::MEDICATION->value)
+            ->get(['id', 'name']);
 
         return Inertia::render('Zootechnie/ProphylaxisProgram/Edit', [
             'program' => $prophylaxisProgram,
