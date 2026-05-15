@@ -7,7 +7,6 @@ import {
     CheckCircle2, 
     Clock, 
     Check,
-    Scale,
     Package
 } from 'lucide-react';
 import { feedConsumptionsCreate, feedConsumptionsApprove } from '@/routes';
@@ -33,6 +32,7 @@ interface Consumption {
 interface Props {
     data: {
         data: Consumption[];
+        links?: any[];
     };
 }
 
@@ -45,7 +45,7 @@ export default function FeedConsumptionIndex({ data }: Props) {
     ];
 
     const handleApprove = (id: number) => {
-        if (confirm('Approuver cette distribution ? Le stock d\'aliment sera déduit.')) {
+        if (confirm("Approuver cette distribution ? Le stock d'aliment sera définitivement déduit.")) {
             post(feedConsumptionsApprove.url(id));
         }
     };
@@ -58,7 +58,7 @@ export default function FeedConsumptionIndex({ data }: Props) {
                 <Breadcrumbs breadcrumbs={breadcrumbs} />
                 <Link
                     href={feedConsumptionsCreate.url()}
-                    className="inline-flex items-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-lg font-semibold transition"
+                    className="inline-flex items-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2.5 rounded-lg font-black transition shadow-sm"
                 >
                     <Plus className="w-4 h-4" />
                     Distribuer Aliment
@@ -66,65 +66,81 @@ export default function FeedConsumptionIndex({ data }: Props) {
             </div>
 
             <div className="bg-card rounded-xl border border-border shadow-md overflow-hidden text-sm">
+                <div className="p-4 border-b border-border bg-secondary/5 flex items-center gap-2">
+                    <Utensils className="w-5 h-5 text-secondary" />
+                    <h2 className="font-bold text-lg text-foreground">Historique des Distributions</h2>
+                </div>
+
                 <table className="w-full text-left border-collapse">
                     <thead className="bg-muted/50 border-b border-border text-xs uppercase tracking-wider font-semibold text-muted-foreground">
                         <tr>
                             <th className="px-6 py-4">Date / Lot</th>
-                            <th className="px-6 py-4">Type d'Aliment</th>
-                            <th className="px-6 py-4 text-center">Quantité Saisie</th>
-                            <th className="px-6 py-4 text-center">Total (Kg)</th>
-                            <th className="px-6 py-4">Statut</th>
+                            <th className="px-6 py-4">Article (Aliment)</th>
+                            <th className="px-6 py-4 text-center">Quantité Distribuée</th>
+                            <th className="px-6 py-4 text-center">Converti (Kg)</th>
+                            <th className="px-6 py-4 text-center">Statut</th>
                             <th className="px-6 py-4 text-right">Actions</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-border">
-                        {data.data.map((c) => (
-                            <tr key={c.id} className="hover:bg-muted/30 transition-colors">
-                                <td className="px-6 py-4">
-                                    <div className="font-bold text-foreground">
-                                        {new Date(c.date).toLocaleDateString('fr-FR')}
-                                    </div>
-                                    <div className="text-[10px] text-muted-foreground font-bold uppercase tracking-tighter">
-                                        Lot: {c.generation.code}
-                                    </div>
-                                </td>
-                                <td className="px-6 py-4">
-                                    <div className="flex items-center gap-2 text-secondary font-medium">
-                                        <Package className="w-4 h-4" />
-                                        {c.category.name}
-                                    </div>
-                                </td>
-                                <td className="px-6 py-4 text-center font-semibold">
-                                    {c.quantity} {c.unit.symbol}
-                                </td>
-                                <td className="px-6 py-4 text-center">
-                                    <span className="bg-accent/10 text-accent-foreground px-2 py-0.5 rounded font-mono text-xs font-bold border border-accent/20">
-                                        {c.total_base_quantity > 0 ? `${c.total_base_quantity} kg` : '--'}
-                                    </span>
-                                </td>
-                                <td className="px-6 py-4">
-                                    <span className={`px-2 py-1 rounded-full text-[10px] font-bold flex items-center w-fit gap-1 border ${
-                                        c.status === 'approved' 
-                                        ? 'bg-primary/10 text-primary border-primary/20' 
-                                        : 'bg-muted text-muted-foreground border-border'
-                                    }`}>
-                                        {c.status === 'approved' ? <CheckCircle2 className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
-                                        {c.status.toUpperCase()}
-                                    </span>
-                                </td>
-                                <td className="px-6 py-4 text-right">
-                                    {c.status === 'draft' && (
-                                        <button
-                                            onClick={() => handleApprove(c.id)}
-                                            disabled={processing}
-                                            className="bg-primary text-primary-foreground p-1.5 rounded-md hover:bg-primary/90 transition shadow-sm disabled:opacity-50"
-                                        >
-                                            <Check className="w-4 h-4" />
-                                        </button>
-                                    )}
+                        {(!data.data || data.data.length === 0) ? (
+                            <tr>
+                                <td colSpan={6} className="px-6 py-8 text-center text-muted-foreground italic">
+                                    Aucune distribution d'aliment enregistrée.
                                 </td>
                             </tr>
-                        ))}
+                        ) : (
+                            data.data.map((c) => (
+                                <tr key={c.id} className="hover:bg-muted/30 transition-colors">
+                                    <td className="px-6 py-4">
+                                        <div className="font-black text-foreground text-base">
+                                            {new Date(c.date).toLocaleDateString('fr-FR')}
+                                        </div>
+                                        <div className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest mt-0.5">
+                                            Lot: {c.generation?.code}
+                                        </div>
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        <div className="flex items-center gap-2 text-secondary font-medium">
+                                            <Package className="w-4 h-4" />
+                                            {c.category?.name || <span className="italic text-destructive">Catégorie inconnue</span>}
+                                        </div>
+                                    </td>
+                                    <td className="px-6 py-4 text-center font-black text-foreground">
+                                        {c.quantity} <span className="text-muted-foreground font-medium text-xs ml-1">{c.unit?.symbol}</span>
+                                    </td>
+                                    <td className="px-6 py-4 text-center">
+                                        <span className="bg-accent/10 text-accent-foreground px-2.5 py-1 rounded font-mono text-xs font-bold border border-accent/20">
+                                            {c.total_base_quantity > 0 ? `${c.total_base_quantity} kg` : '--'}
+                                        </span>
+                                    </td>
+                                    <td className="px-6 py-4 text-center">
+                                        <div className="flex justify-center">
+                                            <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold flex items-center w-fit gap-1 border ${
+                                                c.status === 'approved' 
+                                                ? 'bg-primary/10 text-primary border-primary/20' 
+                                                : 'bg-orange-500/10 text-orange-600 border-orange-500/20'
+                                            }`}>
+                                                {c.status === 'approved' ? <CheckCircle2 className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
+                                                {c.status.toUpperCase()}
+                                            </span>
+                                        </div>
+                                    </td>
+                                    <td className="px-6 py-4 text-right">
+                                        {c.status === 'draft' && (
+                                            <button
+                                                onClick={() => handleApprove(c.id)}
+                                                disabled={processing}
+                                                className="bg-primary text-primary-foreground p-1.5 rounded-md hover:bg-primary/90 transition shadow-sm disabled:opacity-50"
+                                                title="Approuver et déduire du stock"
+                                            >
+                                                <Check className="w-4 h-4" />
+                                            </button>
+                                        )}
+                                    </td>
+                                </tr>
+                            ))
+                        )}
                     </tbody>
                 </table>
             </div>

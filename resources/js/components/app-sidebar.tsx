@@ -24,7 +24,13 @@ import {
     ArrowRightLeft,
     CalendarCheck,
     Dna,
-    Component
+    Component,
+    Truck,
+    ClipboardList,
+    PackageOpen,
+    Wallet,
+    Receipt,
+    HandCoins
 } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { NavMain } from '@/components/nav-main';
@@ -39,12 +45,18 @@ import {
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
 
-// Importation de toutes tes routes générées (Assure-toi que route.ts est à jour)
+// Importation de toutes les routes
 import { 
     dashboard, 
+    // Paramétrage
     sitesIndex, 
     unitsIndex, 
     categoriesIndex, 
+    breedStandardsIndex,
+    speciesIndex,             
+    breedsIndex,              
+    prophylaxisProgramsIndex,
+    // Zootechnie
     generationsIndex, 
     dailyProductionsIndex,
     feedConsumptionsIndex,
@@ -52,16 +64,22 @@ import {
     flockCullingsIndex,
     flockWeighingsIndex,
     healthTreatmentsIndex,
-    breedStandardsIndex,
+    scheduledTreatmentsIndex, 
+    // Ventes
     customersIndex,
     saleOrdersIndex,
     deliveryNotesIndex,
+    invoicesIndex,
+    customerPaymentsIndex,
     productDonationsIndex,
-    scheduledTreatmentsIndex, // NOUVEAU
-    speciesIndex,             // NOUVEAU
-    breedsIndex,              // NOUVEAU
-    prophylaxisProgramsIndex  // NOUVEAU
+    // Achats
+    suppliersIndex,
+    purchaseOrdersIndex,
+    purchaseReceiptsIndex,
+    supplierInvoicesIndex,
+    supplierPaymentsIndex
 } from '@/routes';
+
 import type { NavItem } from '@/types';
 
 // ============================================================================
@@ -74,7 +92,7 @@ const mainNavItems: NavItem[] = [
         icon: LayoutGrid,
     },
     {
-        title: 'Zootechnie (Élevage)',
+        title: 'Zootechnie (Production)',
         icon: Bird,
         href: '#',
         children: [
@@ -83,29 +101,43 @@ const mainNavItems: NavItem[] = [
             { title: 'Production d\'Œufs', href: dailyProductionsIndex(), icon: Egg },
             { title: 'Pesée & Croissance', href: flockWeighingsIndex(), icon: Activity },
             { title: 'Santé & Soins', href: healthTreatmentsIndex(), icon: Stethoscope },
-            { title: 'Calendrier Sanitaire', href: scheduledTreatmentsIndex(), icon: CalendarCheck }, // CORRIGÉ
+            { title: 'Calendrier Sanitaire', href: scheduledTreatmentsIndex(), icon: CalendarCheck },
             { title: 'Mortalité', href: flockMortalitiesIndex(), icon: Skull },
             { title: 'Réforme & Sorties', href: flockCullingsIndex(), icon: TrendingDown },
         ],
     },
     {
-        title: 'Ventes & Commercial',
+        title: 'Achats & Dépenses',
+        icon: Truck,
+        href: '#',
+        children: [
+            { title: 'Fournisseurs', href: suppliersIndex(), icon: Building2 },
+            { title: 'Commandes Achat', href: purchaseOrdersIndex(), icon: ClipboardList },
+            { title: 'Réceptions Stock', href: purchaseReceiptsIndex(), icon: PackageOpen },
+            { title: 'Factures Achats', href: supplierInvoicesIndex(), icon: FileText },
+            { title: 'Décaissements', href: supplierPaymentsIndex(), icon: Wallet },
+        ],
+    },
+    {
+        title: 'Ventes & Revenus',
         icon: ShoppingCart,
         href: '#',
         children: [
             { title: 'Clients', href: customersIndex(), icon: Users },
-            { title: 'Commandes', href: saleOrdersIndex(), icon: ShoppingCart },
-            { title: 'Bons de livraison', href: deliveryNotesIndex(), icon: FileText },
-            { title: 'Dons de produits', href: productDonationsIndex(), icon: Gift },
+            { title: 'Commandes Client', href: saleOrdersIndex(), icon: ShoppingCart },
+            { title: 'Bons de livraison', href: deliveryNotesIndex(), icon: Package },
+            { title: 'Factures Clients', href: invoicesIndex(), icon: Receipt },
+            { title: 'Encaissements', href: customerPaymentsIndex(), icon: HandCoins },
+            { title: 'Dons & Œuvres', href: productDonationsIndex(), icon: Gift },
         ],
     },
     {
         title: 'Stocks & Logistique',
-        icon: Package,
+        icon: ArrowRightLeft,
         href: '#',
         children: [
-            { title: 'Mouvements Stock', href: '#', icon: ArrowRightLeft }, // En attente du contrôleur de stock
-            { title: 'État des stocks', href: '#', icon: LayoutGrid }, // En attente du contrôleur de stock
+            { title: 'Mouvements Stock', href: '#', icon: ArrowRightLeft }, // En attente
+            { title: 'État des stocks', href: '#', icon: LayoutGrid }, // En attente
         ],
     },
 ];
@@ -124,10 +156,10 @@ const configNavItems: NavItem[] = [
             { title: 'Sites & Bâtiments', href: sitesIndex(), icon: MapPin },
             
             // Référentiel Zootechnique
-            { title: 'Espèces', href: speciesIndex(), icon: Dna }, // CORRIGÉ
-            { title: 'Races / Souches', href: breedsIndex(), icon: Component }, // CORRIGÉ
+            { title: 'Espèces', href: speciesIndex(), icon: Dna },
+            { title: 'Races / Souches', href: breedsIndex(), icon: Component },
             { title: 'Standards de Race', href: breedStandardsIndex(), icon: Target },
-            { title: 'Prog. Prophylactiques', href: prophylaxisProgramsIndex(), icon: ShieldPlus }, // CORRIGÉ
+            { title: 'Prog. Prophylactiques', href: prophylaxisProgramsIndex(), icon: ShieldPlus },
             
             // Système
             { title: 'Unités de mesure', href: unitsIndex(), icon: Scale },
