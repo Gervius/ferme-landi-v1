@@ -162,6 +162,37 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('supplier-payments/{supplier_payment}/approve', [\App\Http\Controllers\Purchases\SupplierPaymentController::class, 'approve'])->name('supplierPaymentsApprove');
     });
 
+    // Accounting Endpoints
+    Route::prefix('accounting')->group(function () {
+        Route::resource('financial-years', \App\Http\Controllers\Accounting\FinancialYearController::class)->names([
+            'index'   => 'financialYearsIndex',
+            'create'  => 'financialYearsCreate',
+            'store'   => 'financialYearsStore',
+            'edit'    => 'financialYearsEdit',
+            'update'  => 'financialYearsUpdate',
+            'destroy' => 'financialYearsDestroy',
+        ]);
+        Route::post('financial-years/{financial_year}/close', [\App\Http\Controllers\Accounting\FinancialYearController::class, 'close'])->name('financialYearsClose');
+
+        Route::resource('accounting-journals', \App\Http\Controllers\Accounting\AccountingJournalController::class)->names([
+            'index'   => 'accountingJournalsIndex',
+            'create'  => 'accountingJournalsCreate',
+            'store'   => 'accountingJournalsStore',
+            'edit'    => 'accountingJournalsEdit',
+            'update'  => 'accountingJournalsUpdate',
+            'destroy' => 'accountingJournalsDestroy',
+        ]);
+
+        Route::resource('accounts', \App\Http\Controllers\Accounting\AccountController::class)->names([
+            'index'   => 'accountsIndex',
+            'create'  => 'accountsCreate',
+            'store'   => 'accountsStore',
+            'edit'    => 'accountsEdit',
+            'update'  => 'accountsUpdate',
+            'destroy' => 'accountsDestroy',
+        ]);
+    });
+
     // Zootechnie Endpoints
     Route::prefix('zootechnie')->group(function () {
         Route::resource('generations', GenerationController::class)->names([
