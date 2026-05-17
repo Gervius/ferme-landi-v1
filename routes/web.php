@@ -191,6 +191,33 @@ Route::middleware(['auth', 'verified'])->group(function () {
             'update'  => 'accountsUpdate',
             'destroy' => 'accountsDestroy',
         ]);
+
+        Route::resource('analytical-natures', \App\Http\Controllers\Accounting\AnalyticalNatureController::class)->names([
+            'index'   => 'analyticalNaturesIndex',
+            'create'  => 'analyticalNaturesCreate',
+            'store'   => 'analyticalNaturesStore',
+            'edit'    => 'analyticalNaturesEdit',
+            'update'  => 'analyticalNaturesUpdate',
+            'destroy' => 'analyticalNaturesDestroy',
+        ]);
+
+        Route::resource('analytical-codes', \App\Http\Controllers\Accounting\AnalyticalCodeController::class)->names([
+            'index'   => 'analyticalCodesIndex',
+            'create'  => 'analyticalCodesCreate',
+            'store'   => 'analyticalCodesStore',
+            'edit'    => 'analyticalCodesEdit',
+            'update'  => 'analyticalCodesUpdate',
+            'destroy' => 'analyticalCodesDestroy',
+        ]);
+
+        Route::resource('analytical-centers', \App\Http\Controllers\Accounting\AnalyticalCenterController::class)->names([
+            'index'   => 'analyticalCentersIndex',
+            'create'  => 'analyticalCentersCreate',
+            'store'   => 'analyticalCentersStore',
+            'edit'    => 'analyticalCentersEdit',
+            'update'  => 'analyticalCentersUpdate',
+            'destroy' => 'analyticalCentersDestroy',
+        ]);
     });
 
     // Zootechnie Endpoints
