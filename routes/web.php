@@ -218,6 +218,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
             'update'  => 'analyticalCentersUpdate',
             'destroy' => 'analyticalCentersDestroy',
         ]);
+
+        Route::resource('accounting-entries', \App\Http\Controllers\Accounting\AccountingEntryController::class)->names([
+            'index'   => 'accountingEntriesIndex',
+            'create'  => 'accountingEntriesCreate',
+            'store'   => 'accountingEntriesStore',
+            'edit'    => 'accountingEntriesEdit',
+            'update'  => 'accountingEntriesUpdate',
+            'destroy' => 'accountingEntriesDestroy',
+        ]);
+        Route::post('accounting-entries/{accounting_entry}/approve', [\App\Http\Controllers\Accounting\AccountingEntryController::class, 'approve'])->name('accountingEntriesApprove');
     });
 
     // Zootechnie Endpoints
