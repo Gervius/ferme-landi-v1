@@ -16,6 +16,7 @@ class DatabaseSeeder extends Seeder
             CategorySeeder::class,
             PartnerSeeder::class, // Clients & Fournisseurs
             ZootechnieSeeder::class, // Espèces, Races, Générations
+            AccountingReferentialSeeder::class, // Moteur Comptable
         ]);
     }
 }

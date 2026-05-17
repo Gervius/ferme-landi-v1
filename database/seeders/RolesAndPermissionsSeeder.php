@@ -32,6 +32,9 @@ class RolesAndPermissionsSeeder extends Seeder
             
             // Achats
             'view purchases', 'manage purchases',
+
+            // Comptabilité
+            'manage accounting',
         ];
 
         // Création des permissions en base de données
@@ -59,6 +62,7 @@ class RolesAndPermissionsSeeder extends Seeder
         $comptable->syncPermissions([
             'view sales', 'manage sales',
             'view purchases', 'manage purchases',
+            'manage accounting',
         ]);
 
         $zootechnicien = Role::firstOrCreate(['name' => 'Chef Zootechnicien']);
