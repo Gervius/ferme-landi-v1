@@ -35,6 +35,9 @@ class RolesAndPermissionsSeeder extends Seeder
 
             // Comptabilité
             'manage accounting',
+
+            // Stocks
+            'manage stocks',
         ];
 
         // Création des permissions en base de données
@@ -56,6 +59,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'view breeds', 'view generations', 'view prophylaxis',
             'view sales', 'manage sales',
             'view purchases', 'manage purchases',
+            'manage stocks',
         ]);
 
         $comptable = Role::firstOrCreate(['name' => 'Comptable']);
@@ -77,7 +81,8 @@ class RolesAndPermissionsSeeder extends Seeder
         $magasinier->syncPermissions([
             'view purchases', 'manage purchases',
             'view sales',
-            'view categories', 'view units'
+            'view categories', 'view units',
+            'manage stocks'
         ]);
     }
 }
