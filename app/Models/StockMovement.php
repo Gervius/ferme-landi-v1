@@ -9,12 +9,33 @@ class StockMovement extends Model
 {
     use HasFactory;
 
-    protected $guarded = ['id'];
+    protected $fillable = [
+        'category_id',
+        'type',
+        'quantity',
+        'date',
+        'reference_type',
+        'reference_id',
+        'created_by',
+        'site_id',
+        'unit_id',
+        'notes',
+    ];
 
     protected $casts = [
         'date' => 'date',
         'quantity' => 'decimal:2',
     ];
+
+    public function site()
+    {
+        return $this->belongsTo(Site::class);
+    }
+
+    public function unit()
+    {
+        return $this->belongsTo(Unit::class);
+    }
 
     public function category()
     {

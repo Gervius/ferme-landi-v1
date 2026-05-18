@@ -230,6 +230,17 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('accounting-entries/{accounting_entry}/approve', [\App\Http\Controllers\Accounting\AccountingEntryController::class, 'approve'])->name('accountingEntriesApprove');
     });
 
+    // Stocks Endpoints
+    Route::prefix('stocks')->group(function () {
+        Route::get('stock-balances', [\App\Http\Controllers\Stocks\StockBalanceController::class, 'index'])->name('stockBalancesIndex');
+
+        Route::resource('stock-movements', \App\Http\Controllers\Stocks\StockMovementController::class)->only(['index', 'create', 'store'])->names([
+            'index'   => 'stockMovementsIndex',
+            'create'  => 'stockMovementsCreate',
+            'store'   => 'stockMovementsStore',
+        ]);
+    });
+
     // Zootechnie Endpoints
     Route::prefix('zootechnie')->group(function () {
         Route::resource('generations', GenerationController::class)->names([
