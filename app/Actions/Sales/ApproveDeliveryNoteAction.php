@@ -3,7 +3,7 @@
 namespace App\Actions\Sales;
 
 use App\Models\DeliveryNote;
-use App\Services\Inventory\StockService;
+use App\Actions\Stocks\LogStockMovementAction;
 use App\Services\Logistics\UnitConversionService;
 use Illuminate\Support\Facades\DB;
 
@@ -11,7 +11,7 @@ class ApproveDeliveryNoteAction
 {
     public function __construct(
         private readonly UnitConversionService $unitConversionService,
-        private readonly StockService $stockService
+        private readonly LogStockMovementAction $logStockMovementAction
     ) {
     }
 
@@ -32,16 +32,16 @@ class ApproveDeliveryNoteAction
             $deliveryNote->approve($approverId);
 
             foreach ($deliveryNote->items as $item) {
-                $baseQuantity = $this->unitConversionService->toBase($item->delivered_quantity, $item->unit);
-
-                $this->stockService->recordMovement(
-                    $item->category_id,
-                    'out',
-                    $baseQuantity,
-                    $deliveryNote,
-                    $deliveryNote->delivery_date->format('Y-m-d'),
-                    $approverId
-                );
+                $this->logStockMovementAction->execute([
+                    'site_id' => $deliveryNote->site_id,
+                    'category_id' => $item->category_id,
+                    'unit_id' => $item->unit_id,
+                    'type' => 'out',
+                    'quantity' => $item->delivered_quantity,
+                    'date' => $deliveryNote->delivery_date->format('Y-m-d'),
+                    'reference_type' => get_class($deliveryNote),
+                    'reference_id' => $deliveryNote->id,
+                ], $approverId);
             }
 
             // Optionally, if linked to a SaleOrder, check quantities and update SaleOrder status to 'delivered' or 'partially_delivered'.

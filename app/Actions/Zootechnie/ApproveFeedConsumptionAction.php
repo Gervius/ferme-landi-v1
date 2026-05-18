@@ -3,14 +3,14 @@
 namespace App\Actions\Zootechnie;
 
 use App\Models\FeedConsumption;
-use App\Services\Inventory\StockService;
+use App\Actions\Stocks\LogStockMovementAction;
 use App\Services\Logistics\UnitConversionService;
 
 class ApproveFeedConsumptionAction
 {
     public function __construct(
         private readonly UnitConversionService $unitConversionService,
-        private readonly StockService $stockService
+        private readonly LogStockMovementAction $logStockMovementAction
     ) {
     }
 
@@ -39,14 +39,16 @@ class ApproveFeedConsumptionAction
             $consumption->approve($approverId);
 
             // Mouvement de stock SORTANT sur la catégorie de l'aliment.
-            $this->stockService->recordMovement(
-                $consumption->item_category_id,
-                'out',
-                $totalBaseQuantity,
-                $consumption,
-                $consumption->date->format('Y-m-d'),
-                $approverId
-            );
+            $this->logStockMovementAction->execute([
+                'site_id' => $consumption->generation->site_id,
+                'category_id' => $consumption->item_category_id,
+                'unit_id' => $consumption->unit_id,
+                'type' => 'out',
+                'quantity' => $consumption->quantity,
+                'date' => $consumption->date->format('Y-m-d'),
+                'reference_type' => get_class($consumption),
+                'reference_id' => $consumption->id,
+            ], $approverId);
 
             return $consumption;
         });

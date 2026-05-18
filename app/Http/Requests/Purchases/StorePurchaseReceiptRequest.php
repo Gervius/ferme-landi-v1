@@ -16,6 +16,7 @@ class StorePurchaseReceiptRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'site_id'                       => ['required', 'exists:sites,id'],
             'purchase_order_id'             => ['nullable', 'exists:purchase_orders,id'],
             'receipt_date'                  => ['required', 'date'],
             'reference'                     => ['required', 'string', 'max:255', 'unique:purchase_receipts,reference'],
