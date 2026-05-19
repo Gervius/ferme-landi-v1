@@ -10,6 +10,10 @@ class AnalyticalNature extends Model
 {
     use SoftDeletes;
 
+    public const CODE_SALES = '06';
+    public const CODE_PURCHASES = '04';
+    public const CODE_HEALTH = '05';
+
     protected $fillable = [
         'code',
         'name',

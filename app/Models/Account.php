@@ -9,6 +9,11 @@ class Account extends Model
 {
     use SoftDeletes;
 
+    public const CODE_CLIENTS = '4111';
+    public const CODE_SUPPLIERS = '4011';
+    public const CODE_SALES = '7011';
+    public const CODE_PURCHASES = '6011';
+
     protected $fillable = [
         'number',
         'name',
