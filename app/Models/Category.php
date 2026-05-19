@@ -22,12 +22,18 @@ class Category extends Model
         'slug',
         'scope',
         'is_active',
+        'analytical_code_id',
     ];
 
     protected $casts = [
         'is_active' => 'boolean',
         'scope' => \App\Enums\CategoryScope::class,
     ];
+
+    public function analyticalCode(): BelongsTo
+    {
+        return $this->belongsTo(AnalyticalCode::class, 'analytical_code_id');
+    }
 
     public function parent(): BelongsTo
     {

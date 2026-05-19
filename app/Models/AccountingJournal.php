@@ -9,6 +9,9 @@ class AccountingJournal extends Model
 {
     use SoftDeletes;
 
+    public const CODE_SALES = 'VE';
+    public const CODE_PURCHASES = 'AC';
+
     protected $fillable = [
         'code',
         'name',
