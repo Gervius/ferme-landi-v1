@@ -13,6 +13,7 @@ class AnalyticalNature extends Model
     public const CODE_SALES = '06';
     public const CODE_PURCHASES = '04';
     public const CODE_HEALTH = '05';
+    public const CODE_PAYROLL = '07';
 
     protected $fillable = [
         'code',
