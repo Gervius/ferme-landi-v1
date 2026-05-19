@@ -14,6 +14,7 @@ class StoreSaleOrderRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'site_id' => ['required', 'exists:sites,id'],
             'customer_id' => ['required', 'exists:customers,id'],
             'order_date' => ['required', 'date'],
             'reference' => ['required', 'string', 'unique:sale_orders,reference'],

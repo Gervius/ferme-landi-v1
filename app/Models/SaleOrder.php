@@ -10,11 +10,16 @@ class SaleOrder extends Model
 {
     use HasFactory, SoftDeletes;
 
-    protected $guarded = ['id'];
+    protected $guarded = ["id"];
 
     protected $casts = [
-        'order_date' => 'date',
+        "order_date" => "date",
     ];
+
+    public function site()
+    {
+        return $this->belongsTo(Site::class);
+    }
 
     public function customer()
     {
@@ -28,6 +33,6 @@ class SaleOrder extends Model
 
     public function creator()
     {
-        return $this->belongsTo(User::class, 'created_by');
+        return $this->belongsTo(User::class, "created_by");
     }
 }

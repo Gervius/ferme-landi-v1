@@ -13,11 +13,16 @@ class PurchaseOrder extends Model
 {
     use HasFactory, SoftDeletes, HasApprovalWorkflow;
 
-    protected $guarded = ['id'];
+    protected $guarded = ["id"];
 
     protected $casts = [
-        'order_date' => 'date',
+        "order_date" => "date",
     ];
+
+    public function site(): BelongsTo
+    {
+        return $this->belongsTo(Site::class);
+    }
 
     public function supplier(): BelongsTo
     {
@@ -31,6 +36,6 @@ class PurchaseOrder extends Model
 
     public function creator(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'created_by');
+        return $this->belongsTo(User::class, "created_by");
     }
 }
