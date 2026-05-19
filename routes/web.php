@@ -68,11 +68,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
             'update'  => 'saleOrdersUpdate',
             'destroy' => 'saleOrdersDestroy',
         ]);
+        Route::post('sale-orders/{sale_order}/generate-delivery-note', [\App\Http\Controllers\Sales\SaleOrderController::class, 'generateDeliveryNote'])->name('saleOrdersGenerateDeliveryNote');
 
-        Route::resource('delivery-notes', \App\Http\Controllers\Sales\DeliveryNoteController::class)->only(['index', 'create', 'store'])->names([
+        Route::resource('delivery-notes', \App\Http\Controllers\Sales\DeliveryNoteController::class)->only(['index', 'create', 'store', 'edit', 'update'])->names([
             'index'   => 'deliveryNotesIndex',
             'create'  => 'deliveryNotesCreate',
             'store'   => 'deliveryNotesStore',
+            'edit'    => 'deliveryNotesEdit',
+            'update'  => 'deliveryNotesUpdate',
         ]);
         Route::post('delivery-notes/{delivery_note}/approve', [\App\Http\Controllers\Sales\DeliveryNoteController::class, 'approve'])->name('deliveryNotesApprove');
         Route::get('api/delivery-notes/{delivery_note}', [\App\Http\Controllers\Sales\DeliveryNoteController::class, 'showApi'])->name('apiDeliveryNotesShow');
@@ -137,12 +140,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
             'update'  => 'purchaseOrdersUpdate',
             'destroy' => 'purchaseOrdersDestroy',
         ]);
+        Route::post('purchase-orders/{purchase_order}/generate-receipt', [\App\Http\Controllers\Purchases\PurchaseOrderController::class, 'generateReceipt'])->name('purchaseOrdersGenerateReceipt');
         Route::get('api/purchase-orders/{purchase_order}', [\App\Http\Controllers\Purchases\PurchaseOrderController::class, 'showApi'])->name('apiPurchaseOrdersShow');
 
-        Route::resource('purchase-receipts', \App\Http\Controllers\Purchases\PurchaseReceiptController::class)->only(['index', 'create', 'store'])->names([
+        Route::resource('purchase-receipts', \App\Http\Controllers\Purchases\PurchaseReceiptController::class)->only(['index', 'create', 'store', 'edit', 'update'])->names([
             'index'   => 'purchaseReceiptsIndex',
             'create'  => 'purchaseReceiptsCreate',
             'store'   => 'purchaseReceiptsStore',
+            'edit'    => 'purchaseReceiptsEdit',
+            'update'  => 'purchaseReceiptsUpdate',
         ]);
         Route::post('purchase-receipts/{purchase_receipt}/approve', [\App\Http\Controllers\Purchases\PurchaseReceiptController::class, 'approve'])->name('purchaseReceiptsApprove');
         Route::get('api/purchase-receipts/{purchase_receipt}', [\App\Http\Controllers\Purchases\PurchaseReceiptController::class, 'showApi'])->name('apiPurchaseReceiptsShow');

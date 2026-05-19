@@ -9,6 +9,7 @@ use App\Models\Customer;
 use App\Models\SaleOrder;
 use App\Models\Category;
 use App\Models\Unit;
+use App\Actions\Sales\GenerateDeliveryNoteFromOrderAction;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
@@ -76,5 +77,15 @@ class SaleOrderController extends Controller
         Gate::authorize('delete', $saleOrder);
         $saleOrder->delete();
         return redirect()->route('saleOrdersIndex')->with('success', 'Sale order deleted.');
+    }
+
+    public function generateDeliveryNote(SaleOrder $saleOrder, GenerateDeliveryNoteFromOrderAction $action)
+    {
+        Gate::authorize('update', $saleOrder);
+
+        $deliveryNote = $action->execute($saleOrder, request()->user()->id);
+
+        return redirect()->route('deliveryNotesEdit', $deliveryNote->id)
+            ->with('success', 'Bon de livraison généré avec succès. Veuillez le vérifier.');
     }
 }

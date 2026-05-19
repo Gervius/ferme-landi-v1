@@ -7,26 +7,16 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class PurchaseReceipt extends Model
 {
     use HasFactory, SoftDeletes, HasApprovalWorkflow;
 
-    protected $fillable = [
-        'site_id',
-        'purchase_order_id',
-        'receipt_date',
-        'reference',
-        'status',
-        'prepared_by',
-        'approved_by',
-        'approved_at',
-    ];
+    protected $guarded = ["id"];
 
     protected $casts = [
-        'receipt_date' => 'date',
-        'approved_at' => 'datetime',
+        "receipt_date" => "date",
+        "approved_at" => "datetime",
     ];
 
     public function site(): BelongsTo
@@ -39,13 +29,8 @@ class PurchaseReceipt extends Model
         return $this->belongsTo(PurchaseOrder::class);
     }
 
-    public function items(): HasMany
+    public function items()
     {
         return $this->hasMany(PurchaseReceiptItem::class);
-    }
-
-    public function supplierInvoice()
-    {
-        return $this->hasOne(SupplierInvoice::class);
     }
 }

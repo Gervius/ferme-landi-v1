@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Purchases;
 use App\Actions\Purchases\LogPurchaseOrderAction;
 use App\Actions\Purchases\UpdatePurchaseOrderAction;
 use App\Actions\Purchases\DeletePurchaseOrderAction;
+use App\Actions\Purchases\GenerateReceiptFromOrderAction;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Purchases\StorePurchaseOrderRequest;
 use App\Http\Requests\Purchases\UpdatePurchaseOrderRequest;
@@ -82,6 +83,16 @@ class PurchaseOrderController extends Controller
         Gate::authorize('delete', $purchaseOrder);
         $action->execute($purchaseOrder);
         return redirect()->route('purchaseOrdersIndex')->with('success', 'Purchase order deleted.');
+    }
+
+    public function generateReceipt(PurchaseOrder $purchaseOrder, GenerateReceiptFromOrderAction $action)
+    {
+        Gate::authorize('update', $purchaseOrder);
+
+        $receipt = $action->execute($purchaseOrder, request()->user()->id);
+
+        return redirect()->route('purchaseReceiptsEdit', $receipt->id)
+            ->with('success', 'Bon de réception généré avec succès. Veuillez le vérifier.');
     }
 
     public function showApi(PurchaseOrder $purchaseOrder)
