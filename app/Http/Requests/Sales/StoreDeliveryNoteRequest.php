@@ -14,6 +14,7 @@ class StoreDeliveryNoteRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'site_id' => ['required', 'exists:sites,id'],
             'sale_order_id' => ['nullable', 'exists:sale_orders,id'],
             'delivery_date' => ['required', 'date'],
             'reference' => ['required', 'string', 'unique:delivery_notes,reference'],

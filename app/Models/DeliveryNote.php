@@ -11,12 +11,26 @@ class DeliveryNote extends Model
 {
     use HasFactory, SoftDeletes, HasApprovalWorkflow;
 
-    protected $guarded = ['id'];
+    protected $fillable = [
+        'site_id',
+        'sale_order_id',
+        'delivery_date',
+        'reference',
+        'status',
+        'prepared_by',
+        'approved_by',
+        'approved_at',
+    ];
 
     protected $casts = [
         'delivery_date' => 'date',
         'approved_at' => 'datetime',
     ];
+
+    public function site()
+    {
+        return $this->belongsTo(Site::class);
+    }
 
     public function saleOrder()
     {
