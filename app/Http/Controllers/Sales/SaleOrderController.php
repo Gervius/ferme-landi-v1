@@ -44,6 +44,7 @@ class SaleOrderController extends Controller
         DB::transaction(function () use ($request) {
             $data = $request->validated();
             $order = SaleOrder::create([
+                'site_id' => $data['site_id'],
                 'customer_id' => $data['customer_id'],
                 'order_date' => $data['order_date'],
                 'reference' => $data['reference'],
