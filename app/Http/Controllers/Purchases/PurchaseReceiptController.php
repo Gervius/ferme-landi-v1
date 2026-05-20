@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Purchases;
 
 use App\Actions\Purchases\ApprovePurchaseReceiptAction;
 use App\Actions\Purchases\LogPurchaseReceiptAction;
+use App\Actions\Exports\GeneratePurchaseReceiptPdfAction;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Purchases\StorePurchaseReceiptRequest;
 use App\Models\Category;
@@ -60,5 +61,14 @@ class PurchaseReceiptController extends Controller
         Gate::authorize('view', $purchaseReceipt);
 
         return response()->json($purchaseReceipt->load(['items.category', 'items.unit']));
+    }
+
+    public function downloadPdf(PurchaseReceipt $purchase_receipt, GeneratePurchaseReceiptPdfAction $action)
+    {
+        Gate::authorize('view', $purchase_receipt);
+
+        $pdf = $action->execute($purchase_receipt);
+
+        return $pdf->stream($purchase_receipt->reference . '.pdf');
     }
 }
