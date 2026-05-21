@@ -4,77 +4,60 @@ namespace App\Http\Controllers\Sales;
 
 use App\Actions\Sales\ApproveDeliveryNoteAction;
 use App\Actions\Sales\LogDeliveryNoteAction;
-use App\Actions\Exports\GenerateDeliveryNotePdfAction;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Sales\StoreDeliveryNoteRequest;
 use App\Models\DeliveryNote;
 use App\Models\SaleOrder;
 use App\Models\Category;
 use App\Models\Unit;
-use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
-use Inertia\Response;
 
 class DeliveryNoteController extends Controller
 {
-    public function index(): Response
+    public function index()
     {
-        Gate::authorize("viewAny", DeliveryNote::class);
+        Gate::authorize('viewAny', DeliveryNote::class);
+        $data = DeliveryNote::with('saleOrder.customer')->paginate(15);
+        return Inertia::render('Sales/DeliveryNote/Index', ['data' => $data]);
+    }
 
-        $deliveryNotes = DeliveryNote::with(["saleOrder.customer"])->paginate(15);
+    public function create()
+    {
+        Gate::authorize('create', DeliveryNote::class);
 
-        return Inertia::render("Sales/DeliveryNotes/Index", [
-            "deliveryNotes" => $deliveryNotes,
+        $saleOrders = SaleOrder::whereIn('status', ['validated', 'partially_delivered'])->get(['id', 'reference']);
+        $categories = Category::whereIn('scope', [
+            \App\Enums\CategoryScope::PRODUCT->value,
+            \App\Enums\CategoryScope::ANIMAL->value,
+        ])->get(['id', 'name']);
+        $units = Unit::where('is_active', true)->get(['id', 'name', 'symbol']);
+
+        return Inertia::render('Sales/DeliveryNote/Create', [
+            'saleOrders' => $saleOrders,
+            'categories' => $categories,
+            'units' => $units,
         ]);
     }
 
-    public function create(): Response
-    {
-        Gate::authorize("create", DeliveryNote::class);
-
-        $saleOrders = SaleOrder::where("status", "validated")->get(["id", "reference"]);
-        $categories = Category::get(["id", "name"]);
-        $units = Unit::get(["id", "name", "symbol"]);
-
-        return Inertia::render("Sales/DeliveryNotes/Create", [
-            "saleOrders" => $saleOrders,
-            "categories" => $categories,
-            "units" => $units,
-        ]);
-    }
-
-    public function store(StoreDeliveryNoteRequest $request, LogDeliveryNoteAction $action): RedirectResponse
+    public function store(StoreDeliveryNoteRequest $request, LogDeliveryNoteAction $action)
     {
         $action->execute($request->validated(), $request->user()->id);
-
-        return redirect()->route("deliveryNotesIndex")
-            ->with("success", "Bon de livraison créé avec succès.");
+        return redirect()->route('deliveryNotesIndex')->with('success', 'Delivery note created in draft.');
     }
 
-    public function approve(DeliveryNote $delivery_note, ApproveDeliveryNoteAction $action)
+    public function approve(DeliveryNote $deliveryNote, ApproveDeliveryNoteAction $action)
     {
-        Gate::authorize("update", $delivery_note);
-
-        $action->execute($delivery_note, request()->user()->id);
-
-        return redirect()->route("deliveryNotesIndex")
-            ->with("success", "Bon de livraison validé avec succès.");
+        Gate::authorize('manage sales');
+        $action->execute($deliveryNote, request()->user()->id);
+        return redirect()->route('deliveryNotesIndex')->with('success', 'Delivery note approved and stock updated.');
     }
 
-    public function showApi(DeliveryNote $delivery_note)
+    public function showApi(DeliveryNote $deliveryNote)
     {
-        Gate::authorize("view", $delivery_note);
+        Gate::authorize('view', $deliveryNote);
 
-        return response()->json($delivery_note->load(["items.category", "items.unit"]));
-    }
-
-    public function downloadPdf(DeliveryNote $delivery_note, GenerateDeliveryNotePdfAction $action)
-    {
-        Gate::authorize("view", $delivery_note);
-
-        $pdf = $action->execute($delivery_note);
-
-        return $pdf->stream($delivery_note->reference . ".pdf");
+        // On charge les relations nécessaires pour le Frontend
+        return response()->json($deliveryNote->load(['items.category', 'items.unit']));
     }
 }

@@ -6,7 +6,6 @@ use App\Actions\Purchases\LogPurchaseOrderAction;
 use App\Actions\Purchases\UpdatePurchaseOrderAction;
 use App\Actions\Purchases\DeletePurchaseOrderAction;
 use App\Actions\Purchases\GenerateReceiptFromOrderAction;
-use App\Actions\Exports\GeneratePurchaseOrderPdfAction;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Purchases\StorePurchaseOrderRequest;
 use App\Http\Requests\Purchases\UpdatePurchaseOrderRequest;
@@ -101,14 +100,5 @@ class PurchaseOrderController extends Controller
         Gate::authorize('view', $purchaseOrder);
 
         return response()->json($purchaseOrder->load(['items.category', 'items.unit']));
-    }
-
-    public function downloadPdf(PurchaseOrder $purchaseOrder, GeneratePurchaseOrderPdfAction $action)
-    {
-        Gate::authorize('view', $purchaseOrder);
-
-        $pdf = $action->execute($purchaseOrder);
-
-        return $pdf->stream($purchaseOrder->reference . '.pdf');
     }
 }
