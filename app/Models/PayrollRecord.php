@@ -13,14 +13,14 @@ class PayrollRecord extends Model
     use HasFactory, SoftDeletes, HasApprovalWorkflow;
 
     protected $guarded = ['id'];
+    
 
     protected $casts = [
-        'month' => 'integer',
-        'year' => 'integer',
+        'period_start'         => 'date',
         'base_salary_snapshot' => 'decimal:2',
-        'deductions' => 'decimal:2',
-        'net_salary' => 'decimal:2',
-        'approved_at' => 'datetime',
+        'deductions'           => 'decimal:2',
+        'net_salary'           => 'decimal:2',
+        'approved_at'          => 'datetime',
     ];
 
     public function employee(): BelongsTo

@@ -25,7 +25,10 @@ class AccountingEntryController extends Controller
     {
         Gate::authorize('viewAny', AccountingEntry::class);
 
-        $accountingEntries = AccountingEntry::with(['financialYear', 'accountingJournal'])->orderByDesc('date')->get();
+        // CORRECTION ICI : paginate(15) au lieu de get()
+        $accountingEntries = AccountingEntry::with(['financialYear', 'accountingJournal'])
+            ->orderByDesc('date')
+            ->paginate(15);
 
         return Inertia::render('Accounting/AccountingEntries/Index', [
             'accountingEntries' => $accountingEntries,

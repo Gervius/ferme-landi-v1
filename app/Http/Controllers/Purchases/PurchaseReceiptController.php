@@ -11,6 +11,7 @@ use App\Models\Category;
 use App\Models\PurchaseOrder;
 use App\Models\PurchaseReceipt;
 use App\Models\Unit;
+use App\Models\Site;
 use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 
@@ -35,11 +36,13 @@ class PurchaseReceiptController extends Controller
             \App\Enums\CategoryScope::EQUIPMENT->value,
         ])->get(['id', 'name']);
         $units = Unit::where('is_active', true)->get(['id', 'name', 'symbol']);
+        $sites = Site::where('is_active', true)->select('id', 'name')->get();
 
         return Inertia::render('Purchases/PurchaseReceipt/Create', [
             'purchaseOrders' => $purchaseOrders,
             'categories'     => $categories,
             'units'          => $units,
+            'sites'      => $sites,
         ]);
     }
 

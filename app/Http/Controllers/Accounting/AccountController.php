@@ -20,12 +20,13 @@ class AccountController extends Controller
     {
         Gate::authorize('viewAny', Account::class);
 
-        $accounts = Account::orderBy('number')->get();
+        $accounts = Account::orderBy('number')->paginate(15); 
 
         return Inertia::render('Accounting/Accounts/Index', [
             'accounts' => $accounts,
         ]);
     }
+    
 
     public function create(): Response
     {

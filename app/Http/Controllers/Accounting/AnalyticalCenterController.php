@@ -22,10 +22,17 @@ class AnalyticalCenterController extends Controller
     {
         Gate::authorize('viewAny', AnalyticalCenter::class);
 
-        $analyticalCenters = AnalyticalCenter::with(['nature', 'analyticalCode'])->orderBy('name')->get();
+        // 1. Pagination au lieu de get()
+        $analyticalCenters = AnalyticalCenter::with(['nature', 'analyticalCode'])->orderBy('name')->paginate(15);
+
+        // 2. Chargement des listes pour les select de la modale
+        $natures = \App\Models\AnalyticalNature::select('id', 'code', 'name')->where('is_active', true)->get();
+        $codes = \App\Models\AnalyticalCode::select('id', 'code', 'short_name', 'name')->where('is_active', true)->get();
 
         return Inertia::render('Accounting/AnalyticalCenters/Index', [
             'analyticalCenters' => $analyticalCenters,
+            'natures' => $natures,
+            'codes' => $codes,
         ]);
     }
 

@@ -1,203 +1,200 @@
-import React from 'react';
-import { Head, useForm, router } from '@inertiajs/react';
-import { Breadcrumbs } from '@/components/breadcrumbs';
-import { 
-    CalendarCheck, 
-    Clock, 
-    AlertCircle, 
-    CheckCircle2, 
-    ShieldPlus,
-    XCircle,
-    Filter
-} from 'lucide-react';
+// pages/Zootechnie/ScheduledTreatment/Index.tsx
+import React, { useMemo } from 'react';
+import { Link, router } from '@inertiajs/react';
+import { CalendarCheck, CheckCircle2, Clock, AlertCircle, Syringe, Filter, XCircle } from 'lucide-react';
 import { scheduledTreatmentsIndex, scheduledTreatmentsMarkAsDone } from '@/routes';
+import { getGenerationDisplay } from '@/utils/zootechnieStrategy';
+import { PaginatedData } from '@/types/pagination';
 
 interface ScheduledTreatment {
     id: number;
     scheduled_date: string;
-    status: 'pending' | 'completed' | 'missed';
-    generation: {
-        id: number;
-        code: string;
-        type: string;
-    };
+    status: 'pending' | 'completed';
+    generation: { id: number; code: string; type: string };
     step: {
         description: string;
-        alert_days_before: number;
-        medicationCategory?: {
-            name: string;
-        };
+        day_offset: number;
+        medicationCategory: { name: string };
     };
-}
-
-interface Generation {
-    id: number;
-    code: string;
-    type: string;
 }
 
 interface Props {
-    treatments: {
-        data: ScheduledTreatment[];
-        links: any[]; // Pour la pagination d'Inertia
-    };
-    filters?: {
-        generation_id?: string;
-    };
-    generations?: Generation[]; // La variable que Jules doit ajouter
+    treatments: PaginatedData<ScheduledTreatment>;
+    filters: { generation_id?: string };
+    generations: { id: number; code: string; type: string }[];
 }
 
-export default function ScheduledTreatmentIndex({ treatments, filters, generations = [] }: Props) {
-    const { post, processing } = useForm();
-
-    const breadcrumbs = [
-        { title: 'Zootechnie', href: '#' },
-        { title: 'Calendrier Sanitaire', href: '#' },
-    ];
-
-    // Marquer comme fait (Appel de la route définie dans web.php)
-    const handleMarkAsDone = (id: number) => {
-        if (confirm('Confirmer l\'administration de ce traitement préventif ?')) {
-            // Utilisation du helper route() de Ziggy
-            post(scheduledTreatmentsMarkAsDone.url(id));
-        }
-    };
-
-    // Gestion du filtre interactif
-    const handleFilterChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-        const generationId = e.target.value;
-        router.get(scheduledTreatmentsIndex.url(), 
-            { generation_id: generationId }, 
+export default function Index({ treatments, filters, generations }: Props) {
+    
+    // Filtrage dynamique au changement de lot
+    const handleFilterChange = (generationId: string) => {
+        router.get(
+            scheduledTreatmentsIndex.url(),
+            { generation_id: generationId || undefined },
             { preserveState: true, preserveScroll: true }
         );
     };
 
-    // Calcul d'imminence pour les alertes visuelles
-    const isApproaching = (dateString: string, alertDays: number) => {
-        const scheduledDate = new Date(dateString);
+    // Action pour valider un soin
+    const handleMarkAsDone = (id: number) => {
+        if (confirm("Confirmez-vous que ce traitement a bien été administré au lot ?")) {
+            router.post(scheduledTreatmentsMarkAsDone.url(id), {}, { preserveScroll: true });
+        }
+    };
+
+    // Fonction utilitaire pour déterminer le statut temporel (En retard, Aujourd'hui, À venir)
+    const getTimingStatus = (dateString: string, status: string) => {
+        if (status === 'completed') return { label: 'Terminé', color: 'text-muted-foreground', bg: 'bg-muted', icon: CheckCircle2 };
+        
         const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const scheduledDate = new Date(dateString);
+        scheduledDate.setHours(0, 0, 0, 0);
+
         const diffTime = scheduledDate.getTime() - today.getTime();
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        return diffDays >= 0 && diffDays <= alertDays;
+
+        if (diffDays < 0) return { label: `${Math.abs(diffDays)}j de retard`, color: 'text-destructive', bg: 'bg-destructive/10 border-destructive/20', icon: AlertCircle };
+        if (diffDays === 0) return { label: "Aujourd'hui", color: 'text-primary', bg: 'bg-primary/10 border-primary/20', icon: Clock };
+        if (diffDays === 1) return { label: "Demain", color: 'text-secondary', bg: 'bg-secondary/10 border-border', icon: Clock };
+        
+        return { label: `Dans ${diffDays}j`, color: 'text-foreground', bg: 'bg-card border-border', icon: Clock };
     };
 
     return (
-        <div className="p-6 space-y-6">
-            <Head title="Ferme-Landi | Prophylaxie" />
+        <div className="p-6 max-w-5xl mx-auto space-y-6 bg-background">
             
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                <Breadcrumbs breadcrumbs={breadcrumbs} />
-                
-                {/* Le Filtre par Lot */}
-                <div className="flex items-center gap-2 bg-card p-2 rounded-lg border border-border shadow-sm text-sm">
-                    <Filter className="w-4 h-4 text-muted-foreground ml-1" />
-                    <span className="font-bold uppercase text-muted-foreground text-xs">Filtrer :</span>
+            {/* Header & Filtres */}
+            <div className="flex flex-col md:flex-row justify-between md:items-end gap-6 mb-8">
+                <div>
+                    <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
+                        <CalendarCheck className="text-primary" /> Calendrier Sanitaire
+                    </h1>
+                    <p className="text-muted-foreground text-sm mt-1">
+                        Suivez et validez les interventions préventives générées par vos programmes de prophylaxie.
+                    </p>
+                </div>
+
+                {/* Filtre par Lot */}
+                <div className="flex items-center gap-2 bg-card border border-border p-2 rounded-xl shadow-sm">
+                    <Filter size={16} className="text-muted-foreground ml-2" />
                     <select
-                        value={filters?.generation_id || ''}
-                        onChange={handleFilterChange}
-                        className="bg-background border-none font-bold focus:ring-0 cursor-pointer outline-none text-primary"
+                        value={filters.generation_id || ''}
+                        onChange={(e) => handleFilterChange(e.target.value)}
+                        className="bg-transparent border-none text-sm font-medium focus:ring-0 text-foreground pr-8 cursor-pointer"
                     >
-                        <option value="">Tous les lots</option>
+                        <option value="">Tous les lots actifs</option>
                         {generations.map(gen => (
-                            <option key={gen.id} value={gen.id}>{gen.code} ({gen.type})</option>
+                            <option key={gen.id} value={gen.id}>{gen.code}</option>
                         ))}
                     </select>
+                    {filters.generation_id && (
+                        <button onClick={() => handleFilterChange('')} className="p-1 hover:text-destructive transition-colors text-muted-foreground">
+                            <XCircle size={16} />
+                        </button>
+                    )}
                 </div>
             </div>
 
-            <div className="bg-card rounded-xl border border-border shadow-md overflow-hidden text-sm">
-                <div className="p-4 border-b border-border bg-muted/30 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                        <ShieldPlus className="w-5 h-5 text-primary" />
-                        <h2 className="font-bold text-lg text-foreground">Programme Sanitaire des Lots</h2>
+            {/* Liste des Tâches (Timeline) */}
+            <div className="space-y-4">
+                {treatments.data.length > 0 ? (
+                    treatments.data.map((treatment) => {
+                        const { Icon: GenIcon, colorClass: genColor } = getGenerationDisplay(treatment.generation.type);
+                        const timing = getTimingStatus(treatment.scheduled_date, treatment.status);
+
+                        return (
+                            <div 
+                                key={treatment.id} 
+                                className={`flex flex-col md:flex-row md:items-center justify-between p-4 rounded-xl border transition-all ${
+                                    treatment.status === 'completed' ? 'bg-muted/30 border-border opacity-70' : `bg-card shadow-sm hover:shadow-md ${timing.bg}`
+                                }`}
+                            >
+                                {/* Info principale */}
+                                <div className="flex items-start gap-4">
+                                    <div className={`p-3 rounded-full mt-1 ${treatment.status === 'completed' ? 'bg-muted text-muted-foreground' : 'bg-primary/10 text-primary'}`}>
+                                        <Syringe size={20} />
+                                    </div>
+                                    <div>
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <timing.icon size={16} className={timing.color} />
+                                            <span className={`text-sm font-bold ${timing.color}`}>
+                                                {timing.label} • {new Date(treatment.scheduled_date).toLocaleDateString()}
+                                            </span>
+                                        </div>
+                                        <h3 className={`text-lg font-bold ${treatment.status === 'completed' ? 'text-muted-foreground line-through' : 'text-foreground'}`}>
+                                            {treatment.step.medicationCategory?.name}
+                                        </h3>
+                                        <p className="text-sm text-muted-foreground mt-0.5">
+                                            {treatment.step.description || "Aucune description fournie"}
+                                        </p>
+                                        
+                                        <div className="flex items-center gap-2 mt-3">
+                                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-muted text-xs font-bold text-card-foreground">
+                                                <GenIcon size={12} className={genColor} />
+                                                Lot {treatment.generation.code}
+                                            </span>
+                                            <span className="text-xs text-muted-foreground">
+                                                (Prévu à J+{treatment.step.day_offset})
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Action */}
+                                <div className="mt-4 md:mt-0 flex justify-end shrink-0">
+                                    {treatment.status === 'pending' ? (
+                                        <button
+                                            onClick={() => handleMarkAsDone(treatment.id)}
+                                            className="flex items-center gap-2 bg-primary text-primary-foreground px-5 py-2.5 rounded-lg text-sm font-bold hover:bg-primary/90 transition-all shadow-sm"
+                                        >
+                                            <CheckCircle2 size={18} />
+                                            Marquer comme fait
+                                        </button>
+                                    ) : (
+                                        <span className="flex items-center gap-1.5 text-sm font-bold text-muted-foreground bg-muted px-4 py-2 rounded-lg">
+                                            <CheckCircle2 size={16} /> Fait
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
+                        );
+                    })
+                ) : (
+                    <div className="flex flex-col items-center justify-center py-20 bg-card border border-border border-dashed rounded-xl">
+                        <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4">
+                            <CalendarCheck className="text-muted-foreground opacity-50" size={32} />
+                        </div>
+                        <h3 className="text-xl font-bold text-foreground">Aucun traitement prévu</h3>
+                        <p className="text-muted-foreground mt-2 max-w-md text-center">
+                            Il n'y a aucune intervention sanitaire planifiée pour le moment.
+                        </p>
+                    </div>
+                )}
+            </div>
+
+            {/* Pagination simple (Remplacement du DataTable) */}
+            {treatments.last_page > 1 && (
+                <div className="flex items-center justify-between bg-card p-4 rounded-xl border border-border shadow-sm">
+                    <span className="text-sm text-muted-foreground">
+                        Affichage de {treatments.from} à {treatments.to} sur {treatments.total} tâches
+                    </span>
+                    <div className="flex gap-1">
+                        {treatments.links.map((link, index) => (
+                            <Link
+                                key={index}
+                                href={link.url || '#'}
+                                className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+                                    !link.url ? 'opacity-50 cursor-not-allowed text-muted-foreground' :
+                                    link.active ? 'bg-primary text-primary-foreground font-bold' : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                                }`}
+                                dangerouslySetInnerHTML={{ __html: link.label }}
+                                preserveScroll
+                            />
+                        ))}
                     </div>
                 </div>
-                
-                <table className="w-full text-left border-collapse">
-                    <thead className="bg-muted/50 border-b border-border text-xs uppercase tracking-wider font-semibold text-muted-foreground">
-                        <tr>
-                            <th className="px-6 py-4">Date Prévue</th>
-                            <th className="px-6 py-4">Génération (Lot)</th>
-                            <th className="px-6 py-4">Intervention Prévue</th>
-                            <th className="px-6 py-4">Statut</th>
-                            <th className="px-6 py-4 text-right">Action</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border">
-                        {treatments.data.length === 0 ? (
-                            <tr>
-                                <td colSpan={5} className="px-6 py-12 text-center">
-                                    <ShieldPlus className="w-10 h-10 text-muted-foreground mx-auto mb-3 opacity-30" />
-                                    <p className="text-muted-foreground font-medium">Aucun traitement programmé.</p>
-                                    <p className="text-xs text-muted-foreground mt-1">Les traitements se génèrent automatiquement à la création d'un lot.</p>
-                                </td>
-                            </tr>
-                        ) : (
-                            treatments.data.map((treatment) => {
-                                const approaching = treatment.status === 'pending' && isApproaching(treatment.scheduled_date, treatment.step.alert_days_before);
-                                
-                                return (
-                                    <tr key={treatment.id} className="hover:bg-muted/30 transition-colors">
-                                        <td className="px-6 py-4">
-                                            <div className={`font-bold ${treatment.status === 'missed' ? 'text-destructive' : 'text-foreground'}`}>
-                                                {new Date(treatment.scheduled_date).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'short' })}
-                                            </div>
-                                            {approaching && (
-                                                <span className="text-[10px] text-orange-600 bg-orange-500/10 px-2 py-0.5 rounded font-black uppercase flex items-center w-fit gap-1 mt-1 border border-orange-500/20">
-                                                    <AlertCircle className="w-3 h-3" /> Imminent
-                                                </span>
-                                            )}
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <div className="font-bold text-foreground">{treatment.generation.code}</div>
-                                            <div className="text-[10px] text-muted-foreground uppercase">{treatment.generation.type}</div>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <p className="font-bold text-secondary-foreground">{treatment.step.description}</p>
-                                            {treatment.step.medicationCategory && (
-                                                <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
-                                                    Catégorie : {treatment.step.medicationCategory.name}
-                                                </p>
-                                            )}
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            {/* Badges de statut */}
-                                            {treatment.status === 'completed' && (
-                                                <span className="px-2.5 py-1 rounded-full text-[10px] font-bold flex items-center w-fit gap-1 bg-primary/10 text-primary border border-primary/20">
-                                                    <CheckCircle2 className="w-3 h-3" /> TERMINÉ
-                                                </span>
-                                            )}
-                                            {treatment.status === 'pending' && (
-                                                <span className="px-2.5 py-1 rounded-full text-[10px] font-bold flex items-center w-fit gap-1 bg-orange-500/10 text-orange-600 border border-orange-500/20">
-                                                    <Clock className="w-3 h-3" /> EN ATTENTE
-                                                </span>
-                                            )}
-                                            {treatment.status === 'missed' && (
-                                                <span className="px-2.5 py-1 rounded-full text-[10px] font-bold flex items-center w-fit gap-1 bg-destructive/10 text-destructive border border-destructive/20">
-                                                    <XCircle className="w-3 h-3" /> MANQUÉ
-                                                </span>
-                                            )}
-                                        </td>
-                                        <td className="px-6 py-4 text-right">
-                                            {treatment.status === 'pending' && (
-                                                <button
-                                                    onClick={() => handleMarkAsDone(treatment.id)}
-                                                    disabled={processing}
-                                                    className="bg-primary text-primary-foreground px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-primary/90 transition shadow-sm disabled:opacity-50 flex items-center gap-1.5 ml-auto"
-                                                    title="Marquer comme administré"
-                                                >
-                                                    <CalendarCheck className="w-4 h-4" />
-                                                    Valider
-                                                </button>
-                                            )}
-                                        </td>
-                                    </tr>
-                                );
-                            })
-                        )}
-                    </tbody>
-                </table>
-            </div>
+            )}
         </div>
     );
 }

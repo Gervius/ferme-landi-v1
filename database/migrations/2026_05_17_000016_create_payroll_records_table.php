@@ -11,14 +11,16 @@ return new class extends Migration
         Schema::create('payroll_records', function (Blueprint $table) {
             $table->id();
             $table->foreignId('employee_id')->constrained()->cascadeOnDelete();
-            $table->unsignedTinyInteger('month');
-            $table->unsignedInteger('year');
+            
+            // L'optimisation est ici : on remplace month/year par une date standard
+            $table->date('period_start');
+            
             $table->decimal('base_salary_snapshot', 10, 2);
             $table->decimal('deductions', 10, 2)->default(0);
             $table->text('deduction_reason')->nullable();
             $table->decimal('net_salary', 10, 2);
 
-            // Workflow columns
+            // Workflow
             $table->string('status')->default('draft');
             $table->foreignId('prepared_by')->constrained('users');
             $table->foreignId('approved_by')->nullable()->constrained('users');

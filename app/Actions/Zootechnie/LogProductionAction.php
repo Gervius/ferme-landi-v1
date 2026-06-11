@@ -3,6 +3,7 @@
 namespace App\Actions\Zootechnie;
 
 use App\Models\DailyProduction;
+use Illuminate\Support\Facades\DB;
 
 class LogProductionAction
 {
@@ -15,17 +16,18 @@ class LogProductionAction
      */
     public function execute(array $data, int $userId): DailyProduction
     {
-        $production = new DailyProduction();
-        $production->generation_id = $data['generation_id'];
-        $production->date = $data['date'];
-        $production->unit_id = $data['unit_id'];
-        $production->item_category_id = $data['item_category_id'] ?? null;
-        $production->good_quantity = $data['good_quantity'];
-        $production->broken_quantity = $data['broken_quantity'];
-        $production->prepared_by = $userId;
-        $production->status = 'draft';
-        $production->save();
-
-        return $production;
+        return DB::transaction(function () use ($data, $userId) {
+            return DailyProduction::create([
+                'generation_id' => $data['generation_id'],
+                'date' => $data['date'],
+                'unit_id' => $data['unit_id'],
+                'item_category_id' => $data['item_category_id'] ?? null,
+                'good_quantity' => $data['good_quantity'],
+                'broken_quantity' => $data['broken_quantity'],
+                'prepared_by' => $userId,
+                // L'idéal serait d'avoir une constante dans ton modèle : DailyProduction::STATUS_DRAFT
+                'status' => 'draft', 
+            ]);
+        });
     }
 }

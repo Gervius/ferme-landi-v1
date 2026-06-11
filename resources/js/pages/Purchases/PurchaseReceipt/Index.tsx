@@ -1,136 +1,123 @@
+// pages/Purchases/PurchaseReceipt/Index.tsx
 import React from 'react';
-import { Head, Link, useForm } from '@inertiajs/react';
-import { Breadcrumbs } from '@/components/breadcrumbs';
-import { 
-    Plus, 
-    PackageOpen, 
-    CheckCircle2, 
-    Clock, 
-    Check,
-    Hash,
-    CalendarDays
-} from 'lucide-react';
-import { purchaseReceiptsCreate, purchaseReceiptsApprove } from '@/routes';
+import { Link, router } from '@inertiajs/react';
+import { Plus, Edit2, PackageOpen, CheckCircle, Clock, FileDown, ArrowDownToLine } from 'lucide-react';
+import { purchaseReceiptsCreate, purchaseReceiptsEdit, purchaseReceiptsApprove, purchaseReceiptsPdf } from '@/routes';
+import { PaginatedData } from '@/types/pagination';
+import { DataTable, ColumnDef } from '@/components/ui/DataTable';
 
 interface PurchaseReceipt {
     id: number;
     reference: string;
     receipt_date: string;
-    status: 'draft' | 'approved';
-    purchase_order?: {
-        reference: string;
-    };
+    status: 'draft' | 'approved'; // Géré par les actions backend
+    purchase_order?: { id: number; reference: string } | null;
 }
 
 interface Props {
-    data: {
-        data: PurchaseReceipt[];
-        links: any[];
-    };
+    data: PaginatedData<PurchaseReceipt>;
 }
 
-export default function PurchaseReceiptIndex({ data }: Props) {
-    const { post, processing } = useForm();
-
-    const breadcrumbs = [
-        { title: 'Achats & Stocks', href: '#' },
-        { title: 'Bons de Réception', href: '#' },
-    ];
-
+export default function Index({ data }: Props) {
+    
+    // Déclenche l'action d'approbation et l'incrémentation physique des stocks
     const handleApprove = (id: number) => {
-        if (confirm('Approuver cette réception ? Cela ajoutera définitivement les quantités au stock.')) {
-            post(purchaseReceiptsApprove.url(id));
+        if (confirm("Confirmez-vous la réception de ces marchandises ? Cette action mettra immédiatement à jour vos niveaux de stocks réels.")) {
+            router.post(purchaseReceiptsApprove.url(id), {}, { preserveScroll: true });
         }
     };
 
+    const columns: ColumnDef<PurchaseReceipt>[] = [
+        { 
+            header: 'Bon de Réception', 
+            cell: (item) => <span className="font-bold text-foreground">{item.reference}</span> 
+        },
+        { 
+            header: 'Date Réception', 
+            cell: (item) => new Date(item.receipt_date).toLocaleDateString() 
+        },
+        { 
+            header: 'Commande d\'Origine', 
+            cell: (item) => item.purchase_order ? (
+                <span className="font-medium text-secondary bg-secondary/10 px-2 py-0.5 rounded text-xs">
+                    {item.purchase_order.reference}
+                </span>
+            ) : (
+                <span className="text-muted-foreground text-xs italic">Réception Directe (Sans commande)</span>
+            )
+        },
+        { 
+            header: 'Statut', 
+            cell: (item) => (
+                <span className={`inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold rounded-full border ${
+                    item.status === 'approved' 
+                        ? 'bg-primary/10 text-primary border-primary/20' 
+                        : 'bg-muted text-muted-foreground border-border'
+                }`}>
+                    {item.status === 'approved' ? <CheckCircle size={12} /> : <Clock size={12} />}
+                    {item.status === 'approved' ? 'Approuvé (En Stock)' : 'Brouillon'}
+                </span>
+            )
+        },
+        {
+            header: 'Actions',
+            className: 'text-right',
+            cell: (item) => (
+                <div className="flex items-center justify-end gap-2">
+                    {/* Lien PDF natif */}
+                    <a 
+                        href={purchaseReceiptsPdf.url(item.id)} 
+                        target="_blank" 
+                        rel="noreferrer"
+                        className="p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground rounded-lg transition-colors"
+                        title="Imprimer le bon de réception"
+                    >
+                        <FileDown size={16} />
+                    </a>
+
+                    {item.status === 'draft' ? (
+                        <>
+                            <button
+                                onClick={() => handleApprove(item.id)}
+                                className="bg-primary text-primary-foreground text-xs font-bold px-3 py-1.5 rounded-md hover:bg-primary/90 transition-colors shadow-sm"
+                            >
+                                Valider Stock
+                            </button>
+                            <Link 
+                                href={purchaseReceiptsEdit.url(item.id)} 
+                                className="p-1.5 hover:bg-muted text-muted-foreground hover:text-secondary rounded-lg transition-colors"
+                            >
+                                <Edit2 size={16} />
+                            </Link>
+                        </>
+                    ) : (
+                        <span className="text-xs text-muted-foreground italic px-2">Verrouillé</span>
+                    )}
+                </div>
+            )
+        }
+    ];
+
     return (
-        <div className="p-6 space-y-6">
-            <Head title="Ferme-Landi | Réceptions" />
-            
-            <div className="flex justify-between items-start">
-                <Breadcrumbs breadcrumbs={breadcrumbs} />
-                <Link
-                    href={purchaseReceiptsCreate.url()}
-                    className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg font-semibold transition shadow-sm"
+        <div className="p-6 max-w-7xl mx-auto space-y-6 bg-background">
+            <div className="flex justify-between items-center mb-4">
+                <div>
+                    <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
+                        <PackageOpen className="text-secondary" /> Réceptions de Stocks & Logistique
+                    </h1>
+                    <p className="text-muted-foreground text-sm mt-1">
+                        Suivez les entrées de marchandises en magasin et validez les livraisons fournisseurs.
+                    </p>
+                </div>
+                <Link 
+                    href={purchaseReceiptsCreate.url()} 
+                    className="flex items-center gap-2 bg-secondary text-secondary-foreground px-5 py-2.5 rounded-xl font-bold shadow-sm hover:opacity-90 transition-opacity"
                 >
-                    <Plus className="w-4 h-4" />
-                    Nouvelle Réception
+                    <Plus size={18} /> Réceptionner Marchandise
                 </Link>
             </div>
 
-            <div className="bg-card rounded-xl border border-border shadow-md overflow-hidden text-sm">
-                <div className="p-4 border-b border-border bg-emerald-500/10 flex items-center gap-2">
-                    <PackageOpen className="w-5 h-5 text-emerald-600" />
-                    <h2 className="font-bold text-lg text-foreground">Suivi des Arrivages (Entrées de Stock)</h2>
-                </div>
-
-                <table className="w-full text-left border-collapse">
-                    <thead className="bg-muted/50 border-b border-border text-xs uppercase tracking-wider font-semibold text-muted-foreground">
-                        <tr>
-                            <th className="px-6 py-4">Réf. Réception</th>
-                            <th className="px-6 py-4">Commande Source</th>
-                            <th className="px-6 py-4">Date de Réception</th>
-                            <th className="px-6 py-4">Statut</th>
-                            <th className="px-6 py-4 text-right">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border">
-                        {data.data.length === 0 ? (
-                            <tr>
-                                <td colSpan={5} className="px-6 py-8 text-center text-muted-foreground italic">
-                                    Aucun bon de réception enregistré.
-                                </td>
-                            </tr>
-                        ) : (
-                            data.data.map((receipt) => (
-                                <tr key={receipt.id} className="hover:bg-muted/30 transition-colors">
-                                    <td className="px-6 py-4">
-                                        <div className="font-black text-foreground">{receipt.reference}</div>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        {receipt.purchase_order ? (
-                                            <div className="flex items-center gap-1.5 text-foreground font-medium">
-                                                <Hash className="w-3.5 h-3.5 text-muted-foreground" />
-                                                {receipt.purchase_order.reference}
-                                            </div>
-                                        ) : (
-                                            <span className="text-muted-foreground italic text-xs">Réception libre</span>
-                                        )}
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <div className="flex items-center gap-1.5 font-medium">
-                                            <CalendarDays className="w-4 h-4 text-muted-foreground" />
-                                            {new Date(receipt.receipt_date).toLocaleDateString('fr-FR')}
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold flex items-center w-fit gap-1 border ${
-                                            receipt.status === 'approved' 
-                                            ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' 
-                                            : 'bg-muted text-muted-foreground border-border'
-                                        }`}>
-                                            {receipt.status === 'approved' ? <CheckCircle2 className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
-                                            {receipt.status.toUpperCase()}
-                                        </span>
-                                    </td>
-                                    <td className="px-6 py-4 text-right">
-                                        {receipt.status === 'draft' && (
-                                            <button
-                                                onClick={() => handleApprove(receipt.id)}
-                                                disabled={processing}
-                                                className="bg-emerald-600 text-white p-1.5 rounded-md hover:bg-emerald-700 transition shadow-sm"
-                                                title="Approuver et mettre en stock"
-                                            >
-                                                <Check className="w-4 h-4" />
-                                            </button>
-                                        )}
-                                    </td>
-                                </tr>
-                            ))
-                        )}
-                    </tbody>
-                </table>
-            </div>
+            <DataTable data={data} columns={columns} emptyMessage="Aucun bon de réception de stock enregistré." />
         </div>
     );
 }

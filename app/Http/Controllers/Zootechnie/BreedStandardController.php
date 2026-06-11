@@ -20,21 +20,15 @@ class BreedStandardController extends Controller
 
         $standards = BreedStandard::with('breed')->paginate(15);
 
-        return Inertia::render('Zootechnie/BreedStandard/Index', [
-            'standards' => $standards,
-        ]);
-    }
-
-    public function create(): Response
-    {
-        Gate::authorize('create', BreedStandard::class);
-
         $breeds = Breed::where('is_active', true)->select('id', 'name')->get();
 
-        return Inertia::render('Zootechnie/BreedStandard/Create', [
-            'breeds' => $breeds,
+        return Inertia::render('Zootechnie/BreedStandard/Index', [
+            'standards' => $standards,
+            'breeds' => $breeds, // Injection ici
         ]);
     }
+
+    
 
     public function store(StoreBreedStandardRequest $request): RedirectResponse
     {

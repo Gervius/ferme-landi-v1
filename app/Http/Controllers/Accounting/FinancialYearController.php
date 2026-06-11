@@ -21,7 +21,8 @@ class FinancialYearController extends Controller
     {
         Gate::authorize('viewAny', FinancialYear::class);
 
-        $financialYears = FinancialYear::orderByDesc('year')->get();
+        // CORRECTION : On utilise la pagination pour la performance !
+        $financialYears = FinancialYear::orderByDesc('year')->paginate(15);
 
         return Inertia::render('Accounting/FinancialYears/Index', [
             'financialYears' => $financialYears,

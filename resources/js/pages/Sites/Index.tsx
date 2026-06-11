@@ -1,165 +1,163 @@
-import React from 'react';
-import { Head, Link, useForm } from '@inertiajs/react';
-import { sitesCreate, sitesDestroy, sitesEdit } from '@/routes';
-
-// 1. Définition des Interfaces TypeScript
-interface Company {
-    id: number;
-    name: string;
-}
+// pages/Sites/Index.tsx
+import React, { useState } from 'react';
+import { router, useForm } from '@inertiajs/react';
+import { Plus, Edit2, Trash2, MapPin, CheckCircle, XCircle, Building2 } from 'lucide-react';
+import { sitesStore, sitesUpdate, sitesDestroy } from '@/routes';
+import { PaginatedData } from '@/types/pagination';
+import { DataTable, ColumnDef } from '@/components/ui/DataTable';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 interface Site {
     id: number;
-    code: string;
     name: string;
-    type: string;
-    address: string | null;
     is_active: boolean;
-    company: Company;
-}
-
-interface PaginationLink {
-    url: string | null;
-    label: string;
-    active: boolean;
+    company: { id: number; name: string };
 }
 
 interface Props {
-    sites: {
-        data: Site[];
-        links: PaginationLink[];
-    };
-    flash?: {
-        success?: string;
-    };
+    sites: PaginatedData<Site>;
+    companies: { id: number; name: string }[];
+    siteTypes: { value: string; label: string }[];
 }
 
-export default function SiteIndex({ sites, flash = {} }: Props) {
-    const { delete: destroy } = useForm();
+export default function Index({ sites, companies, siteTypes }: Props) {
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [editingId, setEditingId] = useState<number | null>(null);
 
-    // Fonction pour gérer la suppression avec confirmation
+    const { data, setData, post, put, processing, errors, reset } = useForm({
+        company_id: '',
+        name: '',
+        type: siteTypes.length > 0 ? siteTypes[0].value : '',
+        is_active: true,
+    });
+
+    const openCreateModal = () => {
+        setEditingId(null);
+        reset();
+        setIsModalOpen(true);
+    };
+
+    const openEditModal = (item: Site) => {
+        setEditingId(item.id);
+        setData({
+            company_id: item.company?.id?.toString() || '',
+            name: item.name,
+            is_active: Boolean(item.is_active),
+        });
+        setIsModalOpen(true);
+    };
+
     const handleDelete = (id: number) => {
-        if (confirm('Êtes-vous sûr de vouloir désactiver ce site pour Ferme-Landi ?')) {
-            destroy(sitesDestroy.url(id));
+        if (confirm("Supprimer ce site ? Cela impactera les lots et le stock rattachés.")) {
+            router.delete(sitesDestroy.url(id), { preserveScroll: true });
         }
     };
 
-    // Fonction utilitaire pour le formatage du type de site
-    const formatType = (type: string) => {
-        return type.replace('_', ' ').toUpperCase();
+    const handleSubmit = (e: React.SubmitEvent) => {
+        e.preventDefault();
+        if (editingId) {
+            put(sitesUpdate.url(editingId), { onSuccess: () => { setIsModalOpen(false); reset(); }});
+        } else {
+            post(sitesStore.url(), { onSuccess: () => { setIsModalOpen(false); reset(); }});
+        }
     };
 
+    const columns: ColumnDef<Site>[] = [
+        { header: 'Nom du Site', accessorKey: 'name', className: 'font-bold text-foreground' },
+        { 
+            header: 'Entreprise affiliée', 
+            cell: (item) => (
+                <span className="flex items-center gap-1.5 text-muted-foreground font-medium">
+                    <Building2 size={14} /> {item.company?.name || 'N/A'}
+                </span>
+            ) 
+        },
+        { 
+            header: 'Statut', 
+            cell: (item) => (
+                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold rounded-full ${item.is_active ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}>
+                    {item.is_active ? <CheckCircle size={14} /> : <XCircle size={14} />}
+                    {item.is_active ? 'Actif' : 'Inactif'}
+                </span>
+            )
+        },
+        {
+            header: 'Actions',
+            className: 'text-right',
+            cell: (item) => (
+                <div className="flex justify-end gap-3">
+                    <button onClick={() => openEditModal(item)} className="text-muted-foreground hover:text-primary transition-colors"><Edit2 size={16} /></button>
+                    <button onClick={() => handleDelete(item.id)} className="text-muted-foreground hover:text-destructive transition-colors"><Trash2 size={16} /></button>
+                </div>
+            )
+        }
+    ];
+
     return (
-        <div className="p-6 bg-background text-foreground min-h-screen font-sans">
-            <Head title="Ferme-Landi | Gestion des Sites" />
-
-            <div className="max-w-7xl mx-auto">
-                {/* En-tête de la page */}
-                <div className="flex justify-between items-center mb-8 pb-4 border-b border-border">
-                    <h1 className="text-3xl font-bold text-foreground tracking-tight">Sites d'Exploitation</h1>
-                    <Link
-                        href={sitesCreate.url()}
-                        className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold py-2.5 px-5 rounded-md shadow-sm transition duration-150 ease-in-out flex items-center gap-2"
-                    >
-                        <span className="text-accent font-bold text-lg">+</span> Nouveau Site
-                    </Link>
+        <div className="p-6 max-w-6xl mx-auto space-y-6 bg-background">
+            <div className="flex justify-between items-end mb-6">
+                <div>
+                    <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
+                        <MapPin className="text-primary" /> Sites & Bâtiments
+                    </h1>
+                    <p className="text-muted-foreground text-sm mt-1">Gérez vos emplacements de production et de stockage.</p>
                 </div>
-
-                {/* Message Flash de succès */}
-                {flash?.success && (
-                    <div className="mb-6 p-4 bg-primary/10 border-l-4 border-primary text-primary shadow-sm rounded-r-md flex items-center gap-3">
-                        <svg className="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                        </svg>
-                        <span className="font-medium">{flash.success}</span>
-                    </div>
-                )}
-
-                {/* Tableau de données */}
-                <div className="bg-card text-card-foreground shadow-lg rounded-xl overflow-hidden border border-border">
-                    <table className="min-w-full divide-y divide-border">
-                        <thead className="bg-primary text-primary-foreground">
-                            <tr>
-                                <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider">Code</th>
-                                <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider">Nom du Site</th>
-                                <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider">Type</th>
-                                <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider">Entreprise</th>
-                                <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider">Statut</th>
-                                <th className="px-6 py-4 text-right text-xs font-semibold uppercase tracking-wider">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-border">
-                            {sites.data.length === 0 ? (
-                                <tr>
-                                    <td colSpan={6} className="px-6 py-8 text-center text-muted-foreground font-medium">
-                                        Aucun site n'a encore été référencé pour Ferme-Landi.
-                                    </td>
-                                </tr>
-                            ) : (
-                                sites.data.map((site) => (
-                                    <tr key={site.id} className="hover:bg-muted/50 transition duration-150">
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold">
-                                            {site.code}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm">
-                                            {site.name}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm">
-                                            {/* Badge Type - Utilise Secondary */}
-                                            <span className="bg-secondary/10 text-secondary px-3 py-1 rounded-full text-xs font-medium border border-secondary/20">
-                                                {formatType(site.type)}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
-                                            {site.company.name}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            {/* Badge Statut - Primary pour actif, Destructive pour inactif */}
-                                            <span className={`px-3 py-1 inline-flex text-xs font-bold rounded-full border ${
-                                                site.is_active 
-                                                ? 'bg-primary/10 text-primary border-primary/20' 
-                                                : 'bg-destructive/10 text-destructive border-destructive/20'
-                                            }`}>
-                                                {site.is_active ? 'ACTIF' : 'INACTIF'}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                            <Link
-                                                href={sitesEdit.url(site.id)}
-                                                className="text-primary hover:text-primary/80 mr-5 transition"
-                                            >
-                                                Modifier
-                                            </Link>
-                                            <button
-                                                onClick={() => handleDelete(site.id)}
-                                                className="text-destructive hover:text-destructive/80 transition"
-                                            >
-                                                Désactiver
-                                            </button>
-                                        </td>
-                                    </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-
-                {/* Pagination */}
-                <div className="mt-8 flex justify-end gap-1.5">
-                    {sites.links.map((link, index) => (
-                        <Link
-                            key={index}
-                            href={link.url || '#'}
-                            className={`px-4 py-2 text-sm border rounded-lg shadow-sm transition duration-150 ${
-                                link.active 
-                                ? 'bg-primary text-primary-foreground font-semibold border-primary' 
-                                : 'bg-card text-card-foreground hover:bg-muted border-border'
-                            } ${!link.url && 'opacity-50 cursor-not-allowed'}`}
-                            dangerouslySetInnerHTML={{ __html: link.label }}
-                        />
-                    ))}
-                </div>
+                <button onClick={openCreateModal} className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2.5 rounded-xl font-bold hover:bg-primary/90 transition-colors shadow-sm">
+                    <Plus size={18} /> Nouveau Site
+                </button>
             </div>
+
+            <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+                <DialogContent className="sm:max-w-[450px]">
+                    <DialogHeader>
+                        <DialogTitle>{editingId ? 'Modifier le site' : 'Créer un site'}</DialogTitle>
+                        <DialogDescription>Paramétrez cet emplacement physique.</DialogDescription>
+                    </DialogHeader>
+
+                    <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-foreground">Entreprise Mère</label>
+                            <select value={data.company_id} onChange={e => setData('company_id', e.target.value)} className="w-full bg-input border border-border rounded-lg p-2.5 focus:ring-ring">
+                                <option value="">Sélectionner</option>
+                                {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                            </select>
+                            {errors.company_id && <span className="text-destructive text-xs">{errors.company_id}</span>}
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-foreground">Type d'exploitation</label>
+                            <select 
+                                value={data.type} 
+                                onChange={e => setData('type', e.target.value)} 
+                                className="w-full bg-input border border-border rounded-lg p-2.5 focus:ring-ring"
+                            >
+                                {siteTypes.map((typeOption) => (
+                                    <option key={typeOption.value} value={typeOption.value}>
+                                        {typeOption.label}
+                                    </option>
+                                ))}
+                            </select>
+                            {errors.type && <span className="text-destructive text-xs">{errors.type}</span>}
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-foreground">Nom du Site</label>
+                            <input type="text" value={data.name} onChange={e => setData('name', e.target.value)} className="w-full bg-input border border-border rounded-lg p-2.5 focus:ring-ring" placeholder="Ex: Ferme Ouest - Bâtiment A"/>
+                            {errors.name && <span className="text-destructive text-xs">{errors.name}</span>}
+                        </div>
+                        <div className="flex items-center gap-2 pt-2">
+                            <input type="checkbox" id="is_active" checked={data.is_active} onChange={e => setData('is_active', e.target.checked)} className="w-4 h-4 text-primary focus:ring-ring border-border rounded" />
+                            <label htmlFor="is_active" className="text-sm font-medium text-foreground cursor-pointer">Site actif (disponible pour l'exploitation)</label>
+                        </div>
+                        <div className="flex justify-end gap-3 pt-6 border-t border-border">
+                            <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground">Annuler</button>
+                            <button type="submit" disabled={processing} className="bg-primary text-primary-foreground px-5 py-2.5 rounded-xl font-bold disabled:opacity-50 hover:bg-primary/90">
+                                {editingId ? 'Mettre à jour' : 'Créer'}
+                            </button>
+                        </div>
+                    </form>
+                </DialogContent>
+            </Dialog>
+
+            <DataTable data={sites} columns={columns} emptyMessage="Aucun site paramétré." />
         </div>
     );
 }

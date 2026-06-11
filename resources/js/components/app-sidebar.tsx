@@ -1,3 +1,4 @@
+// components/app-sidebar.tsx
 import { Link } from '@inertiajs/react';
 import { 
     LayoutGrid, 
@@ -30,7 +31,17 @@ import {
     PackageOpen,
     Wallet,
     Receipt,
-    HandCoins
+    HandCoins,
+    Briefcase, 
+    Banknote,
+    // --- NOUVELLES ICÔNES POUR LA COMPTABILITÉ ---
+    Calculator,
+    Landmark,
+    BookOpen,
+    BookDashed,
+    CalendarDays,
+    Hash,
+    Tag
 } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { NavMain } from '@/components/nav-main';
@@ -77,7 +88,21 @@ import {
     purchaseOrdersIndex,
     purchaseReceiptsIndex,
     supplierInvoicesIndex,
-    supplierPaymentsIndex
+    supplierPaymentsIndex,
+    // Ressources Humaines
+    employeesIndex,
+    payrollRecordsIndex,
+    // Stocks
+    stockBalancesIndex,
+    stockMovementsIndex,
+    // --- NOUVELLES ROUTES COMPTABILITÉ ---
+    accountingEntriesIndex,
+    accountsIndex,
+    accountingJournalsIndex,
+    financialYearsIndex,
+    analyticalNaturesIndex,
+    analyticalCodesIndex,
+    analyticalCentersIndex
 } from '@/routes';
 
 import type { NavItem } from '@/types';
@@ -132,12 +157,30 @@ const mainNavItems: NavItem[] = [
         ],
     },
     {
+        title: 'Ressources Humaines',
+        icon: Briefcase,
+        href: '#',
+        children: [
+            { title: 'Personnel & Employés', href: employeesIndex(), icon: Users },
+            { title: 'Gestion de la Paie', href: payrollRecordsIndex(), icon: Banknote },
+        ],
+    },
+    {
         title: 'Stocks & Logistique',
         icon: ArrowRightLeft,
         href: '#',
         children: [
-            { title: 'Mouvements Stock', href: '#', icon: ArrowRightLeft }, // En attente
-            { title: 'État des stocks', href: '#', icon: LayoutGrid }, // En attente
+            { title: 'Mouvements Stock', href: stockMovementsIndex(), icon: ArrowRightLeft },
+            { title: 'État des stocks', href: stockBalancesIndex(), icon: LayoutGrid },
+        ],
+    },
+    // ---- NOUVEAU BLOC COMPTABILITÉ (OPÉRATIONNEL) ----
+    {
+        title: 'Comptabilité & Finances',
+        icon: Calculator,
+        href: '#',
+        children: [
+            { title: 'Écritures Comptables', href: accountingEntriesIndex(), icon: BookOpen },
         ],
     },
 ];
@@ -152,7 +195,7 @@ const configNavItems: NavItem[] = [
         href: '#',
         children: [
             // Structure
-            { title: 'Entreprises & Filiales', href: '#', icon: Building2 }, // En attente
+            { title: 'Entreprises & Filiales', href: '#', icon: Building2 },
             { title: 'Sites & Bâtiments', href: sitesIndex(), icon: MapPin },
             
             // Référentiel Zootechnique
@@ -164,6 +207,20 @@ const configNavItems: NavItem[] = [
             // Système
             { title: 'Unités de mesure', href: unitsIndex(), icon: Scale },
             { title: 'Catégories & Articles', href: categoriesIndex(), icon: Tags },
+        ],
+    },
+    // ---- NOUVEAU BLOC COMPTABILITÉ (PARAMÉTRAGE) ----
+    {
+        title: 'Comptabilité (Configuration)',
+        icon: Landmark,
+        href: '#',
+        children: [
+            { title: 'Exercices Fiscaux', href: financialYearsIndex(), icon: CalendarDays },
+            { title: 'Plan Comptable', href: accountsIndex(), icon: BookDashed },
+            { title: 'Journaux', href: accountingJournalsIndex(), icon: FileText },
+            { title: 'Natures Analytiques', href: analyticalNaturesIndex(), icon: Tag },
+            { title: 'Sections Analytiques', href: analyticalCodesIndex(), icon: Hash },
+            { title: 'Centres Analytiques', href: analyticalCentersIndex(), icon: Target },
         ],
     },
 ];

@@ -4,7 +4,7 @@ namespace App\Actions\Logistics;
 
 use App\Models\Unit;
 
-class UpdateUnitAction
+final readonly class UpdateUnitAction
 {
     /**
      * Update an existing unit.

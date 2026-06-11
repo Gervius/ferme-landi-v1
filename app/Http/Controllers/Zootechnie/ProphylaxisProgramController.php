@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Zootechnie;
 
+use App\Actions\Zootechnie\SyncProphylaxisForGenerationsAction; // Import du moteur de Synchro
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Zootechnie\StoreProphylaxisProgramRequest;
 use App\Http\Requests\Zootechnie\UpdateProphylaxisProgramRequest;
@@ -39,9 +40,9 @@ class ProphylaxisProgramController extends Controller
         ]);
     }
 
-    public function store(StoreProphylaxisProgramRequest $request): RedirectResponse
+    public function store(StoreProphylaxisProgramRequest $request, SyncProphylaxisForGenerationsAction $syncAction): RedirectResponse
     {
-        DB::transaction(function () use ($request) {
+        DB::transaction(function () use ($request, $syncAction) {
             $data = $request->validated();
 
             $program = ProphylaxisProgram::create([
@@ -53,9 +54,12 @@ class ProphylaxisProgramController extends Controller
             if (!empty($data['steps'])) {
                 $program->steps()->createMany($data['steps']);
             }
+
+            // MAGIE : Applique le programme aux lots créés AVANT le programme
+            $syncAction->execute($program);
         });
 
-        return redirect()->route('prophylaxisProgramsIndex')->with('success', 'Program created successfully.');
+        return redirect()->route('prophylaxisProgramsIndex')->with('success', 'Programme créé et appliqué aux lots avec succès.');
     }
 
     public function edit(ProphylaxisProgram $prophylaxisProgram): Response
@@ -73,9 +77,9 @@ class ProphylaxisProgramController extends Controller
         ]);
     }
 
-    public function update(UpdateProphylaxisProgramRequest $request, ProphylaxisProgram $prophylaxisProgram): RedirectResponse
+    public function update(UpdateProphylaxisProgramRequest $request, ProphylaxisProgram $prophylaxisProgram, SyncProphylaxisForGenerationsAction $syncAction): RedirectResponse
     {
-        DB::transaction(function () use ($request, $prophylaxisProgram) {
+        DB::transaction(function () use ($request, $prophylaxisProgram, $syncAction) {
             $data = $request->validated();
 
             $prophylaxisProgram->update([
@@ -84,14 +88,31 @@ class ProphylaxisProgramController extends Controller
                 'is_active' => $data['is_active'] ?? true,
             ]);
 
-            // Sync steps
-            $prophylaxisProgram->steps()->delete(); // simplified replace strategy
+            // MISE À JOUR INTELLIGENTE : Fini la "terre brûlée" !
+            $existingStepIds = [];
             if (!empty($data['steps'])) {
-                $prophylaxisProgram->steps()->createMany($data['steps']);
+                foreach ($data['steps'] as $stepData) {
+                    if (isset($stepData['id'])) {
+                        $step = $prophylaxisProgram->steps()->find($stepData['id']);
+                        if ($step) {
+                            $step->update($stepData);
+                            $existingStepIds[] = $step->id;
+                            continue;
+                        }
+                    }
+                    $newStep = $prophylaxisProgram->steps()->create($stepData);
+                    $existingStepIds[] = $newStep->id;
+                }
             }
+
+            // On ne supprime que les étapes que l'utilisateur a VRAIMENT cliqué pour retirer
+            $prophylaxisProgram->steps()->whereNotIn('id', $existingStepIds)->delete();
+
+            // MAGIE : Met à jour les dates des traitements en cours sans casser l'historique !
+            $syncAction->execute($prophylaxisProgram);
         });
 
-        return redirect()->route('prophylaxisProgramsIndex')->with('success', 'Program updated successfully.');
+        return redirect()->route('prophylaxisProgramsIndex')->with('success', 'Programme mis à jour avec succès.');
     }
 
     public function destroy(ProphylaxisProgram $prophylaxisProgram): RedirectResponse
@@ -100,6 +121,6 @@ class ProphylaxisProgramController extends Controller
 
         $prophylaxisProgram->delete();
 
-        return redirect()->route('prophylaxisProgramsIndex')->with('success', 'Program deleted successfully.');
+        return redirect()->route('prophylaxisProgramsIndex')->with('success', 'Programme supprimé avec succès.');
     }
 }

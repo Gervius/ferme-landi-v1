@@ -11,18 +11,42 @@ use App\Models\Site;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
+use Illuminate\Http\Request;
 use Inertia\Response;
 
 class GenerationController extends Controller
 {
-    public function index(): Response
+    public function index(Request $request): Response
     {
         Gate::authorize('viewAny', Generation::class);
 
-        $generations = Generation::with(['site', 'breed'])->paginate(10);
+        // Construction dynamique de la requête
+        $query = Generation::with(['site', 'breed']);
+
+        if ($request->filled('type')) {
+            $query->where('type', $request->input('type'));
+        }
+
+        if ($request->filled('search')) {
+            $query->where('code', 'like', '%' . $request->input('search') . '%');
+        }
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->input('status'));
+        }
+
+        $generations = $query->paginate(10)->withQueryString();
+
+        // Requête groupée pour les badges du Frontend (ex: statut 'actif')
+        $activeLotsCount = Generation::where('status', 'actif')
+            ->selectRaw('type, count(*) as count')
+            ->groupBy('type')
+            ->pluck('count', 'type');
 
         return Inertia::render('Generations/Index', [
             'generations' => $generations,
+            'activeLotsCount' => $activeLotsCount,
+            'filters' => $request->only(['type', 'search', 'status']),
         ]);
     }
 

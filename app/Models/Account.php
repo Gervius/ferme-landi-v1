@@ -14,8 +14,8 @@ class Account extends Model
     public const CODE_SALES = '7011';
     public const CODE_PURCHASES = '6011';
     public const CODE_SALARIES_EXPENSE = '6611';
-    public const CODE_SALARIES_PAYABLE = '4221';
-    public const CODE_SALARIES_ADVANCES = '4251';
+    public const CODE_SALARIES_PAYABLE = '422';
+    public const CODE_SALARIES_ADVANCES = '421';
 
     protected $fillable = [
         'number',

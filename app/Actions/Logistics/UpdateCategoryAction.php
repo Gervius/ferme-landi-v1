@@ -5,23 +5,33 @@ namespace App\Actions\Logistics;
 use App\Models\Category;
 use Illuminate\Support\Str;
 
-class UpdateCategoryAction
+final readonly class UpdateCategoryAction
 {
     /**
-     * Update an existing category.
+     * Update an existing category (Anti N+1 & Memory Optimized).
      */
     public function execute(Category $category, array $data): Category
     {
-        if (empty($data['slug'])) {
+        if (empty($data['slug']) && isset($data['name'])) {
             $data['slug'] = Str::slug($data['name']);
         }
 
-        if ($data['slug'] !== $category->slug) {
+        // Si le slug a changé ou a été auto-généré, on vérifie l'unicité
+        if (isset($data['slug']) && $data['slug'] !== $category->slug) {
             $originalSlug = $data['slug'];
-            $count = 1;
-            while (Category::where('slug', $data['slug'])->where('id', '!=', $category->id)->exists()) {
+            
+            // Une seule requête pour récupérer les slugs concurrents
+            $existingSlugs = Category::where('slug', 'LIKE', "{$originalSlug}%")
+                ->where('id', '!=', $category->id)
+                ->pluck('slug')
+                ->toArray();
+
+            if (in_array($originalSlug, $existingSlugs)) {
+                $count = 1;
+                while (in_array("{$originalSlug}-{$count}", $existingSlugs)) {
+                    $count++;
+                }
                 $data['slug'] = "{$originalSlug}-{$count}";
-                $count++;
             }
         }
 

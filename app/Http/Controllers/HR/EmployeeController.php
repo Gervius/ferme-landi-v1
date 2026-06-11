@@ -13,48 +13,46 @@ use App\Models\Site;
 use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 
-class EmployeeController extends Controller
+final class EmployeeController extends Controller
 {
     public function index()
     {
         Gate::authorize('viewAny', Employee::class);
-        $data = Employee::with('site')->paginate(15);
-        return Inertia::render('HR/Employee/Index', ['data' => $data]);
+        
+        // Eager loading strict limité aux champs nécessaires
+        $data = Employee::with(['site:id,name'])->paginate(15);
+        
+        // Données chargées ici pour le Modal de création/édition
+        $sites = Site::where('is_active', true)->get(['id', 'name']);
+
+        return Inertia::render('HR/Employee/Index', [
+            'data' => $data,
+            'sites' => $sites,
+        ]);
     }
 
-    public function create()
-    {
-        Gate::authorize('create', Employee::class);
-        $sites = Site::where('is_active', true)->get(['id', 'name']);
-        return Inertia::render('HR/Employee/Create', ['sites' => $sites]);
-    }
+    // Les méthodes create() et edit() sont supprimées
 
     public function store(StoreEmployeeRequest $request, CreateEmployeeAction $action)
     {
         $action->execute($request->validated());
-        return redirect()->route('employeesIndex')->with('success', 'Employee created.');
-    }
-
-    public function edit(Employee $employee)
-    {
-        Gate::authorize('update', $employee);
-        $sites = Site::where('is_active', true)->get(['id', 'name']);
-        return Inertia::render('HR/Employee/Edit', [
-            'employee' => $employee,
-            'sites'    => $sites,
-        ]);
+        
+        // Wayfinder : Redirection stricte par URI
+        return redirect('/hr/employees')->with('success', 'Employé créé.');
     }
 
     public function update(UpdateEmployeeRequest $request, Employee $employee, UpdateEmployeeAction $action)
     {
         $action->execute($employee, $request->validated());
-        return redirect()->route('employeesIndex')->with('success', 'Employee updated.');
+        
+        return redirect('/hr/employees')->with('success', 'Employé mis à jour.');
     }
 
     public function destroy(Employee $employee, DeleteEmployeeAction $action)
     {
         Gate::authorize('delete', $employee);
         $action->execute($employee);
-        return redirect()->route('employeesIndex')->with('success', 'Employee deleted.');
+        
+        return redirect('/hr/employees')->with('success', 'Employé supprimé.');
     }
 }

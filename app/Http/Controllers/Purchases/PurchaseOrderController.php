@@ -13,6 +13,7 @@ use App\Http\Requests\Purchases\UpdatePurchaseOrderRequest;
 use App\Models\Category;
 use App\Models\PurchaseOrder;
 use App\Models\Supplier;
+use App\Models\site;
 use App\Models\Unit;
 use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
@@ -38,11 +39,13 @@ class PurchaseOrderController extends Controller
             \App\Enums\CategoryScope::EQUIPMENT->value,
         ])->get(['id', 'name']);
         $units = Unit::where('is_active', true)->get(['id', 'name', 'symbol']);
+        $sites = Site::where('is_active', true)->select('id', 'name')->get();
 
         return Inertia::render('Purchases/PurchaseOrder/Create', [
             'suppliers'  => $suppliers,
             'categories' => $categories,
             'units'      => $units,
+            'sites'      => $sites,
         ]);
     }
 

@@ -1,196 +1,189 @@
-import React from 'react';
-import { Head, Link, useForm } from '@inertiajs/react';
-// Adapte tes imports de routes selon ton routeur
-import { unitsCreate, unitsDestroy, unitsEdit } from '@/routes'; 
-
-// 1. Définition des Interfaces
-interface BaseUnit {
-    id: number;
-    name: string;
-    symbol: string;
-}
+// pages/Units/Index.tsx
+import React, { useState } from 'react';
+import { router, useForm } from '@inertiajs/react';
+import { Plus, Edit2, Trash2, Scale, GitMerge } from 'lucide-react';
+import { unitsStore, unitsUpdate, unitsDestroy } from '@/routes';
+import { PaginatedData } from '@/types/pagination';
+import { DataTable, ColumnDef } from '@/components/ui/DataTable';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 interface Unit {
     id: number;
     name: string;
     symbol: string;
-    type: string;
     is_base_unit: boolean;
-    base_unit_id: number | null;
-    conversion_rate: string | number; // Souvent reçu en string depuis decimal
+    conversion_rate?: number;
     is_active: boolean;
-    base_unit: BaseUnit | null; // Relation chargée par Jules
-}
-
-interface PaginationLink {
-    url: string | null;
-    label: string;
-    active: boolean;
+    baseUnit?: { id: number; name: string; symbol: string };
 }
 
 interface Props {
-    units: {
-        data: Unit[];
-        links: PaginationLink[];
-    };
-    flash?: {
-        success?: string;
-    };
+    units: PaginatedData<Unit>;
+    baseUnits: { id: number; name: string; symbol: string }[];
+    unitTypes: { value: string; label: string }[];
 }
 
-export default function UnitIndex({ units, flash = {} }: Props) {
-    const { delete: destroy } = useForm();
+export default function Index({ units, baseUnits, unitTypes }: Props) {
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [editingId, setEditingId] = useState<number | null>(null);
+
+    const { data, setData, post, put, processing, errors, reset, transform } = useForm({
+        name: '',
+        symbol: '',
+        type: unitTypes.length > 0 ? unitTypes[0].value : '', // Initialisation dynamique
+        is_base_unit: true,
+        base_unit_id: '',
+        conversion_rate: 1,
+        is_active: true,
+    });
+
+    const openCreateModal = () => {
+        setEditingId(null);
+        reset();
+        setIsModalOpen(true);
+    };
+
+    const openEditModal = (item: Unit) => {
+        setEditingId(item.id);
+        setData({
+            name: item.name,
+            symbol: item.symbol,
+            is_base_unit: Boolean(item.is_base_unit),
+            base_unit_id: item.baseUnit?.id?.toString() || '',
+            conversion_rate: item.conversion_rate || 1,
+            is_active: Boolean(item.is_active),
+        });
+        setIsModalOpen(true);
+    };
 
     const handleDelete = (id: number) => {
-        if (confirm('Êtes-vous sûr de vouloir supprimer cette unité ? Attention, cela peut impacter les stocks associés.')) {
-            destroy(unitsDestroy.url(id));
+        if (confirm("Supprimer cette unité ? Attention aux conversions de stock existantes.")) {
+            router.delete(unitsDestroy.url(id), { preserveScroll: true });
         }
     };
 
-    const formatType = (type: string) => {
-        const types: Record<string, string> = {
-            masse: 'Masse',
-            volume: 'Volume',
-            longueur: 'Longueur',
-            unitaire: 'Unitaire',
-            conditionnement: 'Conditionnement',
-        };
-        return types[type] || type;
+    const handleSubmit = (e: React.SubmitEvent) => {
+        e.preventDefault();
+        if (editingId) {
+            put(unitsUpdate.url(editingId), { onSuccess: () => { setIsModalOpen(false); reset(); }});
+        } else {
+            post(unitsStore.url(), { onSuccess: () => { setIsModalOpen(false); reset(); }});
+        }
     };
 
-    // Fonction pour afficher joliment la règle de conversion
-    const renderConversion = (unit: Unit) => {
-        if (unit.is_base_unit) {
-            return (
-                <span className="bg-primary/10 text-primary px-2.5 py-0.5 rounded text-xs font-semibold border border-primary/20">
-                    Unité de base
+    const columns: ColumnDef<Unit>[] = [
+        { header: 'Nom', accessorKey: 'name', className: 'font-bold text-foreground' },
+        { 
+            header: 'Symbole', 
+            cell: (item) => <span className="font-bold text-secondary bg-secondary/10 px-2 py-1 rounded-md">{item.symbol}</span> 
+        },
+        { 
+            header: 'Type de conversion', 
+            cell: (item) => item.is_base_unit ? (
+                <span className="text-xs font-bold text-primary bg-primary/10 px-2 py-1 rounded-full">Unité de Base</span>
+            ) : (
+                <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                    <GitMerge size={12} /> {item.conversion_rate} x {item.baseUnit?.symbol}
                 </span>
-            );
+            )
+        },
+        {
+            header: 'Actions',
+            className: 'text-right',
+            cell: (item) => (
+                <div className="flex justify-end gap-3">
+                    <button onClick={() => openEditModal(item)} className="text-muted-foreground hover:text-secondary transition-colors"><Edit2 size={16} /></button>
+                    <button onClick={() => handleDelete(item.id)} className="text-muted-foreground hover:text-destructive transition-colors"><Trash2 size={16} /></button>
+                </div>
+            )
         }
-        
-        if (unit.base_unit) {
-            // Supprime les zéros inutiles de la décimale (ex: 30.000000 -> 30)
-            const rate = parseFloat(unit.conversion_rate.toString());
-            return (
-                <span className="text-sm font-medium text-muted-foreground">
-                    1 <span className="font-bold text-foreground">{unit.symbol}</span> = {rate} <span className="font-bold text-foreground">{unit.base_unit.symbol}</span>
-                </span>
-            );
-        }
-
-        return <span className="text-muted-foreground italic">-</span>;
-    };
+    ];
 
     return (
-        <div className="p-6 bg-background text-foreground min-h-screen font-sans">
-            <Head title="Ferme-Landi | Unités de Mesure" />
-
-            <div className="max-w-7xl mx-auto">
-                {/* En-tête de la page */}
-                <div className="flex justify-between items-center mb-8 pb-4 border-b border-border">
-                    <div>
-                        <h1 className="text-3xl font-bold tracking-tight">Unités de Mesure</h1>
-                        <p className="text-muted-foreground mt-1 text-sm">Gestion de la métrologie et des conditionnements.</p>
-                    </div>
-                    <Link
-                        href={unitsCreate.url()}
-                        className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold py-2.5 px-5 rounded-md shadow-sm transition flex items-center gap-2"
-                    >
-                        <span className="text-accent font-bold text-lg">+</span> Nouvelle Unité
-                    </Link>
+        <div className="p-6 max-w-6xl mx-auto space-y-6 bg-background">
+            <div className="flex justify-between items-end mb-6">
+                <div>
+                    <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
+                        <Scale className="text-secondary" /> Unités de Mesure
+                    </h1>
+                    <p className="text-muted-foreground text-sm mt-1">Gérez le référentiel des poids, volumes et conditionnements.</p>
                 </div>
-
-                {/* Message Flash */}
-                {flash?.success && (
-                    <div className="mb-6 p-4 bg-primary/10 border-l-4 border-primary text-primary shadow-sm rounded-r-md flex items-center gap-3">
-                        <svg className="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                        </svg>
-                        <span className="font-medium">{flash.success}</span>
-                    </div>
-                )}
-
-                {/* Tableau de données */}
-                <div className="bg-card shadow-lg rounded-xl overflow-hidden border border-border">
-                    <table className="min-w-full divide-y divide-border">
-                        <thead className="bg-primary text-primary-foreground">
-                            <tr>
-                                <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider">Symbole</th>
-                                <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider">Nom</th>
-                                <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider">Catégorie</th>
-                                <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider">Conversion</th>
-                                <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider">Statut</th>
-                                <th className="px-6 py-4 text-right text-xs font-semibold uppercase tracking-wider">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-border">
-                            {units.data.length === 0 ? (
-                                <tr>
-                                    <td colSpan={6} className="px-6 py-8 text-center text-muted-foreground font-medium">
-                                        Aucune unité n'a été paramétrée.
-                                    </td>
-                                </tr>
-                            ) : (
-                                units.data.map((unit) => (
-                                    <tr key={unit.id} className="hover:bg-muted/50 transition">
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-foreground">
-                                            {unit.symbol}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm">
-                                            {unit.name}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-secondary">
-                                            {formatType(unit.type)}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            {renderConversion(unit)}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <span className={`px-2 py-1 inline-flex text-xs font-bold rounded-full border ${
-                                                unit.is_active 
-                                                ? 'bg-primary/10 text-primary border-primary/20' 
-                                                : 'bg-destructive/10 text-destructive border-destructive/20'
-                                            }`}>
-                                                {unit.is_active ? 'Actif' : 'Inactif'}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                            <Link
-                                                href={unitsEdit.url(unit.id)}
-                                                className="text-primary hover:text-primary/80 mr-4 transition"
-                                            >
-                                                Modifier
-                                            </Link>
-                                            <button
-                                                onClick={() => handleDelete(unit.id)}
-                                                className="text-destructive hover:text-destructive/80 transition"
-                                            >
-                                                Supprimer
-                                            </button>
-                                        </td>
-                                    </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-
-                {/* Pagination */}
-                <div className="mt-8 flex justify-end gap-1.5">
-                    {units.links.map((link, index) => (
-                        <Link
-                            key={index}
-                            href={link.url || '#'}
-                            className={`px-4 py-2 text-sm border rounded-lg shadow-sm transition ${
-                                link.active 
-                                ? 'bg-primary text-primary-foreground font-semibold border-primary' 
-                                : 'bg-card text-foreground hover:bg-muted border-border'
-                            } ${!link.url && 'opacity-50 cursor-not-allowed'}`}
-                            dangerouslySetInnerHTML={{ __html: link.label }}
-                        />
-                    ))}
-                </div>
+                <button onClick={openCreateModal} className="flex items-center gap-2 bg-secondary text-secondary-foreground px-4 py-2.5 rounded-xl font-bold hover:opacity-90 transition-opacity shadow-sm">
+                    <Plus size={18} /> Nouvelle Unité
+                </button>
             </div>
+
+            <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+                <DialogContent className="sm:max-w-[500px]">
+                    <DialogHeader>
+                        <DialogTitle>{editingId ? 'Modifier l\'unité' : 'Créer une unité'}</DialogTitle>
+                    </DialogHeader>
+
+                    <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium text-foreground">Nom complet</label>
+                                <input type="text" value={data.name} onChange={e => setData('name', e.target.value)} className="w-full bg-input border border-border rounded-lg p-2.5 focus:ring-ring" placeholder="Ex: Kilogramme"/>
+                                {errors.name && <span className="text-destructive text-xs">{errors.name}</span>}
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium text-foreground">Symbole</label>
+                                <input type="text" value={data.symbol} onChange={e => setData('symbol', e.target.value)} className="w-full bg-input border border-border rounded-lg p-2.5 focus:ring-ring" placeholder="Ex: Kg"/>
+                                {errors.symbol && <span className="text-destructive text-xs">{errors.symbol}</span>}
+                            </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 pt-2 pb-2">
+                            <input type="checkbox" id="is_base_unit" checked={data.is_base_unit} onChange={e => setData('is_base_unit', e.target.checked)} className="w-4 h-4 text-secondary focus:ring-ring border-border rounded" />
+                            <label htmlFor="is_base_unit" className="text-sm font-medium text-foreground cursor-pointer">Ceci est une Unité de Base (ex: Kg, Pièce)</label>
+                        </div>
+
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-foreground">Catégorie de mesure</label>
+                            <select 
+                                value={data.type} 
+                                onChange={e => setData('type', e.target.value)} 
+                                className="w-full bg-input border border-border rounded-lg p-2.5 focus:ring-ring"
+                            >
+                                {unitTypes.map((typeOption) => (
+                                    <option key={typeOption.value} value={typeOption.value}>
+                                        {typeOption.label}
+                                    </option>
+                                ))}
+                            </select>
+                            {errors.type && <span className="text-destructive text-xs">{errors.type}</span>}
+                        </div>
+
+                        {!data.is_base_unit && (
+                            <div className="grid grid-cols-2 gap-4 bg-muted/50 p-4 rounded-lg border border-border">
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium text-foreground">Unité de référence</label>
+                                    <select value={data.base_unit_id} onChange={e => setData('base_unit_id', e.target.value)} className="w-full bg-input border border-border rounded-lg p-2.5 focus:ring-ring">
+                                        <option value="">Sélectionner</option>
+                                        {baseUnits.map(u => <option key={u.id} value={u.id}>{u.name} ({u.symbol})</option>)}
+                                    </select>
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium text-foreground">Taux de conversion</label>
+                                    <input type="number" step="0.001" value={data.conversion_rate} onChange={e => setData('conversion_rate', Number(e.target.value))} className="w-full bg-input border border-border rounded-lg p-2.5 focus:ring-ring" placeholder="Ex: 30"/>
+                                </div>
+                                <div className="col-span-2 text-xs text-muted-foreground italic">
+                                    Exemple : Si l'unité est "Alvéole" et la référence "Pièce", le taux est 30 (1 Alvéole = 30 Pièces).
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="flex justify-end gap-3 pt-6 border-t border-border">
+                            <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground">Annuler</button>
+                            <button type="submit" disabled={processing} className="bg-secondary text-secondary-foreground px-5 py-2.5 rounded-xl font-bold disabled:opacity-50 hover:opacity-90">
+                                Enregistrer
+                            </button>
+                        </div>
+                    </form>
+                </DialogContent>
+            </Dialog>
+
+            <DataTable data={units} columns={columns} emptyMessage="Aucune unité paramétrée." />
         </div>
     );
 }

@@ -17,7 +17,12 @@ class CustomerPaymentController extends Controller
     {
         Gate::authorize('viewAny', CustomerPayment::class);
         $data = CustomerPayment::with('customer')->paginate(15);
-        return Inertia::render('Sales/CustomerPayment/Index', ['data' => $data]);
+        $customers = \App\Models\Customer::where('is_active', true)->get(['id', 'name']);
+
+        return Inertia::render('Sales/CustomerPayment/Index', [
+            'data' => $data,
+            'customers' => $customers
+        ]);
     }
 
     public function create()

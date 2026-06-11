@@ -1,138 +1,312 @@
-import React from 'react';
-import { Head, Link, useForm } from '@inertiajs/react';
-import { Breadcrumbs } from '@/components/breadcrumbs';
-import { 
-    Plus, 
-    Stethoscope, 
-    CheckCircle2, 
-    Clock, 
-    Check,
-    Pill,
-    UserCheck
-} from 'lucide-react';
-import { healthTreatmentsCreate, healthTreatmentsApprove } from '@/routes';
+// pages/Zootechnie/HealthTreatment/Index.tsx
+import React, { useState, useMemo } from 'react';
+import { useForm, router } from '@inertiajs/react';
+import { Plus, CheckCircle, Clock, Stethoscope, Syringe, Pill } from 'lucide-react';
+import { healthTreatmentsStore, healthTreatmentsApprove } from '@/routes';
+import { getGenerationDisplay } from '@/utils/zootechnieStrategy';
+import { PaginatedData } from '@/types/pagination';
+import { DataTable, ColumnDef } from '@/components/ui/DataTable';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 
-interface Treatment {
+interface HealthTreatment {
     id: number;
     date: string;
     disease_description: string;
     medication_name: string;
     dosage_description: string;
-    veterinarian_name: string | null;
+    veterinarian_name?: string;
     status: 'draft' | 'approved';
-    generation: {
-        code: string;
-        type: string;
-    };
+    generation: { id: number; code: string; type: string };
+}
+
+interface Generation {
+    id: number;
+    code: string;
+    type: string;
 }
 
 interface Props {
-    data: {
-        data: Treatment[];
-    };
+    data: PaginatedData<HealthTreatment>;
+    generations: Generation[];
 }
 
-export default function HealthTreatmentIndex({ data }: Props) {
-    const { post, processing } = useForm();
+export default function Index({ data, generations }: Props) {
+    const [isModalOpen, setIsModalOpen] = useState(false);
 
-    const breadcrumbs = [
-        { title: 'Zootechnie', href: '#' },
-        { title: 'Santé & Traitements', href: '#' },
-    ];
+    // Initialisation du formulaire selon StoreHealthTreatmentRequest
+    const { data: formData, setData, post, processing, errors, reset } = useForm({
+        generation_id: '',
+        date: new Date().toISOString().split('T')[0],
+        disease_description: '',
+        medication_name: '',
+        dosage_description: '',
+        veterinarian_name: '',
+    });
 
+    // Soumission de la création (Brouillon)
+    const submitCreate = (e: React.SubmitEvent) => {
+        e.preventDefault();
+        post(healthTreatmentsStore.url(), {
+            preserveScroll: true,
+            onSuccess: () => {
+                setIsModalOpen(false);
+                reset();
+            },
+        });
+    };
+
+    // Action d'approbation
     const handleApprove = (id: number) => {
-        if (confirm('Voulez-vous valider ce traitement ? cela confirmera l\'intervention médicale.')) {
-            post(healthTreatmentsApprove.url(id));
+        if (confirm("Valider ce traitement ? Il sera inscrit définitivement dans le carnet de santé du lot.")) {
+            router.post(healthTreatmentsApprove.url(id), {}, { preserveScroll: true });
         }
     };
 
-    return (
-        <div className="p-6 space-y-6">
-            <Head title="Ferme-Landi | Santé" />
-            
-            <div className="flex justify-between items-start">
-                <Breadcrumbs breadcrumbs={breadcrumbs} />
-                <Link
-                    href={healthTreatmentsCreate.url()}
-                    className="inline-flex items-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-lg font-semibold transition shadow-sm"
+    // Calcul rapide pour le Dashboard
+    const stats = useMemo(() => {
+        return {
+            totalInterventions: data.data.length,
+        };
+    }, [data.data]);
+
+    // Définition des colonnes du DataTable
+    const columns: ColumnDef<HealthTreatment>[] = [
+        { 
+            header: 'Date', 
+            className: 'font-medium',
+            cell: (item) => new Date(item.date).toLocaleDateString()
+        },
+        { 
+            header: 'Lot (Patient)', 
+            cell: (item) => {
+                const { Icon, colorClass } = getGenerationDisplay(item.generation.type);
+                return (
+                    <div className="flex items-center gap-2">
+                        <Icon className={`w-4 h-4 ${colorClass}`} strokeWidth={2} />
+                        <span className="font-semibold text-card-foreground">{item.generation.code}</span>
+                    </div>
+                );
+            }
+        },
+        { 
+            header: 'Maladie / Symptôme', 
+            cell: (item) => (
+                <span className="text-sm font-medium text-destructive">{item.disease_description}</span>
+            )
+        },
+        { 
+            header: 'Traitement & Dosage', 
+            cell: (item) => (
+                <div className="flex flex-col">
+                    <span className="text-sm font-bold text-primary flex items-center gap-1">
+                        <Pill size={14} /> {item.medication_name}
+                    </span>
+                    <span className="text-xs text-muted-foreground mt-0.5">{item.dosage_description}</span>
+                </div>
+            )
+        },
+        { 
+            header: 'Vétérinaire', 
+            cell: (item) => item.veterinarian_name ? (
+                <span className="text-sm text-card-foreground">{item.veterinarian_name}</span>
+            ) : (
+                <span className="text-sm text-muted-foreground italic">Interne</span>
+            )
+        },
+        { 
+            header: 'Statut', 
+            cell: (item) => (
+                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold rounded-full ${
+                    item.status === 'approved' 
+                        ? 'bg-primary/10 text-primary border border-primary/20' 
+                        : 'bg-muted text-muted-foreground border border-border'
+                }`}>
+                    {item.status === 'approved' ? <CheckCircle size={12} /> : <Clock size={12} />}
+                    {item.status === 'approved' ? 'Validé' : 'Brouillon'}
+                </span>
+            )
+        },
+        {
+            header: 'Actions',
+            className: 'text-right',
+            cell: (item) => item.status === 'draft' ? (
+                <button 
+                    onClick={() => handleApprove(item.id)}
+                    className="text-xs font-bold bg-primary text-primary-foreground px-3 py-1.5 rounded-md hover:bg-primary/90 transition-colors shadow-sm"
                 >
-                    <Plus className="w-4 h-4" />
-                    Nouveau Traitement
-                </Link>
+                    Approuver
+                </button>
+            ) : (
+                <span className="text-xs text-muted-foreground italic">Historisé</span>
+            )
+        }
+    ];
+
+    return (
+        <div className="p-6 max-w-7xl mx-auto space-y-6 bg-background">
+            
+            {/* Header & Statistiques */}
+            <div className="flex flex-col md:flex-row justify-between gap-6 mb-8">
+                <div>
+                    <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
+                        <Stethoscope className="text-primary" /> Santé & Soins
+                    </h1>
+                    <p className="text-muted-foreground text-sm mt-1">
+                        Registre des interventions sanitaires et traitements curatifs.
+                    </p>
+                </div>
+
+                <div className="flex gap-4">
+                    <div className="bg-card border border-border px-5 py-3 rounded-xl shadow-sm flex items-center gap-4">
+                        <div className="bg-primary/10 p-2 rounded-lg text-primary">
+                            <Syringe size={20} />
+                        </div>
+                        <div>
+                            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Interventions récentes</p>
+                            <p className="text-xl font-bold text-foreground">
+                                {stats.totalInterventions} <span className="text-sm font-normal text-muted-foreground">soins</span>
+                            </p>
+                        </div>
+                    </div>
+                </div>
             </div>
 
-            <div className="bg-card rounded-xl border border-border shadow-md overflow-hidden text-sm">
-                <table className="w-full text-left border-collapse">
-                    <thead className="bg-muted/50 border-b border-border text-xs uppercase tracking-wider font-semibold text-muted-foreground">
-                        <tr>
-                            <th className="px-6 py-4">Date / Lot</th>
-                            <th className="px-6 py-4">Pathologie</th>
-                            <th className="px-6 py-4">Médicament & Dosage</th>
-                            <th className="px-6 py-4">Vétérinaire</th>
-                            <th className="px-6 py-4">Statut</th>
-                            <th className="px-6 py-4 text-right">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border">
-                        {data.data.map((t) => (
-                            <tr key={t.id} className="hover:bg-muted/30 transition-colors">
-                                <td className="px-6 py-4">
-                                    <div className="font-bold text-foreground">
-                                        {new Date(t.date).toLocaleDateString('fr-FR')}
-                                    </div>
-                                    <div className="text-[10px] text-muted-foreground font-bold uppercase tracking-tighter">
-                                        Lot: {t.generation.code}
-                                    </div>
-                                </td>
-                                <td className="px-6 py-4 max-w-xs">
-                                    <div className="flex items-start gap-2">
-                                        <Stethoscope className="w-4 h-4 text-destructive mt-0.5 shrink-0" />
-                                        <p className="line-clamp-2 leading-relaxed">{t.disease_description}</p>
-                                    </div>
-                                </td>
-                                <td className="px-6 py-4">
-                                    <div className="flex items-center gap-2 font-medium text-foreground">
-                                        <Pill className="w-4 h-4 text-accent" />
-                                        {t.medication_name}
-                                    </div>
-                                    <div className="text-xs text-muted-foreground ml-6">
-                                        {t.dosage_description}
-                                    </div>
-                                </td>
-                                <td className="px-6 py-4">
-                                    {t.veterinarian_name ? (
-                                        <div className="flex items-center gap-1.5 text-muted-foreground">
-                                            <UserCheck className="w-3.5 h-3.5" />
-                                            {t.veterinarian_name}
-                                        </div>
-                                    ) : '-'}
-                                </td>
-                                <td className="px-6 py-4">
-                                    <span className={`px-2 py-1 rounded-full text-[10px] font-bold flex items-center w-fit gap-1 border ${
-                                        t.status === 'approved' 
-                                        ? 'bg-primary/10 text-primary border-primary/20' 
-                                        : 'bg-secondary/10 text-secondary border-secondary/20'
-                                    }`}>
-                                        {t.status === 'approved' ? <CheckCircle2 className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
-                                        {t.status.toUpperCase()}
-                                    </span>
-                                </td>
-                                <td className="px-6 py-4 text-right">
-                                    {t.status === 'draft' && (
-                                        <button
-                                            onClick={() => handleApprove(t.id)}
-                                            disabled={processing}
-                                            className="bg-primary text-primary-foreground p-1.5 rounded-md hover:bg-primary/90 transition shadow-sm disabled:opacity-50"
-                                        >
-                                            <Check className="w-4 h-4" />
-                                        </button>
-                                    )}
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
+            {/* Barre d'action et Dialog */}
+            <div className="flex justify-end mb-4">
+                <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+                    <DialogTrigger asChild>
+                        <button className="flex items-center gap-2 bg-primary text-primary-foreground px-5 py-2.5 rounded-xl font-bold shadow-sm hover:opacity-90 transition-opacity">
+                            <Plus size={18} />
+                            Déclarer un soin
+                        </button>
+                    </DialogTrigger>
+                    
+                    <DialogContent className="sm:max-w-[600px]">
+                        <DialogHeader>
+                            <DialogTitle className="text-xl text-primary flex items-center gap-2">
+                                <Stethoscope size={20} /> Nouvelle Intervention
+                            </DialogTitle>
+                            <DialogDescription>
+                                Saisissez les détails du traitement. Cette déclaration sera ajoutée en brouillon.
+                            </DialogDescription>
+                        </DialogHeader>
+
+                        <form onSubmit={submitCreate} className="space-y-6 mt-4">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium text-foreground">Lot traité</label>
+                                    <select 
+                                        value={formData.generation_id}
+                                        onChange={e => setData('generation_id', e.target.value)}
+                                        className="w-full bg-input border border-border rounded-lg p-2.5 focus:ring-ring"
+                                    >
+                                        <option value="">Sélectionner un lot actif</option>
+                                        {generations.map(gen => {
+                                            const { label } = getGenerationDisplay(gen.type);
+                                            return <option key={gen.id} value={gen.id}>{gen.code} - {label}</option>;
+                                        })}
+                                    </select>
+                                    {errors.generation_id && <span className="text-destructive text-xs">{errors.generation_id}</span>}
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium text-foreground">Date d'intervention</label>
+                                    <input 
+                                        type="date" 
+                                        value={formData.date}
+                                        onChange={e => setData('date', e.target.value)}
+                                        className="w-full bg-input border border-border rounded-lg p-2.5 focus:ring-ring"
+                                    />
+                                    {errors.date && <span className="text-destructive text-xs">{errors.date}</span>}
+                                </div>
+
+                                <div className="space-y-2 col-span-2">
+                                    <label className="text-sm font-medium text-destructive">Maladie / Constat (Symptômes)</label>
+                                    <input 
+                                        type="text" 
+                                        value={formData.disease_description}
+                                        onChange={e => setData('disease_description', e.target.value)}
+                                        className="w-full bg-destructive/5 border border-destructive/30 text-foreground rounded-lg p-2.5 focus:ring-destructive"
+                                        placeholder="Ex: Coccidiose, toux, diarrhée..."
+                                    />
+                                    {errors.disease_description && <span className="text-destructive text-xs">{errors.disease_description}</span>}
+                                </div>
+
+                                <div className="space-y-2 col-span-2">
+                                    <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2 mt-2 border-b border-border pb-1">Protocole Médical</h3>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium text-primary">Médicament / Produit</label>
+                                    <input 
+                                        type="text" 
+                                        value={formData.medication_name}
+                                        onChange={e => setData('medication_name', e.target.value)}
+                                        className="w-full bg-primary/5 border border-primary/30 rounded-lg p-2.5 focus:ring-primary font-bold text-primary"
+                                        placeholder="Ex: Amprolium 20%"
+                                    />
+                                    {errors.medication_name && <span className="text-destructive text-xs">{errors.medication_name}</span>}
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium text-foreground">Posologie / Dosage</label>
+                                    <input 
+                                        type="text" 
+                                        value={formData.dosage_description}
+                                        onChange={e => setData('dosage_description', e.target.value)}
+                                        className="w-full bg-input border border-border rounded-lg p-2.5 focus:ring-ring"
+                                        placeholder="Ex: 1g / L d'eau pendant 5 jours"
+                                    />
+                                    {errors.dosage_description && <span className="text-destructive text-xs">{errors.dosage_description}</span>}
+                                </div>
+
+                                <div className="space-y-2 col-span-2">
+                                    <label className="text-sm font-medium text-foreground">Vétérinaire ou Responsable (Optionnel)</label>
+                                    <input 
+                                        type="text" 
+                                        value={formData.veterinarian_name}
+                                        onChange={e => setData('veterinarian_name', e.target.value)}
+                                        className="w-full bg-input border border-border rounded-lg p-2.5 focus:ring-ring"
+                                        placeholder="Nom du praticien..."
+                                    />
+                                    {errors.veterinarian_name && <span className="text-destructive text-xs">{errors.veterinarian_name}</span>}
+                                </div>
+                            </div>
+
+                            <div className="flex justify-end gap-3 pt-6 border-t border-border">
+                                <button 
+                                    type="button" 
+                                    onClick={() => setIsModalOpen(false)}
+                                    className="px-5 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+                                >
+                                    Annuler
+                                </button>
+                                <button 
+                                    type="submit" 
+                                    disabled={processing}
+                                    className="bg-primary text-primary-foreground px-6 py-2.5 rounded-xl text-sm font-bold disabled:opacity-50 hover:bg-primary/90 transition-opacity shadow-sm"
+                                >
+                                    Enregistrer le soin
+                                </button>
+                            </div>
+                        </form>
+                    </DialogContent>
+                </Dialog>
             </div>
+
+            {/* DataTable Universel */}
+            <DataTable 
+                data={data} 
+                columns={columns} 
+                emptyMessage="Aucun traitement sanitaire n'a été enregistré." 
+            />
         </div>
     );
 }

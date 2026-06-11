@@ -1,124 +1,97 @@
+// pages/Sales/SaleOrder/Index.tsx
 import React from 'react';
-import { Head, Link, useForm } from '@inertiajs/react';
-import { Breadcrumbs } from '@/components/breadcrumbs';
-import { 
-    Plus, 
-    ShoppingCart, 
-    CheckCircle2, 
-    Clock, 
-    FileText, 
-    Truck, 
-    MoreHorizontal,
-    User,
-    Calendar
-} from 'lucide-react';
-import { saleOrdersCreate, saleOrdersEdit } from '@/routes';
+import { Link, router } from '@inertiajs/react';
+import { Plus, Edit2, FileText, ShoppingCart, Truck, ClipboardList } from 'lucide-react';
+import { saleOrdersCreate, saleOrdersEdit, saleOrdersGenerateDeliveryNote } from '@/routes';
+import { PaginatedData } from '@/types/pagination';
+import { DataTable, ColumnDef } from '@/components/ui/DataTable';
 
 interface SaleOrder {
     id: number;
     reference: string;
     order_date: string;
     status: 'draft' | 'validated' | 'partially_delivered' | 'delivered' | 'closed';
-    total_amount?: number; // Calculé par le backend
-    customer: {
-        name: string;
-    };
+    customer: { id: number; name: string };
 }
 
 interface Props {
-    data: {
-        data: SaleOrder[];
-        links: any[];
-    };
+    data: PaginatedData<SaleOrder>;
 }
 
-export default function SaleOrderIndex({ data }: Props) {
-    const breadcrumbs = [
-        { title: 'Ventes & Commercial', href: '#' },
-        { title: 'Commandes Clients', href: '#' },
-    ];
-
-    const getStatusStyle = (status: string) => {
-        switch (status) {
-            case 'validated': return 'bg-primary/10 text-primary border-primary/20';
-            case 'delivered': return 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20';
-            case 'draft': return 'bg-muted text-muted-foreground border-border';
-            default: return 'bg-orange-500/10 text-orange-600 border-orange-500/20';
+export default function Index({ data }: Props) {
+    
+    // Génération du Bon de Livraison (Flux métier Odoo)
+    const handleGenerateDeliveryNote = (id: number) => {
+        if (confirm("Générer le Bon de Livraison pour cette commande ?")) {
+            router.post(saleOrdersGenerateDeliveryNote.url(id));
         }
     };
 
+    const getStatusBadge = (status: string) => {
+        const styles: Record<string, string> = {
+            draft: 'bg-muted text-muted-foreground border-border',
+            validated: 'bg-primary/10 text-primary border-primary/20',
+            partially_delivered: 'bg-accent/10 text-accent-foreground border-accent/20',
+            delivered: 'bg-primary/20 text-primary font-bold border-primary/30',
+            closed: 'bg-muted text-muted-foreground border-border',
+        };
+        const labels: Record<string, string> = {
+            draft: 'Brouillon',
+            validated: 'Validé',
+            partially_delivered: 'Partiel',
+            delivered: 'Livré',
+            closed: 'Clôturé',
+        };
+        return (
+            <span className={`inline-flex items-center px-2.5 py-1 text-xs font-bold rounded-full border ${styles[status] || styles.draft}`}>
+                {labels[status] || status}
+            </span>
+        );
+    };
+
+    const columns: ColumnDef<SaleOrder>[] = [
+        { header: 'Référence', cell: (item) => <span className="font-bold text-foreground">{item.reference}</span> },
+        { header: 'Date', cell: (item) => new Date(item.order_date).toLocaleDateString() },
+        { header: 'Client', cell: (item) => <span className="font-medium">{item.customer.name}</span> },
+        { header: 'Statut', cell: (item) => getStatusBadge(item.status) },
+        {
+            header: 'Actions',
+            className: 'text-right',
+            cell: (item) => (
+                <div className="flex items-center justify-end gap-2">
+                    {item.status === 'validated' && (
+                        <button
+                            onClick={() => handleGenerateDeliveryNote(item.id)}
+                            className="flex items-center gap-1 bg-accent text-accent-foreground text-xs font-bold px-2.5 py-1.5 rounded-md hover:opacity-90 shadow-sm"
+                        >
+                            <Truck size={14} /> Livraison
+                        </button>
+                    )}
+                    {['draft', 'validated'].includes(item.status) && (
+                        <Link href={saleOrdersEdit.url(item.id)} className="p-1.5 hover:bg-muted text-muted-foreground rounded-lg">
+                            <Edit2 size={16} />
+                        </Link>
+                    )}
+                </div>
+            )
+        }
+    ];
+
     return (
-        <div className="p-6 space-y-6">
-            <Head title="Ferme-Landi | Commandes" />
-            
-            <div className="flex justify-between items-start">
-                <Breadcrumbs breadcrumbs={breadcrumbs} />
-                <Link
-                    href={saleOrdersCreate.url()}
-                    className="inline-flex items-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-lg font-semibold transition shadow-sm"
-                >
-                    <Plus className="w-4 h-4" />
-                    Créer une commande
+        <div className="p-6 max-w-7xl mx-auto space-y-6 bg-background">
+            <div className="flex justify-between items-center mb-4">
+                <div>
+                    <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
+                        <ShoppingCart className="text-primary" /> Commandes Client
+                    </h1>
+                    <p className="text-muted-foreground text-sm mt-1">Gérez le carnet de commandes et le flux de sortie.</p>
+                </div>
+                <Link href={saleOrdersCreate.url()} className="flex items-center gap-2 bg-primary text-primary-foreground px-5 py-2.5 rounded-xl font-bold shadow-sm hover:opacity-90">
+                    <Plus size={18} /> Nouvelle Commande
                 </Link>
             </div>
 
-            <div className="bg-card rounded-xl border border-border shadow-md overflow-hidden text-sm">
-                <div className="p-4 border-b border-border bg-muted/30 flex items-center gap-2">
-                    <ShoppingCart className="w-5 h-5 text-primary" />
-                    <h2 className="font-bold text-lg text-foreground">Gestion des Commandes</h2>
-                </div>
-
-                <table className="w-full text-left border-collapse">
-                    <thead className="bg-muted/50 border-b border-border text-xs uppercase tracking-wider font-semibold text-muted-foreground">
-                        <tr>
-                            <th className="px-6 py-4">Référence / Date</th>
-                            <th className="px-6 py-4">Client</th>
-                            <th className="px-6 py-4">Statut</th>
-                            <th className="px-6 py-4 text-right">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border">
-                        {data.data.length === 0 ? (
-                            <tr>
-                                <td colSpan={4} className="px-6 py-8 text-center text-muted-foreground">
-                                    Aucune commande en cours.
-                                </td>
-                            </tr>
-                        ) : (
-                            data.data.map((order) => (
-                                <tr key={order.id} className="hover:bg-muted/30 transition-colors">
-                                    <td className="px-6 py-4">
-                                        <div className="font-black text-foreground">{order.reference}</div>
-                                        <div className="flex items-center gap-1 text-[10px] text-muted-foreground mt-1">
-                                            <Calendar className="w-3 h-3" />
-                                            {new Date(order.order_date).toLocaleDateString('fr-FR')}
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <div className="flex items-center gap-2 font-medium text-foreground">
-                                            <User className="w-4 h-4 text-secondary" />
-                                            {order.customer.name}
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase border ${getStatusStyle(order.status)}`}>
-                                            {order.status}
-                                        </span>
-                                    </td>
-                                    <td className="px-6 py-4 text-right">
-                                        <Link 
-                                            href={saleOrdersEdit.url(order.id)}
-                                            className="p-2 text-muted-foreground hover:text-primary transition inline-block"
-                                        >
-                                            <MoreHorizontal className="w-5 h-5" />
-                                        </Link>
-                                    </td>
-                                </tr>
-                            ))
-                        )}
-                    </tbody>
-                </table>
-            </div>
+            <DataTable data={data} columns={columns} emptyMessage="Aucune commande client." />
         </div>
     );
 }

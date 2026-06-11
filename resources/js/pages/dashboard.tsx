@@ -1,226 +1,233 @@
-import React, { useState, useEffect } from 'react';
-import { Head } from '@inertiajs/react';
-import { Breadcrumbs } from '@/components/breadcrumbs';
+// pages/dashboard.tsx
+import React, { useMemo } from 'react';
+import { Head, Link } from '@inertiajs/react';
 import { 
-    Activity, 
+    Wallet, 
+    TrendingUp, 
+    TrendingDown, 
+    AlertTriangle, 
     Egg, 
-    Utensils, 
     Skull, 
-    TrendingUp,
-    Scale
+    Package, 
+    Activity,
+    ArrowUpRight,
+    ArrowDownRight,
+    ShoppingCart,
+    Coins
 } from 'lucide-react';
-import axios from 'axios';
-// Importation fictive pour Recharts (à installer via `npm install recharts`)
-import { 
-    LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Area, AreaChart 
-} from 'recharts';
 
-interface Generation {
-    id: number;
-    code: string;
-    type: string;
+interface StockAlert {
+    name: string;
+    symbol: string;
+    quantity: number;
 }
 
-interface DailyMetric {
+interface ZooStat {
     date: string;
-    live_quantity: number;
-    eggs_produced: number;
-    feed_consumed: number;
-    mortality_count: number;
-    laying_rate: number;
-    feed_conversion_ratio: number;
-    average_weight: number | null;
+    eggs: number;
+    mortality: number;
+}
+
+interface FinStat {
+    revenues: number;
+    material_expenses: number;
+    payroll_expenses: number;
 }
 
 interface Props {
-    activeGenerations: Generation[];
+    stockAlerts: StockAlert[]; // Injecté par le DashboardController[cite: 38]
+    zootechnieStats: ZooStat[]; // Injecté par le DashboardController[cite: 38]
+    financialStats: FinStat; // Injecté par le DashboardController[cite: 38]
 }
 
-export default function Dashboard({ activeGenerations }: Props) {
-    const [selectedGenId, setSelectedGenId] = useState<number | string>(
-        activeGenerations?.length > 0 ? activeGenerations[0].id : ''
-    );
-    const [metrics, setMetrics] = useState<DailyMetric[]>([]);
-    const [isLoading, setIsLoading] = useState(false);
+export default function Dashboard({ stockAlerts, zootechnieStats, financialStats }: Props) {
+    
+    // --- CALCULS FINANCIERS ---
+    const totalExpenses = financialStats.material_expenses + financialStats.payroll_expenses;
+    const netMargin = financialStats.revenues - totalExpenses;
+    const marginIsPositive = netMargin >= 0;
 
-    const breadcrumbs = [
-        { title: 'Exploitation', href: '#' },
-        { title: 'Tableau de bord', href: '#' },
-    ];
-
-    // Récupération des données via l'API ZootechnieStatsController
-    useEffect(() => {
-        if (!selectedGenId) return;
-
-        const fetchMetrics = async () => {
-            setIsLoading(true);
-            try {
-                // Route générée par le contrôleur de Jules pour l'API
-                const response = await axios.get(`/api/zootechnie/stats/${selectedGenId}`);
-                setMetrics(response.data.data);
-            } catch (error) {
-                console.error("Erreur lors de la récupération des statistiques", error);
-            } finally {
-                setIsLoading(false);
-            }
-        };
-
-        fetchMetrics();
-    }, [selectedGenId]);
-
-    const selectedGen = activeGenerations?.find(g => g.id === Number(selectedGenId));
-    const latestMetric = metrics?.length > 0 ? metrics[metrics?.length - 1] : null;
+    // --- CALCULS POUR LE GRAPHIQUE ZOOTECHNIQUE (100% CSS) ---
+    const maxEggs = Math.max(...zootechnieStats.map(s => s.eggs), 100); // Base minimum 100 pour l'échelle
+    const maxMortality = Math.max(...zootechnieStats.map(s => s.mortality), 10); // Base minimum 10 pour l'échelle
 
     return (
-        <div className="p-6 space-y-6">
+        <div className="p-6 max-w-7xl mx-auto space-y-8 bg-background min-h-screen">
             <Head title="Ferme-Landi | Tableau de Bord" />
-            
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                <Breadcrumbs breadcrumbs={breadcrumbs} />
-                
-                {/* Sélecteur de Lot pour filtrer le Dashboard */}
-                <div className="flex items-center gap-2 bg-card p-2 rounded-lg border border-border shadow-sm">
-                    <span className="text-xs font-bold uppercase text-muted-foreground ml-2">Analyser le lot :</span>
-                    <select
-                        value={selectedGenId}
-                        onChange={(e) => setSelectedGenId(e.target.value)}
-                        className="bg-background border-none text-sm font-bold focus:ring-0 cursor-pointer outline-none text-primary"
-                    >
-                        {activeGenerations?.map(gen => (
-                            <option key={gen.id} value={gen.id}>{gen.code} ({gen.type})</option>
-                        ))}
-                    </select>
+
+            {/* EN-TÊTE */}
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
+                <div>
+                    <h1 className="text-3xl font-black text-foreground tracking-tight flex items-center gap-3">
+                        <Activity className="w-8 h-8 text-primary" /> Vue d'ensemble
+                    </h1>
+                    <p className="text-muted-foreground text-sm mt-1">
+                        Performances globales de l'exploitation pour le mois en cours.
+                    </p>
+                </div>
+                <div className="text-right">
+                    <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Date du jour</p>
+                    <p className="text-lg font-bold text-foreground">
+                        {new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                    </p>
                 </div>
             </div>
 
-            {isLoading ? (
-                <div className="h-64 flex items-center justify-center text-muted-foreground animate-pulse">
-                    Chargement des données d'exploitation...
-                </div>
-            ) : metrics?.length === 0 ? (
-                <div className="bg-card p-10 rounded-xl border border-border text-center">
-                    <Activity className="w-10 h-10 text-muted-foreground mx-auto mb-3 opacity-50" />
-                    <p className="text-muted-foreground">Aucune métrique calculée pour ce lot.</p>
-                    <p className="text-xs mt-1">La commande nocturne de calcul n'est pas encore passée ou les données sont vides.</p>
-                </div>
-            ) : (
-                <>
-                    {/* KPIs : La vue d'ensemble du dernier jour */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                        <div className="bg-card p-5 rounded-xl border border-border shadow-sm">
-                            <div className="flex justify-between items-start">
-                                <div>
-                                    <p className="text-xs font-bold uppercase text-muted-foreground">Effectif Vivant</p>
-                                    <p className="text-2xl font-black text-foreground mt-1">
-                                        {latestMetric?.live_quantity.toLocaleString()}
-                                    </p>
-                                </div>
-                                <div className="p-2 bg-primary/10 rounded-lg text-primary"><Activity className="w-5 h-5" /></div>
-                            </div>
+            {/* SECTION 1 : KPIS FINANCIERS */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {/* Carte Revenus */}
+                <div className="bg-card rounded-2xl p-6 border border-border shadow-sm flex flex-col justify-between overflow-hidden relative">
+                    <div className="absolute top-0 right-0 p-4 opacity-10">
+                        <TrendingUp className="w-24 h-24 text-emerald-500" />
+                    </div>
+                    <div className="flex justify-between items-start relative z-10">
+                        <div className="bg-emerald-500/10 p-3 rounded-xl text-emerald-600">
+                            <Wallet className="w-6 h-6" />
                         </div>
+                    </div>
+                    <div className="mt-4 relative z-10">
+                        <p className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Revenus (Ventes)</p>
+                        <p className="text-3xl font-black text-foreground mt-1">
+                            {financialStats.revenues.toLocaleString()} <span className="text-sm font-medium text-muted-foreground">FCFA</span>
+                        </p>
+                    </div>
+                </div>
 
-                        {selectedGen?.type === 'pondeuse' && (
-                            <div className="bg-card p-5 rounded-xl border border-border shadow-sm">
-                                <div className="flex justify-between items-start">
-                                    <div>
-                                        <p className="text-xs font-bold uppercase text-muted-foreground">Taux de Ponte Actuel</p>
-                                        <p className="text-2xl font-black text-primary mt-1">
-                                            {latestMetric?.laying_rate}%
+                {/* Carte Dépenses (Matériel + Paie) */}
+                <div className="bg-card rounded-2xl p-6 border border-border shadow-sm flex flex-col justify-between overflow-hidden relative">
+                    <div className="absolute top-0 right-0 p-4 opacity-10">
+                        <TrendingDown className="w-24 h-24 text-destructive" />
+                    </div>
+                    <div className="flex justify-between items-start relative z-10">
+                        <div className="bg-destructive/10 p-3 rounded-xl text-destructive">
+                            <ShoppingCart className="w-6 h-6" />
+                        </div>
+                    </div>
+                    <div className="mt-4 relative z-10">
+                        <p className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Total Dépenses</p>
+                        <p className="text-3xl font-black text-foreground mt-1">
+                            {totalExpenses.toLocaleString()} <span className="text-sm font-medium text-muted-foreground">FCFA</span>
+                        </p>
+                        <div className="flex gap-4 mt-2 text-xs font-medium text-muted-foreground">
+                            <span>Matériel: {financialStats.material_expenses.toLocaleString()}</span>
+                            <span>Paie: {financialStats.payroll_expenses.toLocaleString()}</span>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Carte Résultat / Marge */}
+                <div className={`rounded-2xl p-6 border shadow-sm flex flex-col justify-between overflow-hidden relative ${marginIsPositive ? 'bg-primary/10 border-primary/20' : 'bg-destructive/10 border-destructive/20'}`}>
+                    <div className="flex justify-between items-start relative z-10">
+                        <div className={`p-3 rounded-xl ${marginIsPositive ? 'bg-primary text-primary-foreground' : 'bg-destructive text-destructive-foreground'}`}>
+                            <Coins className="w-6 h-6" />
+                        </div>
+                        <span className={`flex items-center gap-1 text-sm font-black px-3 py-1 rounded-full ${marginIsPositive ? 'text-primary bg-primary/10' : 'text-destructive bg-destructive/10'}`}>
+                            {marginIsPositive ? <ArrowUpRight className="w-4 h-4" /> : <ArrowDownRight className="w-4 h-4" />}
+                            Bilan Mensuel
+                        </span>
+                    </div>
+                    <div className="mt-4 relative z-10">
+                        <p className={`text-sm font-bold uppercase tracking-wider ${marginIsPositive ? 'text-primary/70' : 'text-destructive/70'}`}>
+                            {marginIsPositive ? 'Bénéfice Net' : 'Déficit'}
+                        </p>
+                        <p className={`text-3xl font-black mt-1 ${marginIsPositive ? 'text-primary' : 'text-destructive'}`}>
+                            {marginIsPositive ? '+' : ''}{netMargin.toLocaleString()} <span className="text-sm font-medium opacity-70">FCFA</span>
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            {/* SECTION 2 : GRAPHIQUES ET ALERTES */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                
+                {/* Graphique de Production (7 derniers jours) */}
+                <div className="lg:col-span-2 bg-card rounded-2xl border border-border shadow-sm p-6 flex flex-col">
+                    <div className="flex justify-between items-center mb-8">
+                        <div>
+                            <h2 className="text-lg font-bold flex items-center gap-2">
+                                <Egg className="w-5 h-5 text-primary" /> Production vs Mortalité
+                            </h2>
+                            <p className="text-xs text-muted-foreground mt-1">Évolution zootechnique sur les 7 derniers jours.</p>
+                        </div>
+                        <div className="flex gap-4 text-xs font-bold">
+                            <span className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-full bg-primary"></div> Œufs pondus</span>
+                            <span className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-full bg-destructive"></div> Mortalité</span>
+                        </div>
+                    </div>
+
+                    {/* Graphique CSS Custom */}
+                    <div className="flex-1 flex items-end gap-2 sm:gap-4 h-64 mt-auto">
+                        {zootechnieStats.map((stat, index) => {
+                            // Calcul des hauteurs en pourcentage (max 100%)
+                            const eggHeight = Math.max((stat.eggs / maxEggs) * 100, 2); 
+                            const mortHeight = Math.max((stat.mortality / maxMortality) * 100, 2);
+
+                            return (
+                                <div key={index} className="flex-1 flex flex-col items-center justify-end group">
+                                    {/* Tooltip Hover */}
+                                    <div className="opacity-0 group-hover:opacity-100 transition-opacity bg-foreground text-background text-[10px] p-2 rounded-lg mb-2 text-center pointer-events-none z-10 whitespace-nowrap">
+                                        <p className="font-bold mb-1">{stat.date}</p>
+                                        <p className="text-primary-foreground">{stat.eggs} œufs</p>
+                                        <p className="text-destructive-foreground">{stat.mortality} pertes</p>
+                                    </div>
+                                    
+                                    {/* Barres */}
+                                    <div className="w-full flex justify-center items-end gap-1 sm:gap-2 h-48 relative">
+                                        <div 
+                                            className="w-1/2 bg-primary rounded-t-md transition-all duration-500 hover:bg-primary/80" 
+                                            style={{ height: `${eggHeight}%` }}
+                                        />
+                                        <div 
+                                            className="w-1/2 bg-destructive rounded-t-md transition-all duration-500 hover:bg-destructive/80" 
+                                            style={{ height: `${mortHeight}%` }}
+                                        />
+                                    </div>
+                                    <span className="text-xs font-bold text-muted-foreground mt-3">{stat.date}</span>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+
+                {/* Alertes de Stock Critiques */}
+                <div className="bg-card rounded-2xl border border-border shadow-sm p-6 flex flex-col">
+                    <div className="flex items-center gap-2 mb-6 text-destructive">
+                        <AlertTriangle className="w-6 h-6" />
+                        <div>
+                            <h2 className="text-lg font-bold text-foreground">Alertes Stocks</h2>
+                            <p className="text-xs text-muted-foreground">Aliments & Médicaments critiques</p>
+                        </div>
+                    </div>
+
+                    <div className="flex-1 overflow-y-auto pr-2 space-y-3">
+                        {stockAlerts.length > 0 ? (
+                            stockAlerts.map((alert, index) => (
+                                <div key={index} className="bg-muted/30 border border-border rounded-xl p-3 flex justify-between items-center transition-colors hover:bg-muted/50">
+                                    <div className="flex items-center gap-3">
+                                        <div className="bg-destructive/10 p-2 rounded-lg text-destructive">
+                                            <Package className="w-4 h-4" />
+                                        </div>
+                                        <p className="font-bold text-sm text-foreground line-clamp-1" title={alert.name}>
+                                            {alert.name}
                                         </p>
                                     </div>
-                                    <div className="p-2 bg-primary/10 rounded-lg text-primary"><Egg className="w-5 h-5" /></div>
-                                </div>
-                            </div>
-                        )}
-
-                        <div className="bg-card p-5 rounded-xl border border-border shadow-sm">
-                            <div className="flex justify-between items-start">
-                                <div>
-                                    <p className="text-xs font-bold uppercase text-muted-foreground">Indice Consommation (IC)</p>
-                                    <p className="text-2xl font-black text-accent mt-1">
-                                        {latestMetric?.feed_conversion_ratio}
-                                    </p>
-                                </div>
-                                <div className="p-2 bg-accent/10 rounded-lg text-accent-foreground"><Utensils className="w-5 h-5" /></div>
-                            </div>
-                        </div>
-
-                        {(selectedGen?.type === 'chair' || selectedGen?.type === 'porc') && (
-                            <div className="bg-card p-5 rounded-xl border border-border shadow-sm">
-                                <div className="flex justify-between items-start">
-                                    <div>
-                                        <p className="text-xs font-bold uppercase text-muted-foreground">Poids Moyen</p>
-                                        <p className="text-2xl font-black text-secondary mt-1">
-                                            {latestMetric?.average_weight ? `${latestMetric.average_weight} kg` : '-'}
+                                    <div className="text-right whitespace-nowrap pl-2">
+                                        <p className="text-sm font-black text-destructive">
+                                            {alert.quantity} <span className="text-[10px] font-normal">{alert.symbol}</span>
                                         </p>
                                     </div>
-                                    <div className="p-2 bg-secondary/10 rounded-lg text-secondary"><Scale className="w-5 h-5" /></div>
                                 </div>
+                            ))
+                        ) : (
+                            <div className="h-full flex flex-col items-center justify-center text-center space-y-3 opacity-60">
+                                <Package className="w-12 h-12 text-muted-foreground" />
+                                <p className="text-sm font-bold text-muted-foreground">Aucune rupture de stock détectée sur les aliments et la santé.</p>
                             </div>
                         )}
                     </div>
+                </div>
 
-                    {/* Graphiques Principaux */}
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        
-                        {/* Graphique 1 : Courbe de Ponte (Si Pondeuse) ou Croissance (Si Chair/Porc) */}
-                        <div className="bg-card p-5 rounded-xl border border-border shadow-sm">
-                            <h3 className="font-bold text-sm text-foreground mb-4 flex items-center gap-2">
-                                <TrendingUp className="w-4 h-4 text-primary" />
-                                {selectedGen?.type === 'pondeuse' ? 'Évolution du Taux de Ponte (%)' : 'Courbe de Croissance Poids (Kg)'}
-                            </h3>
-                            <div className="h-64 w-full text-xs">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <AreaChart data={metrics}>
-                                        <defs>
-                                            <linearGradient id="colorPrimary" x1="0" y1="0" x2="0" y2="1">
-                                                <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.3}/>
-                                                <stop offset="95%" stopColor="var(--primary)" stopOpacity={0}/>
-                                            </linearGradient>
-                                        </defs>
-                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" />
-                                        <XAxis dataKey="date" tickFormatter={(str) => new Date(str).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })} />
-                                        <YAxis />
-                                        <Tooltip 
-                                            labelFormatter={(str) => new Date(str).toLocaleDateString('fr-FR')}
-                                            contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                                        />
-                                        <Area 
-                                            type="monotone" 
-                                            dataKey={selectedGen?.type === 'pondeuse' ? 'laying_rate' : 'average_weight'} 
-                                            stroke="var(--primary)" 
-                                            fillOpacity={1} 
-                                            fill="url(#colorPrimary)" 
-                                            strokeWidth={3}
-                                        />
-                                    </AreaChart>
-                                </ResponsiveContainer>
-                            </div>
-                        </div>
-
-                        {/* Graphique 2 : Indice de Consommation (FCR) */}
-                        <div className="bg-card p-5 rounded-xl border border-border shadow-sm">
-                            <h3 className="font-bold text-sm text-foreground mb-4 flex items-center gap-2">
-                                <Utensils className="w-4 h-4 text-accent" />
-                                Indice de Consommation (Aliment vs Production)
-                            </h3>
-                            <div className="h-64 w-full text-xs">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <LineChart data={metrics}>
-                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" />
-                                        <XAxis dataKey="date" tickFormatter={(str) => new Date(str).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })} />
-                                        <YAxis domain={['auto', 'auto']} />
-                                        <Tooltip 
-                                            labelFormatter={(str) => new Date(str).toLocaleDateString('fr-FR')}
-                                        />
-                                        <Line type="monotone" dataKey="feed_conversion_ratio" stroke="#84cc16" strokeWidth={3} dot={false} />
-                                    </LineChart>
-                                </ResponsiveContainer>
-                            </div>
-                        </div>
-                    </div>
-                </>
-            )}
+            </div>
         </div>
     );
 }

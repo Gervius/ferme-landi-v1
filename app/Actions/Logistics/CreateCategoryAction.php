@@ -5,22 +5,30 @@ namespace App\Actions\Logistics;
 use App\Models\Category;
 use Illuminate\Support\Str;
 
-class CreateCategoryAction
+final readonly class CreateCategoryAction
 {
     /**
-     * Create a new category.
+     * Crée une catégorie avec gestion de slug dédoublonnée en RAM.
      */
     public function execute(array $data): Category
     {
         if (empty($data['slug'])) {
             $data['slug'] = Str::slug($data['name']);
-            // ensure unique slug
-            $originalSlug = $data['slug'];
+        }
+
+        $originalSlug = $data['slug'];
+
+        // Élimination du N+1 : On récupère tous les slugs similaires en UNE seule requête restreinte
+        $existingSlugs = Category::where('slug', 'LIKE', "{$originalSlug}%")
+            ->pluck('slug')
+            ->toArray();
+
+        if (in_array($originalSlug, $existingSlugs)) {
             $count = 1;
-            while (Category::where('slug', $data['slug'])->exists()) {
-                $data['slug'] = "{$originalSlug}-{$count}";
+            while (in_array("{$originalSlug}-{$count}", $existingSlugs)) {
                 $count++;
             }
+            $data['slug'] = "{$originalSlug}-{$count}";
         }
 
         return Category::create($data);

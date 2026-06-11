@@ -10,11 +10,21 @@ return new class extends Migration
     {
         Schema::create('employees', function (Blueprint $table) {
             $table->id();
+            
+            // Clés étrangères
             $table->foreignId('site_id')->constrained()->cascadeOnDelete();
+            
+            // Données personnelles et professionnelles
             $table->string('first_name');
             $table->string('last_name');
+            $table->string('position'); // Ajouté
+            $table->date('hire_date'); // Ajouté
+            
+            // Paie et Statut
             $table->decimal('base_salary', 10, 2);
             $table->boolean('is_active')->default(true);
+            
+            // Audit trails
             $table->timestamps();
             $table->softDeletes();
         });

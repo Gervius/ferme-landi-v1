@@ -20,7 +20,7 @@ class AccountingJournalController extends Controller
     {
         Gate::authorize('viewAny', AccountingJournal::class);
 
-        $accountingJournals = AccountingJournal::orderBy('code')->get();
+        $accountingJournals = AccountingJournal::orderBy('code')->paginate(15);
 
         return Inertia::render('Accounting/AccountingJournals/Index', [
             'accountingJournals' => $accountingJournals,

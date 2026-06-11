@@ -1,239 +1,229 @@
-import React, { useEffect, useState } from 'react';
-import { Head, useForm, Link } from '@inertiajs/react';
-import { Breadcrumbs } from '@/components/breadcrumbs';
-import { 
-    Save, 
-    ArrowLeft, 
-    PackageOpen, 
-    Plus, 
-    Trash2, 
-    Info,
-    Loader2
-} from 'lucide-react';
+// pages/Purchases/PurchaseReceipt/Create.tsx
+import React, { useMemo } from 'react';
+import { useForm, Link } from '@inertiajs/react';
+import { Plus, Trash2, ArrowLeft, PackageOpen, ArrowDownToLine } from 'lucide-react';
 import { purchaseReceiptsIndex, purchaseReceiptsStore } from '@/routes';
-import axios from 'axios';
+
+interface SelectionItem { id: number; name: string; symbol?: string; reference?: string }
 
 interface Props {
-    purchaseOrders: { id: number; reference: string }[];
-    categories: { id: number; name: string }[];
-    units: { id: number; name: string; symbol: string }[];
+    purchaseOrders: SelectionItem[]; // Commandes en attente de livraison
+    categories: SelectionItem[];     // Liste des articles
+    units: SelectionItem[];          // Référentiel des unités
+    sites?: SelectionItem[];         // Entrepôts/Fermes de stockage
 }
 
-export default function CreatePurchaseReceipt({ purchaseOrders, categories, units }: Props) {
-    const [isLoadingItems, setIsLoadingItems] = useState(false);
+interface ReceiptItem {
+    purchase_order_item_id: string | number | null;
+    category_id: string | number;
+    unit_id: string | number;
+    received_quantity: number;
+}
 
+export default function Create({ purchaseOrders, categories, units, sites = [] }: Props) {
     const { data, setData, post, processing, errors } = useForm({
+        site_id: '',
         purchase_order_id: '',
         receipt_date: new Date().toISOString().split('T')[0],
-        reference: `BR-${Date.now().toString().slice(-6)}`,
-        items: [
-            { purchase_order_item_id: '', category_id: '', unit_id: '', received_quantity: 0 }
-        ],
+        reference: '',
+        items: [{ purchase_order_item_id: null, category_id: '', unit_id: '', received_quantity: 1 }] as ReceiptItem[],
     });
 
-    const breadcrumbs = [
-        { title: 'Achats', href: '#' },
-        { title: 'Réceptions', href: purchaseReceiptsIndex.url() },
-        { title: 'Nouvel Arrivage', href: '#' },
-    ];
-
-    // --- LOGIQUE D'AUTO-REMPLISSAGE VIA L'API DE JULES ---
-    useEffect(() => {
-        if (!data.purchase_order_id) return;
-
-        const fetchOrderDetails = async () => {
-            setIsLoadingItems(true);
-            try {
-                // Appel vers la nouvelle route API de Jules
-                const response = await axios.get(`/api/purchase-orders/${data.purchase_order_id}`);
-                const order = response.data;
-
-                // Mappage des items de la commande vers le bon de réception
-                const newItems = order.items.map((item: any) => ({
-                    purchase_order_item_id: item.id,
-                    category_id: item.category_id,
-                    unit_id: item.unit_id,
-                    received_quantity: item.quantity, // Par défaut, on suppose qu'il reçoit tout (il peut modifier)
-                }));
-
-                setData('items', newItems);
-            } catch (error) {
-                console.error("Erreur lors de la récupération de la commande", error);
-            } finally {
-                setIsLoadingItems(false);
-            }
-        };
-
-        fetchOrderDetails();
-    }, [data.purchase_order_id]);
-
-    const addItem = () => {
-        setData('items', [...data.items, { purchase_order_item_id: '', category_id: '', unit_id: '', received_quantity: 0 }]);
+    // Insertion et suppression dynamique de lignes
+    const addLine = () => {
+        setData('items', [...data.items, { purchase_order_item_id: null, category_id: '', unit_id: '', received_quantity: 1 }]);
     };
 
-    const removeItem = (index: number) => {
-        setData('items', data.items.filter((_, i) => i !== index));
+    const removeLine = (index: number) => {
+        if (data.items.length > 1) {
+            setData('items', data.items.filter((_, i) => i !== index));
+        }
     };
 
-    const updateItem = (index: number, field: string, value: any) => {
-        const newItems = [...data.items];
-        newItems[index] = { ...newItems[index], [field]: value };
-        setData('items', newItems);
+    const updateLine = (index: number, field: keyof ReceiptItem, value: any) => {
+        const updatedItems = data.items.map((item, i) => {
+            if (i === index) return { ...item, [field]: value };
+            return item;
+        });
+        setData('items', updatedItems);
     };
 
-    // Utilisation stricte de React.SubmitEvent comme tu l'as précisé
+    // Performance (RAM) : Cumul des quantités totales livrées calculé à la volée
+    const totalItemsCount = useMemo(() => {
+        return data.items.reduce((sum, item) => sum + Number(item.received_quantity || 0), 0);
+    }, [data.items]);
+
     const handleSubmit = (e: React.SubmitEvent) => {
         e.preventDefault();
         post(purchaseReceiptsStore.url());
     };
 
     return (
-        <div className="p-6 max-w-5xl mx-auto space-y-6">
-            <Head title="Ferme-Landi | Nouveau Bon de Réception" />
-            
-            <div className="flex justify-between items-center text-sm">
-                <Breadcrumbs breadcrumbs={breadcrumbs} />
-                <Link href={purchaseReceiptsIndex.url()} className="text-muted-foreground hover:text-foreground flex items-center gap-1 transition">
-                    <ArrowLeft className="w-4 h-4" /> Retour
+        <div className="p-6 max-w-6xl mx-auto space-y-6 bg-background text-foreground">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Link href={purchaseReceiptsIndex.url()} className="hover:text-foreground flex items-center gap-1">
+                    <ArrowLeft size={14} /> Réceptions
                 </Link>
+                <span>/</span><span className="text-foreground font-medium">Nouveau bon d'entrée</span>
             </div>
 
+            <h1 className="text-2xl font-bold flex items-center gap-2">
+                <PackageOpen className="text-secondary" /> Créer un Bon de Réception de Matériel
+            </h1>
+
             <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="bg-card rounded-xl border border-border shadow-lg overflow-hidden">
-                    <div className="p-5 border-b border-border bg-emerald-500/5 flex items-center gap-3">
-                        <PackageOpen className="w-6 h-6 text-emerald-600" />
-                        <div>
-                            <h2 className="text-lg font-bold text-foreground">Réception de Marchandises</h2>
-                            <p className="text-sm text-muted-foreground">Enregistrez l'arrivée physique des produits dans l'entrepôt.</p>
-                        </div>
+                
+                {/* Informations logistiques générales */}
+                <div className="bg-card border border-border rounded-xl p-6 shadow-sm grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div className="space-y-1">
+                        <label className="text-sm font-semibold">Numéro de Réception / BL</label>
+                        <input 
+                            type="text" 
+                            value={data.reference} 
+                            onChange={e => setData('reference', e.target.value)} 
+                            className="w-full bg-input border border-border rounded-lg p-2.5" 
+                            placeholder="Ex: BR-2026-0001" 
+                        />
+                        {errors.reference && <span className="text-destructive text-xs font-medium">{errors.reference}</span>}
                     </div>
 
-                    <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <div className="space-y-1.5">
-                            <label className="text-xs font-bold uppercase text-muted-foreground">Lier à une commande</label>
-                            <select
-                                value={data.purchase_order_id}
-                                onChange={e => setData('purchase_order_id', e.target.value)}
-                                className="w-full bg-background border border-border rounded-lg px-3 py-2.5 outline-none focus:ring-2 focus:ring-emerald-500/20 font-bold text-primary"
-                            >
-                                <option value="">--- Réception Libre ---</option>
-                                {purchaseOrders.map(po => <option key={po.id} value={po.id}>{po.reference}</option>)}
-                            </select>
-                            {errors.purchase_order_id && <p className="text-destructive text-[10px] font-bold">{errors.purchase_order_id}</p>}
-                        </div>
+                    <div className="space-y-1">
+                        <label className="text-sm font-semibold">Associer à une Commande d'Achat (Optionnel)</label>
+                        <select 
+                            value={data.purchase_order_id} 
+                            onChange={e => setData('purchase_order_id', e.target.value)} 
+                            className="w-full bg-input border border-border rounded-lg p-2.5 text-sm"
+                        >
+                            <option value="">Achat direct (Sans bon de commande)</option>
+                            {purchaseOrders.map(po => <option key={po.id} value={po.id}>{po.reference}</option>)}
+                        </select>
+                        {errors.purchase_order_id && <span className="text-destructive text-xs font-medium">{errors.purchase_order_id}</span>}
+                    </div>
 
-                        <div className="space-y-1.5">
-                            <label className="text-xs font-bold uppercase text-muted-foreground">Réf. Bon de Réception</label>
-                            <input
-                                type="text"
-                                value={data.reference}
-                                onChange={e => setData('reference', e.target.value)}
-                                className="w-full bg-background border border-border rounded-lg px-3 py-2.5 font-mono font-bold"
-                            />
-                            {errors.reference && <p className="text-destructive text-[10px] font-bold">{errors.reference}</p>}
-                        </div>
+                    <div className="space-y-1">
+                        <label className="text-sm font-semibold">Magasin / Site de stockage d'arrivée</label>
+                        <select 
+                            value={data.site_id} 
+                            onChange={e => setData('site_id', e.target.value)} 
+                            className="w-full bg-input border border-border rounded-lg p-2.5 text-sm"
+                        >
+                            <option value="">Sélectionner le dépôt de destination</option>
+                            {sites.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                        </select>
+                        {errors.site_id && <span className="text-destructive text-xs font-medium">{errors.site_id}</span>}
+                    </div>
 
-                        <div className="space-y-1.5">
-                            <label className="text-xs font-bold uppercase text-muted-foreground">Date d'arrivée</label>
-                            <input
-                                type="date"
-                                value={data.receipt_date}
-                                onChange={e => setData('receipt_date', e.target.value)}
-                                className="w-full bg-background border border-border rounded-lg px-3 py-2.5 outline-none"
-                            />
-                            {errors.receipt_date && <p className="text-destructive text-[10px] font-bold">{errors.receipt_date}</p>}
-                        </div>
+                    <div className="space-y-1">
+                        <label className="text-sm font-semibold">Date d'entrée en soute</label>
+                        <input 
+                            type="date" 
+                            value={data.receipt_date} 
+                            onChange={e => setData('receipt_date', e.target.value)} 
+                            className="w-full bg-input border border-border rounded-lg p-2.5" 
+                        />
+                        {errors.receipt_date && <span className="text-destructive text-xs font-medium">{errors.receipt_date}</span>}
                     </div>
                 </div>
 
-                {/* TABLEAU DES ARTICLES */}
-                <div className="bg-card rounded-xl border border-border shadow-lg overflow-hidden relative">
-                    {/* Overlay de chargement pendant l'appel API */}
-                    {isLoadingItems && (
-                        <div className="absolute inset-0 bg-background/60 backdrop-blur-sm z-10 flex items-center justify-center">
-                            <div className="flex flex-col items-center gap-2">
-                                <Loader2 className="w-8 h-8 text-emerald-600 animate-spin" />
-                                <span className="text-xs font-bold uppercase text-muted-foreground tracking-widest">Extraction de la commande...</span>
-                            </div>
-                        </div>
-                    )}
-
-                    <div className="p-4 border-b border-border bg-muted/30 flex justify-between items-center text-sm font-bold">
-                        <span className="uppercase tracking-widest text-muted-foreground">Articles Réceptionnés</span>
-                        <button type="button" onClick={addItem} className="text-emerald-600 hover:text-emerald-700 flex items-center gap-1 transition">
-                            <Plus className="w-4 h-4" /> Ajouter ligne
+                {/* Grille de déchargement des marchandises */}
+                <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden">
+                    <div className="p-4 border-b border-border bg-muted/20 flex justify-between items-center">
+                        <span className="text-sm font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                            <ArrowDownToLine size={16}/> Colis et volumes réceptionnés
+                        </span>
+                        <button 
+                            type="button" 
+                            onClick={addLine} 
+                            className="bg-secondary text-secondary-foreground text-xs font-bold px-3 py-2 rounded-lg hover:opacity-90"
+                        >
+                            Ajouter une ligne
                         </button>
                     </div>
 
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left border-collapse">
-                            <thead className="bg-muted/10 text-[10px] uppercase font-black text-muted-foreground border-b border-border">
-                                <tr>
-                                    <th className="px-6 py-3">Produit (Catégorie)</th>
-                                    <th className="px-4 py-3">Unité de mesure</th>
-                                    <th className="px-4 py-3 text-center">Quantité Réelle Reçue</th>
-                                    <th className="px-4 py-3 w-10"></th>
+                    <table className="w-full text-left text-sm">
+                        <thead className="bg-muted text-muted-foreground text-xs uppercase font-semibold">
+                            <tr>
+                                <th className="p-4">Article / Produit reçu</th>
+                                <th className="p-4 w-48">Conditionnement / Unité</th>
+                                <th className="p-4 w-48 text-right">Quantité Physiquement Reçue</th>
+                                <th className="p-4 w-12"></th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-border">
+                            {data.items.map((item, index) => (
+                                <tr key={index} className="hover:bg-muted/10">
+                                    <td className="p-3">
+                                        <select 
+                                            value={item.category_id} 
+                                            onChange={e => updateLine(index, 'category_id', e.target.value)} 
+                                            className="w-full bg-input border border-border rounded-md p-2"
+                                        >
+                                            <option value="">Sélectionner l'article</option>
+                                            {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                        </select>
+                                        {errors[`items.${index}.category_id` as keyof typeof errors] && (
+                                            <span className="text-destructive text-xs block mt-0.5">Requis</span>
+                                        )}
+                                    </td>
+                                    <td className="p-3">
+                                        <select 
+                                            value={item.unit_id} 
+                                            onChange={e => updateLine(index, 'unit_id', e.target.value)} 
+                                            className="w-full bg-input border border-border rounded-md p-2"
+                                        >
+                                            <option value="">Sélectionner l'unité</option>
+                                            {units.map(u => <option key={u.id} value={u.id}>{u.name} ({u.symbol})</option>)}
+                                        </select>
+                                        {errors[`items.${index}.unit_id` as keyof typeof errors] && (
+                                            <span className="text-destructive text-xs block mt-0.5">Requis</span>
+                                        )}
+                                    </td>
+                                    <td className="p-3">
+                                        <input 
+                                            type="number" 
+                                            min="0.01" 
+                                            step="0.01" 
+                                            value={item.received_quantity || ''} 
+                                            onChange={e => updateLine(index, 'received_quantity', Number(e.target.value))} 
+                                            className="w-full bg-input border border-border rounded-md p-2 text-right font-bold text-secondary" 
+                                        />
+                                        {errors[`items.${index}.received_quantity` as keyof typeof errors] && (
+                                            <span className="text-destructive text-xs block mt-0.5">Invalide</span>
+                                        )}
+                                    </td>
+                                    <td className="p-3 text-center">
+                                        <button 
+                                            type="button" 
+                                            onClick={() => removeLine(index)} 
+                                            disabled={data.items.length === 1} 
+                                            className="text-muted-foreground hover:text-destructive disabled:opacity-30 p-1"
+                                        >
+                                            <Trash2 size={16} />
+                                        </button>
+                                    </td>
                                 </tr>
-                            </thead>
-                            <tbody className="divide-y divide-border">
-                                {data.items.map((item, index) => (
-                                    <tr key={index} className="group hover:bg-muted/5">
-                                        <td className="px-6 py-3">
-                                            <select
-                                                value={item.category_id}
-                                                onChange={e => updateItem(index, 'category_id', e.target.value)}
-                                                className="w-full bg-transparent border-none focus:ring-0 font-bold"
-                                            >
-                                                <option value="">Sélectionner...</option>
-                                                {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                                            </select>
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            <select
-                                                value={item.unit_id}
-                                                onChange={e => updateItem(index, 'unit_id', e.target.value)}
-                                                className="w-full bg-transparent border-none focus:ring-0 text-muted-foreground"
-                                            >
-                                                <option value="">Unité...</option>
-                                                {units.map(u => <option key={u.id} value={u.id}>{u.symbol}</option>)}
-                                            </select>
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            <input
-                                                type="number"
-                                                step="0.01"
-                                                min="0.01"
-                                                value={item.received_quantity}
-                                                onChange={e => updateItem(index, 'received_quantity', Number(e.target.value))}
-                                                className="w-32 mx-auto bg-muted/30 border border-border rounded px-3 py-2 font-black text-emerald-600 text-center focus:bg-background focus:ring-2 focus:ring-emerald-500/20 outline-none"
-                                            />
-                                        </td>
-                                        <td className="px-4 py-3 text-right">
-                                            {data.items.length > 1 && (
-                                                <button type="button" onClick={() => removeItem(index)} className="text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition">
-                                                    <Trash2 className="w-4 h-4" />
-                                                </button>
-                                            )}
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                            ))}
+                        </tbody>
+                    </table>
+
+                    <div className="p-4 bg-muted/20 border-t border-border flex justify-end">
+                        <p className="text-sm font-semibold text-muted-foreground">
+                            Volume total cumulé sur ce bon : <span className="text-foreground font-black">{totalItemsCount.toLocaleString()} units</span>
+                        </p>
                     </div>
                 </div>
 
-                <div className="p-6 bg-muted/20 rounded-xl border border-border flex flex-col md:flex-row justify-between items-center gap-4">
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground italic">
-                        <Info className="w-4 h-4 text-emerald-600 shrink-0" />
-                        L'approbation de ce bon ajoutera les quantités au stock d'inventaire disponible.
-                    </div>
-                    <button
-                        type="submit"
-                        disabled={processing || isLoadingItems}
-                        className="w-full md:w-auto bg-emerald-600 hover:bg-emerald-700 text-white px-12 py-3.5 rounded-xl font-black shadow-lg flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50"
+                {/* Boutons d'enregistrements */}
+                <div className="flex justify-end gap-4">
+                    <Link href={purchaseReceiptsIndex.url()} className="px-5 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground">
+                        Annuler
+                    </Link>
+                    <button 
+                        type="submit" 
+                        disabled={processing} 
+                        className="bg-secondary text-secondary-foreground px-6 py-2.5 rounded-xl font-bold shadow-sm hover:opacity-90 disabled:opacity-50 transition-opacity"
                     >
-                        <Save className="w-5 h-5" />
-                        {processing ? 'Génération...' : 'Créer le Bon de Réception'}
+                        Créer le Bon de Réception (Draft)
                     </button>
                 </div>
             </form>

@@ -16,13 +16,17 @@ use Inertia\Response;
 
 class StockMovementController extends Controller
 {
+
+
     public function index(): Response
     {
         Gate::authorize('viewAny', StockMovement::class);
 
         $stockMovements = StockMovement::with(['site', 'category', 'unit', 'creator'])
             ->orderByDesc('date')
-            ->get();
+            ->paginate(15); // <-- CORRECTION ICI
+
+        
 
         return Inertia::render('Stocks/StockMovements/Index', [
             'stockMovements' => $stockMovements,
@@ -35,7 +39,8 @@ class StockMovementController extends Controller
 
         $sites = Site::select('id', 'name')->get();
         $categories = Category::select('id', 'name')->get();
-        $units = Unit::select('id', 'name')->get();
+        $units = Unit::where('is_active', true)->get(['id', 'name', 'symbol']);
+
 
         return Inertia::render('Stocks/StockMovements/Create', [
             'sites' => $sites,

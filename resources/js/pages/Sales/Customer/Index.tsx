@@ -1,9 +1,17 @@
-import React from 'react';
-import { Head, Link, useForm } from '@inertiajs/react';
-import { Breadcrumbs } from '@/components/breadcrumbs';
-import { Plus, Edit, Trash2, CheckCircle2, XCircle, Users, Phone, Mail, MapPin } from 'lucide-react';
-// Assure-toi d'importer les routes générées (customersCreate, customersEdit, customersDestroy)
-import { customersCreate, customersEdit, customersDestroy } from '@/routes';
+// pages/Sales/Customer/Index.tsx
+import React, { useState } from 'react';
+import { router, useForm } from '@inertiajs/react';
+import { Plus, Edit2, Trash2, Users, User, Phone, Mail, MapPin } from 'lucide-react';
+import { customersStore, customersUpdate, customersDestroy } from '@/routes';
+import { PaginatedData } from '@/types/pagination';
+import { DataTable, ColumnDef } from '@/components/ui/DataTable';
+import { 
+    Dialog, 
+    DialogContent, 
+    DialogDescription, 
+    DialogHeader, 
+    DialogTitle 
+} from '@/components/ui/dialog';
 
 interface Customer {
     id: number;
@@ -15,124 +23,140 @@ interface Customer {
 }
 
 interface Props {
-    data: {
-        data: Customer[];
-    };
+    data: PaginatedData<Customer>;
 }
 
-export default function CustomerIndex({ data }: Props) {
-    const { delete: destroy } = useForm();
+export default function Index({ data }: Props) {
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [editingId, setEditingId] = useState<number | null>(null);
 
-    const breadcrumbs = [
-        { title: 'Ventes & Commercial', href: '#' },
-        { title: 'Clients', href: '#' },
-    ];
+    const { data: formData, setData, post, put, processing, errors, reset } = useForm({
+        name: '',
+        phone: '',
+        email: '',
+        address: '',
+        is_active: true,
+    });
+
+    const openCreateModal = () => {
+        setEditingId(null);
+        reset();
+        setIsModalOpen(true);
+    };
+
+    const openEditModal = (customer: Customer) => {
+        setEditingId(customer.id);
+        setData({
+            name: customer.name,
+            phone: customer.phone,
+            email: customer.email || '',
+            address: customer.address || '',
+            is_active: Boolean(customer.is_active),
+        });
+        setIsModalOpen(true);
+    };
 
     const handleDelete = (id: number) => {
-        if (confirm('Voulez-vous vraiment supprimer ce client ? (Impossible s\'il a des commandes liées)')) {
-            destroy(customersDestroy.url(id));
+        if (confirm("Supprimer ce client ?")) {
+            router.delete(customersDestroy.url(id), { preserveScroll: true });
         }
     };
 
-    return (
-        <div className="p-6 space-y-6">
-            <Head title="Ferme-Landi | Clients" />
-            
-            <div className="flex justify-between items-start">
-                <Breadcrumbs breadcrumbs={breadcrumbs} />
-                <Link
-                    href={customersCreate.url()}
-                    className="inline-flex items-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-lg font-semibold transition shadow-sm"
-                >
-                    <Plus className="w-4 h-4" />
-                    Nouveau Client
-                </Link>
-            </div>
+    const handleSubmit = (e: React.SubmitEvent) => {
+        e.preventDefault();
+        if (editingId) {
+            put(customersUpdate.url(editingId), { onSuccess: () => { setIsModalOpen(false); reset(); }});
+        } else {
+            post(customersStore.url(), { onSuccess: () => { setIsModalOpen(false); reset(); }});
+        }
+    };
 
-            <div className="bg-card rounded-xl border border-border shadow-md overflow-hidden text-sm">
-                <div className="p-4 border-b border-border bg-muted/30 flex items-center gap-2">
-                    <Users className="w-5 h-5 text-primary" />
-                    <h2 className="font-bold text-lg text-foreground">Répertoire Clients</h2>
+    const columns: ColumnDef<Customer>[] = [
+        {
+            header: 'Client',
+            cell: (item) => (
+                <div className="flex items-center gap-3">
+                    <div className="p-2 bg-muted text-secondary rounded-lg"><User size={18} /></div>
+                    <span className="font-bold text-foreground">{item.name}</span>
                 </div>
+            )
+        },
+        {
+            header: 'Coordonnées',
+            cell: (item) => (
+                <div className="flex flex-col gap-0.5 text-xs">
+                    <span className="flex items-center gap-1 font-medium"><Phone size={12} className="text-muted-foreground" /> {item.phone}</span>
+                    {item.email && <span className="flex items-center gap-1 text-muted-foreground"><Mail size={12} /> {item.email}</span>}
+                </div>
+            )
+        },
+        {
+            header: 'Adresse',
+            cell: (item) => item.address ? <span className="text-sm text-muted-foreground">{item.address}</span> : '-'
+        },
+        {
+            header: 'Actions',
+            className: 'text-right',
+            cell: (item) => (
+                <div className="flex justify-end gap-3">
+                    <button onClick={() => openEditModal(item)} className="text-muted-foreground hover:text-secondary transition-colors"><Edit2 size={16} /></button>
+                    <button onClick={() => handleDelete(item.id)} className="text-muted-foreground hover:text-destructive transition-colors"><Trash2 size={16} /></button>
+                </div>
+            )
+        }
+    ];
 
-                <table className="w-full text-left border-collapse">
-                    <thead className="bg-muted/50 border-b border-border text-xs uppercase tracking-wider font-semibold text-muted-foreground">
-                        <tr>
-                            <th className="px-6 py-4">Nom / Raison Sociale</th>
-                            <th className="px-6 py-4">Contact</th>
-                            <th className="px-6 py-4">Adresse</th>
-                            <th className="px-6 py-4">Statut</th>
-                            <th className="px-6 py-4 text-right">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border">
-                        {data.data.length === 0 ? (
-                            <tr>
-                                <td colSpan={5} className="px-6 py-8 text-center text-muted-foreground">
-                                    Aucun client enregistré.
-                                </td>
-                            </tr>
-                        ) : (
-                            data.data.map((customer) => (
-                                <tr key={customer.id} className="hover:bg-muted/30 transition-colors">
-                                    <td className="px-6 py-4 font-black text-foreground text-base">
-                                        {customer.name}
-                                    </td>
-                                    <td className="px-6 py-4 space-y-1">
-                                        <div className="flex items-center gap-2 text-foreground font-medium">
-                                            <Phone className="w-3.5 h-3.5 text-secondary" />
-                                            {customer.phone}
-                                        </div>
-                                        {customer.email && (
-                                            <div className="flex items-center gap-2 text-muted-foreground text-xs">
-                                                <Mail className="w-3.5 h-3.5" />
-                                                {customer.email}
-                                            </div>
-                                        )}
-                                    </td>
-                                    <td className="px-6 py-4 max-w-xs">
-                                        <div className="flex items-start gap-2 text-muted-foreground">
-                                            {customer.address ? (
-                                                <>
-                                                    <MapPin className="w-3.5 h-3.5 mt-0.5 shrink-0" />
-                                                    <span className="line-clamp-2 leading-relaxed">{customer.address}</span>
-                                                </>
-                                            ) : (
-                                                <span className="italic">Non renseignée</span>
-                                            )}
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        {customer.is_active ? (
-                                            <span className="flex items-center gap-1 text-xs font-bold text-primary">
-                                                <CheckCircle2 className="w-4 h-4" /> Actif
-                                            </span>
-                                        ) : (
-                                            <span className="flex items-center gap-1 text-xs font-bold text-muted-foreground">
-                                                <XCircle className="w-4 h-4" /> Inactif
-                                            </span>
-                                        )}
-                                    </td>
-                                    <td className="px-6 py-4 text-right flex justify-end gap-2">
-                                        <Link 
-                                            href={customersEdit.url(customer.id)}
-                                            className="p-2 text-muted-foreground hover:text-primary transition"
-                                        >
-                                            <Edit className="w-4 h-4" />
-                                        </Link>
-                                        <button 
-                                            onClick={() => handleDelete(customer.id)}
-                                            className="p-2 text-muted-foreground hover:text-destructive transition"
-                                        >
-                                            <Trash2 className="w-4 h-4" />
-                                        </button>
-                                    </td>
-                                </tr>
-                            ))
-                        )}
-                    </tbody>
-                </table>
+    return (
+        <div className="p-6 max-w-7xl mx-auto space-y-6 bg-background">
+            <div className="flex justify-between items-end mb-6">
+                <div>
+                    <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
+                        <Users className="text-secondary" /> Gestion des Clients
+                    </h1>
+                    <p className="text-muted-foreground text-sm mt-1">Annuaire de vos partenaires commerciaux et acheteurs.</p>
+                </div>
+                <button onClick={openCreateModal} className="flex items-center gap-2 bg-secondary text-secondary-foreground px-4 py-2.5 rounded-xl font-bold hover:opacity-90 transition-opacity shadow-sm">
+                    <Plus size={18} /> Nouveau Client
+                </button>
             </div>
+
+            <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+                <DialogContent className="sm:max-w-[450px]">
+                    <DialogHeader>
+                        <DialogTitle>{editingId ? 'Modifier le client' : 'Créer un client'}</DialogTitle>
+                        <DialogDescription>Enregistrez les informations de facturation du client.</DialogDescription>
+                    </DialogHeader>
+
+                    <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+                        <div className="space-y-1">
+                            <label className="text-sm font-semibold">Nom complet</label>
+                            <input type="text" value={formData.name} onChange={e => setData('name', e.target.value)} className="w-full bg-input border border-border rounded-lg p-2.5 focus:ring-secondary" placeholder="Ex: Marché Central..." />
+                            {errors.name && <span className="text-destructive text-xs">{errors.name}</span>}
+                        </div>
+                        <div className="space-y-1">
+                            <label className="text-sm font-semibold">Téléphone</label>
+                            <input type="text" value={formData.phone} onChange={e => setData('phone', e.target.value)} className="w-full bg-input border border-border rounded-lg p-2.5 focus:ring-secondary" />
+                            {errors.phone && <span className="text-destructive text-xs">{errors.phone}</span>}
+                        </div>
+                        <div className="space-y-1">
+                            <label className="text-sm font-semibold">E-mail</label>
+                            <input type="email" value={formData.email} onChange={e => setData('email', e.target.value)} className="w-full bg-input border border-border rounded-lg p-2.5 focus:ring-secondary" />
+                        </div>
+                        <div className="space-y-1">
+                            <label className="text-sm font-semibold">Adresse</label>
+                            <textarea value={formData.address} onChange={e => setData('address', e.target.value)} className="w-full bg-input border border-border rounded-lg p-2.5 focus:ring-secondary min-h-[70px]" />
+                        </div>
+                        <div className="flex justify-end gap-3 pt-6 border-t border-border">
+                            <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground">Annuler</button>
+                            <button type="submit" disabled={processing} className="bg-secondary text-secondary-foreground px-5 py-2.5 rounded-xl font-bold disabled:opacity-50 hover:opacity-90">
+                                {editingId ? 'Enregistrer' : 'Créer'}
+                            </button>
+                        </div>
+                    </form>
+                </DialogContent>
+            </Dialog>
+
+            <DataTable data={data} columns={columns} emptyMessage="Aucun client enregistré." />
         </div>
     );
 }

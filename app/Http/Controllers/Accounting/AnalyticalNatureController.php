@@ -20,7 +20,8 @@ class AnalyticalNatureController extends Controller
     {
         Gate::authorize('viewAny', AnalyticalNature::class);
 
-        $analyticalNatures = AnalyticalNature::orderBy('code')->get();
+        // CORRECTION : On utilise la pagination
+        $analyticalNatures = AnalyticalNature::orderBy('code')->paginate(15);
 
         return Inertia::render('Accounting/AnalyticalNatures/Index', [
             'analyticalNatures' => $analyticalNatures,

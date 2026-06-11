@@ -3,8 +3,9 @@
 namespace App\Actions\Logistics;
 
 use App\Models\Site;
+use Illuminate\Support\Facades\DB;
 
-class CreateSiteAction
+final readonly class CreateSiteAction
 {
     /**
      * Create a new Site.
@@ -19,22 +20,26 @@ class CreateSiteAction
     }
 
     /**
-     * Generate a unique code for the site based on its name.
+     * Génération du code en UNE SEULE requête (adieu les N+1)
      */
     private function generateUniqueCode(string $name): string
     {
-        // Example: First 2 letters of name + an incremental number
         $prefix = strtoupper(substr($name, 0, 2));
-        $count = Site::where('code', 'like', "{$prefix}%")->count();
-        $nextNumber = $count + 1;
+        
+        // On lock la lecture ou on cherche directement le dernier code avec ce préfixe
+        $latestSite = Site::select('code')
+            ->where('code', 'like', "{$prefix}%")
+            ->orderByRaw('LENGTH(code) DESC') // Gère SI1, SI2... SI10 proprement
+            ->orderBy('code', 'desc')
+            ->first();
 
-        $code = "{$prefix}{$nextNumber}";
-
-        while (Site::where('code', $code)->exists()) {
-            $nextNumber++;
-            $code = "{$prefix}{$nextNumber}";
+        if (! $latestSite) {
+            return "{$prefix}1";
         }
 
-        return $code;
+        // Extraction du numéro existant et incrémentation locale (RAM)
+        $lastNumber = (int) str_replace($prefix, '', $latestSite->code);
+        
+        return $prefix . ($lastNumber + 1);
     }
 }

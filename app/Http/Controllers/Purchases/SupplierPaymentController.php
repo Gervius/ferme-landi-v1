@@ -17,7 +17,12 @@ class SupplierPaymentController extends Controller
     {
         Gate::authorize('viewAny', SupplierPayment::class);
         $data = SupplierPayment::with('supplier')->paginate(15);
-        return Inertia::render('Purchases/SupplierPayment/Index', ['data' => $data]);
+        $suppliers = Supplier::where('is_active', true)->get(['id', 'name']);
+
+        return Inertia::render('Purchases/SupplierPayment/Index', [
+            'data' => $data,
+            'suppliers' => $suppliers
+        ]);
     }
 
     public function create()

@@ -20,7 +20,8 @@ class AnalyticalCodeController extends Controller
     {
         Gate::authorize('viewAny', AnalyticalCode::class);
 
-        $analyticalCodes = AnalyticalCode::orderBy('code')->get();
+        // CORRECTION : On utilise la pagination
+        $analyticalCodes = AnalyticalCode::orderBy('code')->paginate(15);
 
         return Inertia::render('Accounting/AnalyticalCodes/Index', [
             'analyticalCodes' => $analyticalCodes,

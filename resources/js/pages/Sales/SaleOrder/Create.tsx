@@ -18,10 +18,12 @@ interface Props {
     customers: { id: number; name: string }[];
     categories: { id: number; name: string }[];
     units: { id: number; name: string; symbol: string }[];
+    sites?: { id: number; name: string; symbol?: string }[];
 }
 
-export default function CreateSaleOrder({ customers, categories, units }: Props) {
+export default function CreateSaleOrder({ customers, categories, units, sites = [] }: Props) {
     const { data, setData, post, processing, errors } = useForm({
+        site_id: '',
         customer_id: '',
         order_date: new Date().toISOString().split('T')[0],
         reference: `CMD-${Date.now().toString().slice(-6)}`, // Pré-remplissage simple
@@ -29,6 +31,10 @@ export default function CreateSaleOrder({ customers, categories, units }: Props)
             { category_id: '', unit_id: '', quantity: 1, unit_price: 0 }
         ],
     });
+
+    const getLineError = (index: number, field: string) => {
+        return errors[`items.${index}.${field}` as keyof typeof errors];
+    };
 
     const breadcrumbs = [
         { title: 'Ventes', href: '#' },
@@ -55,7 +61,7 @@ export default function CreateSaleOrder({ customers, categories, units }: Props)
         setData('items', newItems);
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = (e: React.SubmitEvent) => {
         e.preventDefault();
         post(saleOrdersStore.url());
     };
@@ -72,6 +78,11 @@ export default function CreateSaleOrder({ customers, categories, units }: Props)
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-6">
+                {Object.keys(errors).length > 0 && (
+                    <div className="bg-destructive/10 border border-destructive/20 text-destructive p-4 rounded-xl text-sm font-bold">
+                        Certaines lignes ou certains champs contiennent des erreurs de saisie. Veuillez vérifier les éléments indiqués en rouge.
+                    </div>
+                )}
                 {/* ENTÊTE DE COMMANDE */}
                 <div className="bg-card rounded-xl border border-border shadow-lg overflow-hidden">
                     <div className="p-5 border-b border-border bg-primary/5 flex items-center gap-3">
@@ -94,6 +105,15 @@ export default function CreateSaleOrder({ customers, categories, units }: Props)
                                 {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                             </select>
                             {errors.customer_id && <p className="text-destructive text-[10px] font-bold">{errors.customer_id}</p>}
+                        </div>
+
+                        <div className="space-y-1">
+                            <label className="text-sm font-semibold">Site de destination</label>
+                            <select value={data.site_id} onChange={e => setData('site_id', e.target.value)} className="w-full bg-input border border-border rounded-lg p-2.5">
+                                <option value="">Sélectionner</option>
+                                {sites.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                            </select>
+                            {errors.site_id && <span className="text-destructive text-xs">{errors.site_id}</span>}
                         </div>
 
                         <div className="space-y-1.5">
@@ -151,17 +171,20 @@ export default function CreateSaleOrder({ customers, categories, units }: Props)
                             <tbody className="divide-y divide-border">
                                 {data.items.map((item, index) => (
                                     <tr key={index} className="group hover:bg-primary/[0.02]">
-                                        <td className="px-6 py-3">
+                                        <td className="px-6 py-3 border-b border-border align-top">
                                             <select
                                                 value={item.category_id}
                                                 onChange={e => updateItem(index, 'category_id', e.target.value)}
-                                                className="w-full bg-transparent border-none focus:ring-0 text-sm font-bold text-foreground"
+                                                className={`w-full bg-transparent border-none focus:ring-0 text-sm font-bold text-foreground ${getLineError(index, 'category_id') ? 'text-destructive' : ''}`}
                                             >
                                                 <option value="">Choisir produit...</option>
                                                 {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                                             </select>
+                                            {getLineError(index, 'category_id') && (
+                                                <p className="text-destructive text-[10px] font-bold mt-1 px-1">{getLineError(index, 'category_id')}</p>
+                                            )}
                                         </td>
-                                        <td className="px-4 py-3">
+                                        <td className="px-4 py-3 border-b border-border align-top">
                                             <select
                                                 value={item.unit_id}
                                                 onChange={e => updateItem(index, 'unit_id', e.target.value)}
@@ -170,29 +193,38 @@ export default function CreateSaleOrder({ customers, categories, units }: Props)
                                                 <option value="">Unité...</option>
                                                 {units.map(u => <option key={u.id} value={u.id}>{u.symbol}</option>)}
                                             </select>
+                                            {getLineError(index, 'unit_id') && (
+                                                <p className="text-destructive text-[10px] font-bold mt-1 px-1">{getLineError(index, 'unit_id')}</p>
+                                            )}
                                         </td>
-                                        <td className="px-4 py-3">
+                                        <td className="px-4 py-3 border-b border-border align-top">
                                             <input
                                                 type="number"
                                                 min="0.01"
                                                 step="0.01"
                                                 value={item.quantity}
                                                 onChange={e => updateItem(index, 'quantity', Number(e.target.value))}
-                                                className="w-20 bg-muted/30 border border-border rounded px-2 py-1 text-sm font-bold"
+                                                className={`w-20 bg-muted/30 border rounded px-2 py-1 text-sm font-bold text-right ${getLineError(index, 'quantity') ? 'border-destructive' : 'border-border'}`}
                                             />
+                                            {getLineError(index, 'quantity') && (
+                                                <p className="text-destructive text-[10px] font-bold mt-1 text-right">{getLineError(index, 'quantity')}</p>
+                                            )}
                                         </td>
-                                        <td className="px-4 py-3">
+                                        <td className="px-4 py-3 border-b border-border align-top">
                                             <input
                                                 type="number"
                                                 value={item.unit_price}
                                                 onChange={e => updateItem(index, 'unit_price', Number(e.target.value))}
-                                                className="w-28 bg-muted/30 border border-border rounded px-2 py-1 text-sm font-bold text-primary"
+                                                className={`w-28 bg-muted/30 border rounded px-2 py-1 text-sm font-bold text-primary text-right ${getLineError(index, 'unit_price') ? 'border-destructive' : 'border-border'}`}
                                             />
+                                            {getLineError(index, 'unit_price') && (
+                                                <p className="text-destructive text-[10px] font-bold mt-1 text-right">{getLineError(index, 'unit_price')}</p>
+                                            )}
                                         </td>
-                                        <td className="px-4 py-3 text-right font-black text-foreground">
+                                        <td className="px-4 py-3 text-right font-black text-foreground border-b border-border align-top pt-4">
                                             {(item.quantity * item.unit_price).toLocaleString()}
                                         </td>
-                                        <td className="px-4 py-3 text-right">
+                                        <td className="px-4 py-3 text-right border-b border-border align-top pt-4">
                                             {data.items.length > 1 && (
                                                 <button
                                                     type="button"

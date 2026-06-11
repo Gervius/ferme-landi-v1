@@ -1,208 +1,176 @@
-import React from 'react';
-import { Head, Link, useForm, router } from '@inertiajs/react';
-// Adapte selon ton routeur métier (ex: @/routes)
-import { categoriesCreate, categoriesDestroy, categoriesEdit, categoriesIndex } from '@/routes';
+// pages/Categories/Index.tsx
+import React, { useState } from 'react';
+import { router, useForm } from '@inertiajs/react';
+import { Plus, Edit2, Trash2, Tags, CornerDownRight, Filter } from 'lucide-react';
+import { categoriesStore, categoriesUpdate, categoriesDestroy, categoriesIndex } from '@/routes';
+import { PaginatedData } from '@/types/pagination';
+import { DataTable, ColumnDef } from '@/components/ui/DataTable';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
-// 1. Interfaces TypeScript
 interface Category {
     id: number;
-    parent_id: number | null;
     name: string;
-    slug: string;
     scope: string;
-    is_active: boolean;
-    parent: Category | null; // Chargé par le 'with' du contrôleur
-}
-
-interface PaginationLink {
-    url: string | null;
-    label: string;
-    active: boolean;
+    parent?: { id: number; name: string };
 }
 
 interface Props {
-    categories: {
-        data: Category[];
-        links: PaginationLink[];
-    };
-    filters: {
-        scope?: string;
-    };
-    flash?: {
-        success?: string;
-    };
+    categories: PaginatedData<Category>;
+    parents: { id: number; name: string; scope: string }[];
+    filters: { scope?: string };
 }
 
-export default function CategoryIndex({ categories, filters, flash = {} }: Props) {
-    const { delete: destroy } = useForm();
+export default function Index({ categories, parents, filters }: Props) {
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [editingId, setEditingId] = useState<number | null>(null);
+
+    const { data, setData, post, put, processing, errors, reset } = useForm({
+        name: '',
+        scope: filters.scope || 'product',
+        parent_id: '',
+    });
+
+    const handleFilterChange = (scope: string) => {
+        router.get(categoriesIndex.url(), { scope: scope || undefined }, { preserveState: true });
+    };
+
+    const openCreateModal = () => {
+        setEditingId(null);
+        reset();
+        setData('scope', filters.scope || 'product');
+        setIsModalOpen(true);
+    };
+
+    const openEditModal = (item: Category) => {
+        setEditingId(item.id);
+        setData({
+            name: item.name,
+            scope: item.scope,
+            parent_id: item.parent?.id?.toString() || '',
+        });
+        setIsModalOpen(true);
+    };
 
     const handleDelete = (id: number) => {
-        if (confirm('Êtes-vous sûr de vouloir supprimer cette catégorie ? Toutes les sous-catégories pourraient être affectées.')) {
-            // Utilise ton helper ou router.delete(`/categories/${id}`)
-            destroy(categoriesDestroy.url(id));
+        if (confirm("Supprimer cette catégorie ?")) {
+            router.delete(categoriesDestroy.url(id), { preserveScroll: true });
         }
     };
 
-    // Filtrage dynamique appelant le contrôleur de Jules
-    const handleScopeFilter = (e: React.ChangeEvent<HTMLSelectElement>) => {
-        const scope = e.target.value;
-        router.get(
-            categoriesIndex.url(), // Ou categoriesIndex.url()
-            { scope: scope || undefined },
-            { preserveState: true, replace: true }
-        );
+    const handleSubmit = (e: React.SubmitEvent) => {
+        e.preventDefault();
+        if (editingId) {
+            put(categoriesUpdate.url(editingId), { onSuccess: () => { setIsModalOpen(false); reset(); }});
+        } else {
+            post(categoriesStore.url(), { onSuccess: () => { setIsModalOpen(false); reset(); }});
+        }
     };
 
-    // Traduction esthétique des scopes métier
-    const formatScope = (scope: string) => {
-        const scopes: Record<string, { label: string; color: string }> = {
-            inventory: { label: 'Inventaire & Stock', color: 'bg-primary/10 text-primary border-primary/20' },
-            animal: { label: 'Zootechnie (Animaux)', color: 'bg-accent/20 text-accent-foreground border-accent/30' },
-            finance: { label: 'Finance & Compta', color: 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300' },
-            equipment: { label: 'Équipement', color: 'bg-secondary/10 text-secondary border-secondary/20' },
-        };
-        return scopes[scope] || { label: scope, color: 'bg-muted text-muted-foreground' };
-    };
+    const availableParents = parents.filter(p => p.scope === data.scope && p.id !== editingId);
+
+    const columns: ColumnDef<Category>[] = [
+        { header: 'Nom de la catégorie', accessorKey: 'name', className: 'font-bold text-foreground' },
+        { 
+            header: 'Domaine d\'application (Scope)', 
+            cell: (item) => <span className="text-xs font-bold uppercase tracking-wider text-accent-foreground bg-accent/20 px-2.5 py-1 rounded-full">{item.scope}</span>
+        },
+        { 
+            header: 'Catégorie Parente', 
+            cell: (item) => item.parent ? (
+                <span className="flex items-center gap-1 text-sm text-muted-foreground"><CornerDownRight size={14} /> {item.parent.name}</span>
+            ) : <span className="text-sm text-muted-foreground italic">- Racine -</span>
+        },
+        {
+            header: 'Actions',
+            className: 'text-right',
+            cell: (item) => (
+                <div className="flex justify-end gap-3">
+                    <button onClick={() => openEditModal(item)} className="text-muted-foreground hover:text-accent-foreground transition-colors"><Edit2 size={16} /></button>
+                    <button onClick={() => handleDelete(item.id)} className="text-muted-foreground hover:text-destructive transition-colors"><Trash2 size={16} /></button>
+                </div>
+            )
+        }
+    ];
 
     return (
-        <div className="p-6 bg-background text-foreground min-h-screen font-sans">
-            <Head title="Ferme-Landi | Catégories" />
+        <div className="p-6 max-w-6xl mx-auto space-y-6 bg-background">
+            <div className="flex flex-col md:flex-row justify-between md:items-end gap-4 mb-6">
+                <div>
+                    <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
+                        <Tags className="text-accent-foreground" /> Catégories & Articles
+                    </h1>
+                    <p className="text-muted-foreground text-sm mt-1">Classez vos produits finis, animaux, aliments et équipements.</p>
+                </div>
 
-            <div className="max-w-7xl mx-auto">
-                {/* En-tête */}
-                <div className="flex justify-between items-center mb-6 pb-4 border-b border-border">
-                    <div>
-                        <h1 className="text-3xl font-bold tracking-tight">Catégories & Nomenclatures</h1>
-                        <p className="text-muted-foreground mt-1 text-sm">Gestion hiérarchique des classifications de l'ERP.</p>
+                <div className="flex items-center gap-4">
+                    {/* FILTRE MIS À JOUR */}
+                    <div className="flex items-center gap-2 bg-card border border-border p-2 rounded-xl shadow-sm">
+                        <Filter size={16} className="text-muted-foreground ml-2" />
+                        <select
+                            value={filters.scope || ''}
+                            onChange={(e) => handleFilterChange(e.target.value)}
+                            className="bg-transparent border-none text-sm font-medium focus:ring-0 text-foreground pr-8 cursor-pointer"
+                        >
+                            <option value="">Tous les domaines</option>
+                            <option value="animal">Animaux (Cheptel)</option>
+                            <option value="feed">Alimentation (Sacs, Vrac)</option>
+                            <option value="medication">Pharmacie (Vaccins, Soins)</option>
+                            <option value="product">Produits & Ventes (Œufs...)</option>
+                            <option value="equipment">Équipements & Matériel</option>
+                        </select>
                     </div>
-                    <Link
-                        href={categoriesCreate.url()}
-                        className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold py-2.5 px-5 rounded-md shadow-sm transition flex items-center gap-2"
-                    >
-                        <span className="text-accent font-bold text-lg">+</span> Nouvelle Catégorie
-                    </Link>
-                </div>
 
-                {/* Message Flash */}
-                {flash?.success && (
-                    <div className="mb-6 p-4 bg-primary/10 border-l-4 border-primary text-primary shadow-sm rounded-r-md flex items-center gap-3">
-                        <svg className="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                        </svg>
-                        <span className="font-medium">{flash.success}</span>
-                    </div>
-                )}
-
-                {/* Barre de Filtres */}
-                <div className="mb-6 flex items-center bg-card p-4 rounded-xl shadow-sm border border-border">
-                    <label htmlFor="filter_scope" className="text-sm font-semibold mr-4 text-foreground">
-                        Filtrer par domaine métier :
-                    </label>
-                    <select
-                        id="filter_scope"
-                        value={filters?.scope || ''}
-                        onChange={handleScopeFilter}
-                        className="rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary w-64"
-                    >
-                        <option value="">Tous les domaines</option>
-                        <option value="inventory">Inventaire & Stock</option>
-                        <option value="animal">Zootechnie (Animaux)</option>
-                        <option value="finance">Finance & Compta</option>
-                        <option value="equipment">Équipement</option>
-                    </select>
-                </div>
-
-                {/* Tableau de données */}
-                <div className="bg-card shadow-lg rounded-xl overflow-hidden border border-border">
-                    <table className="min-w-full divide-y divide-border">
-                        <thead className="bg-primary text-primary-foreground">
-                            <tr>
-                                <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider">Nom (Hiérarchie)</th>
-                                <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider">Identifiant (Slug)</th>
-                                <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider">Domaine (Scope)</th>
-                                <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider">Statut</th>
-                                <th className="px-6 py-4 text-right text-xs font-semibold uppercase tracking-wider">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-border">
-                            {categories.data.length === 0 ? (
-                                <tr>
-                                    <td colSpan={5} className="px-6 py-8 text-center text-muted-foreground font-medium">
-                                        Aucune catégorie ne correspond aux critères.
-                                    </td>
-                                </tr>
-                            ) : (
-                                categories.data.map((category) => {
-                                    const scopeData = formatScope(category.scope);
-                                    return (
-                                        <tr key={category.id} className="hover:bg-muted/50 transition">
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
-                                                {/* Affichage hiérarchique intuitif */}
-                                                {category.parent ? (
-                                                    <span className="flex items-center gap-2">
-                                                        <span className="text-muted-foreground">{category.parent.name}</span>
-                                                        <span className="text-muted-foreground text-xs">▶</span>
-                                                        <span className="font-bold">{category.name}</span>
-                                                    </span>
-                                                ) : (
-                                                    <span className="font-bold">{category.name}</span>
-                                                )}
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
-                                                {category.slug}
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm">
-                                                <span className={`px-2.5 py-1 inline-flex text-xs font-bold rounded-md border ${scopeData.color}`}>
-                                                    {scopeData.label}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                <span className={`px-2 py-1 inline-flex text-xs font-bold rounded-full border ${
-                                                    category.is_active 
-                                                    ? 'bg-primary/10 text-primary border-primary/20' 
-                                                    : 'bg-destructive/10 text-destructive border-destructive/20'
-                                                }`}>
-                                                    {category.is_active ? 'Actif' : 'Inactif'}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                                <Link
-                                                    href={categoriesEdit.url(category.id)}
-                                                    className="text-primary hover:text-primary/80 mr-4 transition"
-                                                >
-                                                    Modifier
-                                                </Link>
-                                                <button
-                                                    onClick={() => handleDelete(category.id)}
-                                                    className="text-destructive hover:text-destructive/80 transition"
-                                                >
-                                                    Supprimer
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    );
-                                })
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-
-                {/* Pagination */}
-                <div className="mt-8 flex justify-end gap-1.5">
-                    {categories.links.map((link, index) => (
-                        <Link
-                            key={index}
-                            href={link.url || '#'}
-                            className={`px-4 py-2 text-sm border rounded-lg shadow-sm transition ${
-                                link.active 
-                                ? 'bg-primary text-primary-foreground font-semibold border-primary' 
-                                : 'bg-card text-foreground hover:bg-muted border-border'
-                            } ${!link.url && 'opacity-50 cursor-not-allowed'}`}
-                            dangerouslySetInnerHTML={{ __html: link.label }}
-                        />
-                    ))}
+                    <button onClick={openCreateModal} className="flex items-center gap-2 bg-accent text-accent-foreground px-4 py-2.5 rounded-xl font-bold hover:opacity-90 transition-opacity shadow-sm">
+                        <Plus size={18} /> Nouvelle
+                    </button>
                 </div>
             </div>
+
+            <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+                <DialogContent className="sm:max-w-[450px]">
+                    <DialogHeader>
+                        <DialogTitle>{editingId ? 'Modifier la catégorie' : 'Créer une catégorie'}</DialogTitle>
+                    </DialogHeader>
+
+                    <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-foreground">Domaine d'application</label>
+                            {/* MENU DÉROULANT FORMULAIRE MIS À JOUR */}
+                            <select value={data.scope} onChange={e => setData('scope', e.target.value)} className="w-full bg-input border border-border rounded-lg p-2.5 focus:ring-ring font-bold uppercase text-xs tracking-wider text-accent-foreground">
+                                <option value="animal">Animaux (Cheptel)</option>
+                                <option value="feed">Aliments Zootechniques</option>
+                                <option value="medication">Médicaments & Vaccins</option>
+                                <option value="product">Produits & Ventes</option>
+                                <option value="equipment">Équipements & Matériel</option>
+                            </select>
+                            {errors.scope && <span className="text-destructive text-xs">{errors.scope}</span>}
+                        </div>
+
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-foreground">Nom de la catégorie</label>
+                            <input type="text" value={data.name} onChange={e => setData('name', e.target.value)} className="w-full bg-input border border-border rounded-lg p-2.5 focus:ring-ring" placeholder="Ex: Poussins, Vaccins, Œufs Calibre Moyen..."/>
+                            {errors.name && <span className="text-destructive text-xs">{errors.name}</span>}
+                        </div>
+
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-foreground">Sous-catégorie de (Optionnel)</label>
+                            <select value={data.parent_id} onChange={e => setData('parent_id', e.target.value)} className="w-full bg-input border border-border rounded-lg p-2.5 focus:ring-ring">
+                                <option value="">- Catégorie Principale (Racine) -</option>
+                                {availableParents.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                            </select>
+                        </div>
+
+                        <div className="flex justify-end gap-3 pt-6 border-t border-border">
+                            <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground">Annuler</button>
+                            <button type="submit" disabled={processing} className="bg-accent text-accent-foreground px-5 py-2.5 rounded-xl font-bold disabled:opacity-50 hover:opacity-90">
+                                Enregistrer
+                            </button>
+                        </div>
+                    </form>
+                </DialogContent>
+            </Dialog>
+
+            <DataTable data={categories} columns={columns} emptyMessage="Aucune catégorie trouvée." />
         </div>
     );
 }

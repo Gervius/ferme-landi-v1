@@ -1,131 +1,135 @@
+// pages/Zootechnie/ProphylaxisProgram/Index.tsx
 import React from 'react';
-import { Head, Link, useForm } from '@inertiajs/react';
-import { Breadcrumbs } from '@/components/breadcrumbs';
-import { Plus, ShieldPlus, Edit, Trash2, CheckCircle2, XCircle, Activity, GitCommitHorizontal } from 'lucide-react';
-// À ajouter dans routes.ts : prophylaxisProgramsCreate, prophylaxisProgramsEdit, prophylaxisProgramsDestroy
-import { prophylaxisProgramsCreate, prophylaxisProgramsEdit, prophylaxisProgramsDestroy } from '@/routes'; 
+import { Link, router } from '@inertiajs/react';
+import { Plus, Edit2, Trash2, ShieldPlus, ShieldCheck, ShieldAlert } from 'lucide-react';
+import { prophylaxisProgramsCreate, prophylaxisProgramsEdit, prophylaxisProgramsDestroy } from '@/routes';
+import { getGenerationDisplay } from '@/utils/zootechnieStrategy';
+import { PaginatedData } from '@/types/pagination';
+import { DataTable, ColumnDef } from '@/components/ui/DataTable';
 
-interface Step {
+interface ProphylaxisStep {
     id: number;
     day_offset: number;
     description: string;
-    medicationCategory: { name: string };
+    alert_days_before: number;
+    medicationCategory: { id: number; name: string };
 }
 
-interface Program {
+interface ProphylaxisProgram {
     id: number;
     name: string;
     animal_type: string;
     is_active: boolean;
-    steps: Step[];
+    steps: ProphylaxisStep[];
 }
 
 interface Props {
-    programs: {
-        data: Program[];
-    };
+    programs: PaginatedData<ProphylaxisProgram>;
 }
 
-export default function ProphylaxisProgramIndex({ programs }: Props) {
-    const { delete: destroy } = useForm();
-
-    const breadcrumbs = [
-        { title: 'Administration', href: '#' },
-        { title: 'Prog. Prophylactiques', href: '#' },
-    ];
-
+export default function Index({ programs }: Props) {
+    
+    // Action de suppression
     const handleDelete = (id: number) => {
-        if (confirm('Voulez-vous vraiment supprimer ce programme ? Il ne sera plus appliqué aux futurs lots.')) {
-            destroy(prophylaxisProgramsDestroy.url(id));
+        if (confirm("Êtes-vous sûr de vouloir supprimer ce programme ? Cela n'affectera pas les traitements déjà planifiés, mais il ne pourra plus être assigné à de nouveaux lots.")) {
+            router.delete(prophylaxisProgramsDestroy.url(id), { preserveScroll: true });
         }
     };
 
+    // Définition des colonnes du DataTable
+    const columns: ColumnDef<ProphylaxisProgram>[] = [
+        { 
+            header: 'Nom du Programme', 
+            className: 'font-bold text-primary',
+            cell: (item) => item.name
+        },
+        { 
+            header: 'Espèce cible', 
+            cell: (item) => {
+                const { Icon, label, colorClass } = getGenerationDisplay(item.animal_type);
+                return (
+                    <div className="flex items-center gap-2">
+                        <Icon className={`w-4 h-4 ${colorClass}`} strokeWidth={2} />
+                        <span className="font-semibold text-card-foreground">{label}</span>
+                    </div>
+                );
+            }
+        },
+        { 
+            header: 'Étapes du protocole', 
+            className: 'text-center',
+            cell: (item) => (
+                <span className="inline-flex items-center justify-center px-2.5 py-1 bg-muted text-muted-foreground rounded-md text-xs font-bold">
+                    {item.steps.length} étapes
+                </span>
+            )
+        },
+        { 
+            header: 'Statut', 
+            cell: (item) => (
+                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold rounded-full ${
+                    item.is_active 
+                        ? 'bg-primary/10 text-primary border border-primary/20' 
+                        : 'bg-destructive/10 text-destructive border border-destructive/20'
+                }`}>
+                    {item.is_active ? <ShieldCheck size={14} /> : <ShieldAlert size={14} />}
+                    {item.is_active ? 'Actif' : 'Inactif'}
+                </span>
+            )
+        },
+        {
+            header: 'Actions',
+            className: 'text-right',
+            cell: (item) => (
+                <div className="flex items-center justify-end gap-3">
+                    <Link 
+                        href={prophylaxisProgramsEdit.url(item.id)}
+                        className="text-muted-foreground hover:text-primary transition-colors"
+                        title="Modifier le programme"
+                    >
+                        <Edit2 size={18} />
+                    </Link>
+                    <button 
+                        onClick={() => handleDelete(item.id)}
+                        className="text-muted-foreground hover:text-destructive transition-colors"
+                        title="Supprimer"
+                    >
+                        <Trash2 size={18} />
+                    </button>
+                </div>
+            )
+        }
+    ];
+
     return (
-        <div className="p-6 space-y-6">
-            <Head title="Ferme-Landi | Prophylaxie" />
+        <div className="p-6 max-w-7xl mx-auto space-y-6 bg-background">
             
-            <div className="flex justify-between items-start">
-                <Breadcrumbs breadcrumbs={breadcrumbs} />
-                <Link
+            {/* Header */}
+            <div className="flex flex-col md:flex-row justify-between md:items-end gap-6 mb-8">
+                <div>
+                    <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
+                        <ShieldPlus className="text-primary" /> Programmes Prophylactiques
+                    </h1>
+                    <p className="text-muted-foreground text-sm mt-1">
+                        Gérez les protocoles de vaccination et de soins préventifs par type d'animal.
+                    </p>
+                </div>
+
+                <Link 
                     href={prophylaxisProgramsCreate.url()}
-                    className="inline-flex items-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-lg font-semibold transition shadow-sm"
+                    className="flex items-center justify-center gap-2 bg-primary text-primary-foreground px-5 py-2.5 rounded-xl font-bold shadow-sm hover:bg-primary/90 transition-colors"
                 >
-                    <Plus className="w-4 h-4" />
+                    <Plus size={18} />
                     Créer un Programme
                 </Link>
             </div>
 
-            <div className="bg-card rounded-xl border border-border shadow-md overflow-hidden text-sm max-w-6xl">
-                <div className="p-4 border-b border-border bg-primary/5 flex items-center gap-2">
-                    <ShieldPlus className="w-5 h-5 text-primary" />
-                    <h2 className="font-bold text-lg text-foreground">Programmes de Soins Préventifs</h2>
-                </div>
-
-                <table className="w-full text-left border-collapse">
-                    <thead className="bg-muted/50 border-b border-border text-xs uppercase tracking-wider font-semibold text-muted-foreground">
-                        <tr>
-                            <th className="px-6 py-4">Nom du Programme</th>
-                            <th className="px-6 py-4">Espèce Cible</th>
-                            <th className="px-6 py-4 text-center">Étapes (Soins)</th>
-                            <th className="px-6 py-4">Statut</th>
-                            <th className="px-6 py-4 text-right">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border">
-                        {programs.data.length === 0 ? (
-                            <tr>
-                                <td colSpan={5} className="px-6 py-8 text-center text-muted-foreground">
-                                    Aucun programme de prophylaxie configuré.
-                                </td>
-                            </tr>
-                        ) : (
-                            programs.data.map((prog) => (
-                                <tr key={prog.id} className="hover:bg-muted/30 transition-colors">
-                                    <td className="px-6 py-4 font-black text-foreground">
-                                        {prog.name}
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <span className="bg-secondary/10 text-secondary px-2.5 py-1 rounded text-xs font-bold uppercase border border-secondary/20">
-                                            {prog.animal_type}
-                                        </span>
-                                    </td>
-                                    <td className="px-6 py-4 text-center">
-                                        <div className="inline-flex items-center gap-1.5 px-2 py-1 bg-accent/10 border border-accent/20 rounded-md text-accent-foreground font-semibold text-xs">
-                                            <GitCommitHorizontal className="w-3.5 h-3.5" />
-                                            {prog.steps.length} interventions
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        {prog.is_active ? (
-                                            <span className="flex items-center gap-1 text-xs font-bold text-primary">
-                                                <CheckCircle2 className="w-4 h-4" /> Actif
-                                            </span>
-                                        ) : (
-                                            <span className="flex items-center gap-1 text-xs font-bold text-muted-foreground">
-                                                <XCircle className="w-4 h-4" /> Inactif
-                                            </span>
-                                        )}
-                                    </td>
-                                    <td className="px-6 py-4 text-right flex justify-end gap-2">
-                                        <Link 
-                                            href={prophylaxisProgramsEdit.url(prog.id)}
-                                            className="p-2 text-muted-foreground hover:text-primary transition"
-                                        >
-                                            <Edit className="w-4 h-4" />
-                                        </Link>
-                                        <button 
-                                            onClick={() => handleDelete(prog.id)}
-                                            className="p-2 text-muted-foreground hover:text-destructive transition"
-                                        >
-                                            <Trash2 className="w-4 h-4" />
-                                        </button>
-                                    </td>
-                                </tr>
-                            ))
-                        )}
-                    </tbody>
-                </table>
-            </div>
+            {/* DataTable Universel */}
+            <DataTable 
+                data={programs} 
+                columns={columns} 
+                emptyMessage="Aucun programme de prophylaxie n'a été créé. Cliquez sur 'Créer un Programme' pour commencer." 
+            />
         </div>
     );
 }

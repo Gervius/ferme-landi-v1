@@ -5,7 +5,7 @@ namespace App\Actions\HR;
 use App\Models\Employee;
 use Illuminate\Support\Facades\DB;
 
-class CreateEmployeeAction
+final readonly class CreateEmployeeAction
 {
     public function execute(array $data): Employee
     {

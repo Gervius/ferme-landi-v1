@@ -12,15 +12,16 @@ use App\Models\PayrollRecord;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
-class ApprovePayrollRecordAction
+final readonly class ApprovePayrollRecordAction
 {
     public function __construct(
-        private readonly LogAccountingEntryAction $logAccountingEntryAction
-    ) {
-    }
+        private LogAccountingEntryAction $logAccountingEntryAction
+    ) {}
 
     public function execute(PayrollRecord $payrollRecord, int $userId): PayrollRecord
     {
+        $payrollRecord->loadMissing('employee:id,analytical_code_id');
+
         return DB::transaction(function () use ($payrollRecord, $userId) {
             $payrollRecord->update([
                 'status' => 'approved',
@@ -30,73 +31,97 @@ class ApprovePayrollRecordAction
 
             $payrollDate = $payrollRecord->period_start ?? now();
 
-            $financialYear = FinancialYear::where('is_closed', false)
+            $financialYear = FinancialYear::select(['id'])
+                ->where('is_closed', false)
                 ->where('start_date', '<=', $payrollDate)
                 ->where('end_date', '>=', $payrollDate)
-                ->first();
-
-            if (! $financialYear) {
-                throw ValidationException::withMessages([
+                ->first() ?? throw ValidationException::withMessages([
                     'period' => 'Aucun exercice comptable actif trouvé pour la date de cette paie.',
                 ]);
+
+            // 1. Définir les comptes requis dynamiquement
+            $requiredAccountCodes = [
+                Account::CODE_SALARIES_EXPENSE, // ex: 6611
+                Account::CODE_SALARIES_PAYABLE, // ex: 422
+            ];
+
+            if ($payrollRecord->deductions > 0) {
+                $requiredAccountCodes[] = Account::CODE_SALARIES_ADVANCES; // ex: 421
             }
 
-            $journal = AccountingJournal::where('code', AccountingJournal::CODE_PAYROLL)->firstOrFail();
+            // 2. Requête Batch
+            $accounts = Account::select(['id', 'number'])
+                ->whereIn('number', $requiredAccountCodes)
+                ->get()
+                ->keyBy('number');
 
-            $expenseAccount = Account::where('number', Account::CODE_SALARIES_EXPENSE)->firstOrFail();
-            $payableAccount = Account::where('number', Account::CODE_SALARIES_PAYABLE)->firstOrFail();
-            $advancesAccount = Account::where('number', Account::CODE_SALARIES_ADVANCES)->firstOrFail();
-
-            $payrollNature = AnalyticalNature::where('code', AnalyticalNature::CODE_PAYROLL)->firstOrFail();
-
-            $lines = [];
-
-            $centerId = null;
-            if ($payrollRecord->employee && $payrollRecord->employee->analytical_code_id) {
-                $center = AnalyticalCenter::where('analytical_nature_id', $payrollNature->id)
-                    ->where('analytical_code_id', $payrollRecord->employee->analytical_code_id)
-                    ->first();
-
-                if ($center) {
-                    $centerId = $center->id;
+            // 3. VÉRIFICATION STRICTE (Correction du bug)
+            foreach ($requiredAccountCodes as $code) {
+                if (!isset($accounts[$code])) {
+                    throw ValidationException::withMessages([
+                        'accounting' => "Configuration incomplète : Le compte comptable '{$code}' est introuvable. Veuillez le créer dans le module Comptabilité.",
+                    ]);
                 }
             }
 
-            $lines[] = [
-                'account_id' => $expenseAccount->id,
-                'debit' => $payrollRecord->base_salary,
-                'credit' => 0,
-                'analytical_center_id' => $centerId,
-            ];
+            $journalId = AccountingJournal::where('code', AccountingJournal::CODE_PAYROLL)->value('id');
+            
+            if (!$journalId) {
+                throw ValidationException::withMessages([
+                    'accounting' => "Configuration incomplète : Le journal de paie est introuvable.",
+                ]);
+            }
 
-            $lines[] = [
-                'account_id' => $payableAccount->id,
-                'debit' => 0,
-                'credit' => $payrollRecord->net_salary,
-                'analytical_center_id' => null,
+            $lines = [
+                [
+                    'account_id' => $accounts[Account::CODE_SALARIES_EXPENSE]->id,
+                    'debit' => $payrollRecord->base_salary_snapshot, // Utilisation du snapshot
+                    'credit' => 0,
+                    'analytical_center_id' => $this->resolveAnalyticalCenterId($payrollRecord),
+                ],
+                [
+                    'account_id' => $accounts[Account::CODE_SALARIES_PAYABLE]->id,
+                    'debit' => 0,
+                    'credit' => $payrollRecord->net_salary,
+                    'analytical_center_id' => null,
+                ],
             ];
 
             if ($payrollRecord->deductions > 0) {
                 $lines[] = [
-                    'account_id' => $advancesAccount->id,
+                    'account_id' => $accounts[Account::CODE_SALARIES_ADVANCES]->id,
                     'debit' => 0,
                     'credit' => $payrollRecord->deductions,
                     'analytical_center_id' => null,
                 ];
             }
 
-            $entryData = [
+            $this->logAccountingEntryAction->execute([
                 'financial_year_id' => $financialYear->id,
-                'accounting_journal_id' => $journal->id,
+                'accounting_journal_id' => $journalId,
                 'date' => $payrollDate->format('Y-m-d'),
                 'reference' => 'PAIE-' . ($payrollRecord->employee_id ?? 'X') . '-' . $payrollDate->format('Y-m'),
-                'description' => 'Fiche de paie ' . ($payrollRecord->id),
+                'description' => 'Fiche de paie ' . $payrollRecord->id,
                 'lines' => $lines,
-            ];
-
-            $this->logAccountingEntryAction->execute($entryData);
+            ]);
 
             return $payrollRecord;
         });
+    }
+
+    private function resolveAnalyticalCenterId(PayrollRecord $payrollRecord): ?int
+    {
+        $analyticalCodeId = $payrollRecord->employee?->analytical_code_id;
+        
+        if (! $analyticalCodeId) {
+            return null;
+        }
+
+        // On évite d'hydrater tout le modèle Nature, on prend juste l'ID
+        $natureId = AnalyticalNature::where('code', AnalyticalNature::CODE_PAYROLL)->value('id');
+
+        return AnalyticalCenter::where('analytical_nature_id', $natureId)
+            ->where('analytical_code_id', $analyticalCodeId)
+            ->value('id');
     }
 }

@@ -7,14 +7,13 @@ use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\Zootechnie\GenerationController;
 use App\Http\Controllers\SiteController;
 use App\Http\Controllers\UnitController;
+use App\Http\Controllers\DashboardController;
 
 Route::inertia('/', 'welcome', [
     'canRegister' => Features::enabled(Features::registration()),
 ])->name('home');
 
-Route::middleware(['auth', 'verified'])->group(function () {
-    Route::inertia('dashboard', 'dashboard')->name('dashboard');
-});
+
 
 require __DIR__.'/settings.php';
 
@@ -340,5 +339,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ]);
 
         Route::get('stats/{generation}/metrics', [\App\Http\Controllers\Zootechnie\ZootechnieStatsController::class, 'getMetrics'])->name('metricsGetMetrics');
+
     });
+
+    Route::get('delivery-notes/{delivery_note}/pdf', [\App\Http\Controllers\Sales\DeliveryNoteController::class, 'downloadPdf'])->name('deliveryNotesPdf');
+    Route::get('invoices/{invoice}/pdf', [\App\Http\Controllers\Sales\InvoiceController::class, 'downloadPdf'])->name('invoicesPdf');
+
+    Route::get('purchase-orders/{purchase_order}/pdf', [\App\Http\Controllers\Purchases\PurchaseOrderController::class, 'downloadPdf'])->name('purchaseOrdersPdf');
+    Route::get('purchase-receipts/{purchase_receipt}/pdf', [\App\Http\Controllers\Purchases\PurchaseReceiptController::class, 'downloadPdf'])->name('purchaseReceiptsPdf');
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 });

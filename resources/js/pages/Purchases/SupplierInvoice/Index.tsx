@@ -1,18 +1,10 @@
+// pages/Purchases/SupplierInvoice/Index.tsx
 import React from 'react';
-import { Head, Link, useForm } from '@inertiajs/react';
-import { Breadcrumbs } from '@/components/breadcrumbs';
-import { 
-    Plus, 
-    FileText, 
-    CheckCircle2, 
-    Clock, 
-    Check,
-    Building2,
-    Calendar,
-    Hash,
-    Receipt
-} from 'lucide-react';
-import { supplierInvoicesCreate, supplierInvoicesApprove } from '@/routes';
+import { Link, router } from '@inertiajs/react';
+import { Plus, Edit2, FileText, CheckCircle, Clock, FileDown, Receipt } from 'lucide-react';
+import { supplierInvoicesCreate, supplierInvoicesApprove, invoicesPdf } from '@/routes'; // InvoicesPdf mappé dans web.php
+import { PaginatedData } from '@/types/pagination';
+import { DataTable, ColumnDef } from '@/components/ui/DataTable';
 
 interface SupplierInvoice {
     id: number;
@@ -20,126 +12,112 @@ interface SupplierInvoice {
     invoice_date: string;
     due_date: string | null;
     status: 'draft' | 'approved';
-    supplier: {
-        name: string;
-    };
-    purchase_receipt: {
-        reference: string;
-    };
+    supplier: { id: number; name: string };
+    purchase_receipt: { id: number; reference: string };
 }
 
 interface Props {
-    data: {
-        data: SupplierInvoice[];
-        links: any[];
-    };
+    data: PaginatedData<SupplierInvoice>;
 }
 
-export default function SupplierInvoiceIndex({ data }: Props) {
-    const { post, processing } = useForm();
-
-    const breadcrumbs = [
-        { title: 'Achats & Stocks', href: '#' },
-        { title: 'Factures Fournisseurs', href: '#' },
-    ];
-
+export default function Index({ data }: Props) {
+    
+    // Approbation de la facture (Validation comptable définitive)
     const handleApprove = (id: number) => {
-        if (confirm('Approuver cette facture fournisseur ? Elle sera comptabilisée comme une dette exigible.')) {
-            post(supplierInvoicesApprove.url(id));
+        if (confirm("Confirmez-vous l'approbation de cette facture ? Cette action générera les écritures comptables associées et verrouillera le document.")) {
+            router.post(supplierInvoicesApprove.url(id), {}, { preserveScroll: true });
         }
     };
 
+    const columns: ColumnDef<SupplierInvoice>[] = [
+        { 
+            header: 'N° Facture', 
+            cell: (item) => <span className="font-bold text-foreground">{item.reference}</span> 
+        },
+        { 
+            header: 'Date Facture', 
+            cell: (item) => new Date(item.invoice_date).toLocaleDateString() 
+        },
+        { 
+            header: 'Échéance', 
+            cell: (item) => item.due_date ? new Date(item.due_date).toLocaleDateString() : <span className="text-muted-foreground">-</span>
+        },
+        { 
+            header: 'Fournisseur', 
+            cell: (item) => <span className="font-medium text-card-foreground">{item.supplier.name}</span> 
+        },
+        { 
+            header: 'BR Associé', 
+            cell: (item) => (
+                <span className="font-semibold text-xs text-secondary bg-secondary/10 px-2 py-0.5 rounded">
+                    {item.purchase_receipt.reference}
+                </span>
+            )
+        },
+        { 
+            header: 'Statut', 
+            cell: (item) => (
+                <span className={`inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold rounded-full border ${
+                    item.status === 'approved' 
+                        ? 'bg-primary/10 text-primary border-primary/20' 
+                        : 'bg-muted text-muted-foreground border-border'
+                }`}>
+                    {item.status === 'approved' ? <CheckCircle size={12} /> : <Clock size={12} />}
+                    {item.status === 'approved' ? 'Comptabilisée' : 'Brouillon'}
+                </span>
+            )
+        },
+        {
+            header: 'Actions',
+            className: 'text-right',
+            cell: (item) => (
+                <div className="flex items-center justify-end gap-2">
+                    {/* Impression PDF native via web.php */}
+                    <a 
+                        href={invoicesPdf.url(item.id)} // Mappé sur downloadPdf du InvoiceController
+                        target="_blank" 
+                        rel="noreferrer"
+                        className="p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground rounded-lg transition-colors"
+                        title="Imprimer la facture"
+                    >
+                        <FileDown size={16} />
+                    </a>
+
+                    {item.status === 'draft' ? (
+                        <button
+                            onClick={() => handleApprove(item.id)}
+                            className="bg-primary text-primary-foreground text-xs font-bold px-3 py-1.5 rounded-md hover:bg-primary/90 transition-colors shadow-sm"
+                        >
+                            Approuver
+                        </button>
+                    ) : (
+                        <span className="text-xs text-muted-foreground italic px-2">Validée</span>
+                    )}
+                </div>
+            )
+        }
+    ];
+
     return (
-        <div className="p-6 space-y-6">
-            <Head title="Ferme-Landi | Factures Achats" />
-            
-            <div className="flex justify-between items-start">
-                <Breadcrumbs breadcrumbs={breadcrumbs} />
-                <Link
-                    href={supplierInvoicesCreate.url()}
-                    className="inline-flex items-center gap-2 bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg font-semibold transition shadow-sm"
+        <div className="p-6 max-w-7xl mx-auto space-y-6 bg-background">
+            <div className="flex justify-between items-center mb-4">
+                <div>
+                    <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
+                        <Receipt className="text-secondary" /> Factures d'Achats Fournisseurs
+                    </h1>
+                    <p className="text-muted-foreground text-sm mt-1">
+                        Saisissez et contrôlez les factures reçues pour valider les dettes et préparer les paiements.
+                    </p>
+                </div>
+                <Link 
+                    href={supplierInvoicesCreate.url()} 
+                    className="flex items-center gap-2 bg-secondary text-secondary-foreground px-5 py-2.5 rounded-xl font-bold shadow-sm hover:opacity-90 transition-opacity"
                 >
-                    <Plus className="w-4 h-4" />
-                    Enregistrer Facture
+                    <Plus size={18} /> Enregistrer une Facture
                 </Link>
             </div>
 
-            <div className="bg-card rounded-xl border border-border shadow-md overflow-hidden text-sm">
-                <div className="p-4 border-b border-border bg-orange-500/10 flex items-center gap-2">
-                    <FileText className="w-5 h-5 text-orange-600" />
-                    <h2 className="font-bold text-lg text-foreground">Registre des Factures Fournisseurs</h2>
-                </div>
-
-                <table className="w-full text-left border-collapse">
-                    <thead className="bg-muted/50 border-b border-border text-xs uppercase tracking-wider font-semibold text-muted-foreground">
-                        <tr>
-                            <th className="px-6 py-4">Réf. Facture</th>
-                            <th className="px-6 py-4">Fournisseur / Arrivage</th>
-                            <th className="px-6 py-4 text-center">Dates</th>
-                            <th className="px-6 py-4">Statut</th>
-                            <th className="px-6 py-4 text-right">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border">
-                        {data.data.length === 0 ? (
-                            <tr>
-                                <td colSpan={5} className="px-6 py-8 text-center text-muted-foreground italic">
-                                    Aucune facture fournisseur enregistrée.
-                                </td>
-                            </tr>
-                        ) : (
-                            data.data.map((invoice) => (
-                                <tr key={invoice.id} className="hover:bg-muted/30 transition-colors">
-                                    <td className="px-6 py-4">
-                                        <div className="font-black text-foreground">{invoice.reference}</div>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <div className="flex items-center gap-1.5 font-medium text-foreground">
-                                            <Building2 className="w-3.5 h-3.5 text-orange-600" />
-                                            {invoice.supplier.name}
-                                        </div>
-                                        <div className="flex items-center gap-1 text-[10px] text-muted-foreground font-bold uppercase mt-1">
-                                            <Receipt className="w-3 h-3" /> Arrivage: {invoice.purchase_receipt.reference}
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-4 text-center">
-                                        <div className="flex flex-col gap-0.5">
-                                            <span className="text-xs font-medium">Facture: {new Date(invoice.invoice_date).toLocaleDateString('fr-FR')}</span>
-                                            {invoice.due_date && (
-                                                <span className="text-[10px] text-orange-600 font-bold uppercase italic">
-                                                    Échéance: {new Date(invoice.due_date).toLocaleDateString('fr-FR')}
-                                                </span>
-                                            )}
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold flex items-center w-fit gap-1 border ${
-                                            invoice.status === 'approved' 
-                                            ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' 
-                                            : 'bg-muted text-muted-foreground border-border'
-                                        }`}>
-                                            {invoice.status === 'approved' ? <CheckCircle2 className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
-                                            {invoice.status.toUpperCase()}
-                                        </span>
-                                    </td>
-                                    <td className="px-6 py-4 text-right">
-                                        {invoice.status === 'draft' && (
-                                            <button
-                                                onClick={() => handleApprove(invoice.id)}
-                                                disabled={processing}
-                                                className="bg-primary text-primary-foreground p-1.5 rounded-md hover:bg-primary/90 transition shadow-sm"
-                                                title="Valider la facture"
-                                            >
-                                                <Check className="w-4 h-4" />
-                                            </button>
-                                        )}
-                                    </td>
-                                </tr>
-                            ))
-                        )}
-                    </tbody>
-                </table>
-            </div>
+            <DataTable data={data} columns={columns} emptyMessage="Aucune facture fournisseur enregistrée." />
         </div>
     );
 }

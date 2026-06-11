@@ -4,7 +4,7 @@ namespace App\Actions\Logistics;
 
 use App\Models\Unit;
 
-class CreateUnitAction
+final readonly class CreateUnitAction
 {
     /**
      * Create a new unit.

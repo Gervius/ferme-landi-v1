@@ -9,10 +9,11 @@ use App\Models\Company;
 use App\Models\Site;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Gate;
+use App\Enums\SiteType;
 use Inertia\Inertia;
 use Inertia\Response;
 
-class SiteController extends Controller
+final class SiteController extends Controller
 {
     /**
      * Display a listing of the resource.
@@ -21,26 +22,26 @@ class SiteController extends Controller
     {
         Gate::authorize('viewAny', Site::class);
 
-        $sites = Site::with('company')->paginate(10);
+        $sites = Site::select(['id', 'company_id', 'name', 'code', 'type', 'is_active'])
+            ->with(['company:id,name'])
+            ->paginate(10);
+
+        $companies = Company::select(['id', 'name'])->get();
+
+        // Extraction dynamique des types depuis l'Enum (s'exécute directement dans la RAM du serveur)
+        $siteTypes = array_map(fn($type) => [
+            'value' => $type->value,
+            'label' => $type->label()
+        ], SiteType::cases());
 
         return Inertia::render('Sites/Index', [
-            'sites' => $sites,
-        ]);
-    }
-
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create(): Response
-    {
-        Gate::authorize('create', Site::class);
-
-        $companies = Company::where('is_active', true)->select('id', 'name')->get();
-
-        return Inertia::render('Sites/Create', [
+            'sites'     => $sites,
             'companies' => $companies,
+            'siteTypes' => $siteTypes, // On passe les types au Front
         ]);
     }
+
+    
 
     /**
      * Store a newly created resource in storage.

@@ -3,14 +3,14 @@
 namespace App\Actions\Zootechnie;
 
 use App\Models\DailyProduction;
-use App\Services\Inventory\StockService;
+use App\Actions\Stocks\LogStockMovementAction;
 use App\Services\Logistics\UnitConversionService;
 
 class ApproveProductionAction
 {
     public function __construct(
         private readonly UnitConversionService $unitConversionService,
-        private readonly StockService $stockService
+        private readonly LogStockMovementAction $logStockMovementAction // INJECTION DU NOUVEAU SYSTÈME
     ) {
     }
 
@@ -28,6 +28,9 @@ class ApproveProductionAction
         }
 
         return \Illuminate\Support\Facades\DB::transaction(function () use ($production, $approverId) {
+            // Chargement de la relation pour accéder au site_id
+            $production->loadMissing('generation');
+
             // Calculate total base quantity
             $totalQuantity = $production->good_quantity + $production->broken_quantity;
             $totalBaseQuantity = $this->unitConversionService->toBase($totalQuantity, $production->unit);
@@ -39,17 +42,18 @@ class ApproveProductionAction
             // Approve the record
             $production->approve($approverId);
 
-            // Mouvement de stock ENTRANT pour les œufs
+            // NOUVEAU SYSTÈME : Mouvement de stock ENTRANT pour les œufs
             if ($production->item_category_id) {
-                $goodBaseQuantity = $this->unitConversionService->toBase($production->good_quantity, $production->unit);
-                $this->stockService->recordMovement(
-                    $production->item_category_id,
-                    'in',
-                    $goodBaseQuantity,
-                    $production,
-                    $production->date->format('Y-m-d'),
-                    $approverId
-                );
+                $this->logStockMovementAction->execute([
+                    'site_id' => $production->generation->site_id,
+                    'category_id' => $production->item_category_id,
+                    'unit_id' => $production->unit_id,
+                    'type' => 'in',
+                    'quantity' => $production->good_quantity, // On met en stock uniquement les bons œufs
+                    'reference_type' => $production->getMorphClass(),
+                    'reference_id' => $production->id,
+                    'date' => $production->date->format('Y-m-d'),
+                ], $approverId);
             }
 
             return $production;

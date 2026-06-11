@@ -7,61 +7,60 @@ use App\Actions\Logistics\UpdateUnitAction;
 use App\Http\Requests\Logistics\StoreUnitRequest;
 use App\Http\Requests\Logistics\UpdateUnitRequest;
 use App\Models\Unit;
+use App\Enums\UnitType;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 use Inertia\Response;
 
-class UnitController extends Controller
+final class UnitController extends Controller
 {
     public function index(): Response
     {
         Gate::authorize('viewAny', Unit::class);
 
-        $units = Unit::with('baseUnit')->paginate(10);
+        // Optimisation RAM : On limite les données de la base parent au strict minimum (id, name, symbol)
+        $units = Unit::select(['id', 'name', 'symbol', 'is_base_unit', 'base_unit_id', 'conversion_rate', 'is_active'])
+            ->with(['baseUnit:id,name,symbol'])
+            ->paginate(10);
+
+        // Chargement très léger pour le select des unités de référence dans la modale
+        $baseUnits = Unit::select(['id', 'name', 'symbol'])
+            ->where('is_base_unit', true)
+            ->where('is_active', true)
+            ->get();
+
+        $unitTypes = array_map(fn($type) => [
+            'value' => $type->value,
+            'label' => $type->label()
+        ], UnitType::cases());
 
         return Inertia::render('Units/Index', [
             'units' => $units,
-        ]);
-    }
-
-    public function create(): Response
-    {
-        Gate::authorize('create', Unit::class);
-        $baseUnits = Unit::where('is_base_unit', true)->where('is_active', true)->get();
-
-        return Inertia::render('Units/Create', [
             'baseUnits' => $baseUnits,
+            'unitTypes' => $unitTypes, // Injection directe
         ]);
     }
 
     public function store(StoreUnitRequest $request, CreateUnitAction $createAction): RedirectResponse
     {
         $createAction->execute($request->validated());
-        return redirect()->route('unitsIndex')->with('success', 'Unit created successfully.');
-    }
-
-    public function edit(Unit $unit): Response
-    {
-        Gate::authorize('update', $unit);
-        $baseUnits = Unit::where('is_base_unit', true)->where('is_active', true)->where('id', '!=', $unit->id)->get();
-
-        return Inertia::render('Units/Edit', [
-            'unit' => $unit,
-            'baseUnits' => $baseUnits,
-        ]);
+        
+        return redirect('/units')->with('success', 'Unité créée avec succès.');
     }
 
     public function update(UpdateUnitRequest $request, Unit $unit, UpdateUnitAction $updateAction): RedirectResponse
     {
         $updateAction->execute($unit, $request->validated());
-        return redirect()->route('unitsIndex')->with('success', 'Unit updated successfully.');
+        
+        return redirect('/units')->with('success', 'Unité mise à jour avec succès.');
     }
 
     public function destroy(Unit $unit): RedirectResponse
     {
         Gate::authorize('delete', $unit);
         $unit->delete();
-        return redirect()->route('unitsIndex')->with('success', 'Unit deleted successfully.');
+        
+        return redirect('/units')->with('success', 'Unité supprimée avec succès.');
     }
 }

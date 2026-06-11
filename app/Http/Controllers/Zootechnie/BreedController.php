@@ -20,21 +20,15 @@ class BreedController extends Controller
 
         $breeds = Breed::with('species')->paginate(15);
 
-        return Inertia::render('Zootechnie/Breed/Index', [
-            'breeds' => $breeds,
-        ]);
-    }
-
-    public function create(): Response
-    {
-        Gate::authorize('create', Breed::class);
-
         $species = Species::where('is_active', true)->get(['id', 'name']);
 
-        return Inertia::render('Zootechnie/Breed/Create', [
-            'species' => $species,
+        return Inertia::render('Zootechnie/Breed/Index', [
+            'breeds' => $breeds,
+            'species' => $species, // Injection ici
         ]);
     }
+
+    
 
     public function store(StoreBreedRequest $request): RedirectResponse
     {

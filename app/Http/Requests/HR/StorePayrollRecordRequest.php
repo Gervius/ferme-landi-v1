@@ -7,7 +7,7 @@ use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
 
-class StorePayrollRecordRequest extends FormRequest
+final class StorePayrollRecordRequest extends FormRequest
 {
     public function authorize(): bool
     {
@@ -18,8 +18,7 @@ class StorePayrollRecordRequest extends FormRequest
     {
         return [
             'employee_id'      => ['required', 'exists:employees,id'],
-            'month'            => ['required', 'integer', 'min:1', 'max:12'],
-            'year'             => ['required', 'integer', 'min:2000'],
+            'period_start'     => ['required', 'date'], // Remplacement de month/year
             'deductions'       => ['nullable', 'numeric', 'min:0'],
             'deduction_reason' => [
                 Rule::requiredIf(fn () => $this->input('deductions', 0) > 0),

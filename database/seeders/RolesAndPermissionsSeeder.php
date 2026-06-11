@@ -38,6 +38,8 @@ class RolesAndPermissionsSeeder extends Seeder
 
             // Stocks
             'manage stocks',
+            //hr
+            'manage hr',
         ];
 
         // Création des permissions en base de données

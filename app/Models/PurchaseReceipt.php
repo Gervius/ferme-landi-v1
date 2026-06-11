@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use App\Traits\HasApprovalWorkflow;
+use App\Models\SupplierInvoice; // Assure-toi d'importer le modèle de facture si nécessaire
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -27,6 +29,12 @@ class PurchaseReceipt extends Model
     public function purchaseOrder(): BelongsTo
     {
         return $this->belongsTo(PurchaseOrder::class);
+    }
+
+    public function supplierInvoice(): HasOne
+    {
+        // Ajuste la clé étrangère si elle ne s'appelle pas purchase_receipt_id dans ta table supplier_invoices
+        return $this->hasOne(SupplierInvoice::class, 'purchase_receipt_id'); 
     }
 
     public function items()

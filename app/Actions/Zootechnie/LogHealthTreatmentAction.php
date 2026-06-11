@@ -3,21 +3,17 @@
 namespace App\Actions\Zootechnie;
 
 use App\Models\HealthTreatment;
+use Illuminate\Support\Facades\DB;
 
 class LogHealthTreatmentAction
 {
-    /**
-     * Log a new health treatment record in draft status.
-     *
-     * @param array $data
-     * @param int $userId
-     * @return HealthTreatment
-     */
     public function execute(array $data, int $userId): HealthTreatment
     {
-        $data['status'] = 'draft';
-        $data['prepared_by'] = $userId;
+        return DB::transaction(function () use ($data, $userId) {
+            $data['status'] = 'draft';
+            $data['prepared_by'] = $userId;
 
-        return HealthTreatment::create($data);
+            return HealthTreatment::create($data);
+        });
     }
 }
