@@ -17,11 +17,18 @@ class ApproveSupplierInvoiceAction
 {
     public function __construct(
         private readonly LogAccountingEntryAction $logAccountingEntryAction
-    ) {
-    }
+    ) {}
 
     public function execute(SupplierInvoice $invoice, int $userId): SupplierInvoice
     {
+        if ($invoice->status === 'validated') {
+            throw ValidationException::withMessages(['status' => 'Cette facture est déjà validée en comptabilité.']);
+        }
+
+        // Élimination du N+1 : Chargement profond des relations analytiques
+        // Note : Assure-toi que SupplierInvoiceItem a bien une relation 'item'
+        $invoice->loadMissing('items.item.category');
+
         return DB::transaction(function () use ($invoice, $userId) {
             $invoice->update([
                 'status' => 'validated',
@@ -40,33 +47,34 @@ class ApproveSupplierInvoiceAction
                 ]);
             }
 
+            // Récupération des comptes et natures (Idéalement mis en cache ou chargés via Config)
             $journal = AccountingJournal::where('code', AccountingJournal::CODE_PURCHASES)->firstOrFail();
-
             $supplierAccount = Account::where('number', Account::CODE_SUPPLIERS)->firstOrFail();
             $purchasesAccount = Account::where('number', Account::CODE_PURCHASES)->firstOrFail();
-
+            
             $purchasesNature = AnalyticalNature::where('code', AnalyticalNature::CODE_PURCHASES)->firstOrFail();
             $healthNature = AnalyticalNature::where('code', AnalyticalNature::CODE_HEALTH)->firstOrFail();
 
             $lines = [];
 
-            // Debit Lines (Purchases)
-            foreach ($invoice->items as $item) {
-                $amountHt = round($item->quantity * $item->unit_price, 2);
-
+            foreach ($invoice->items as $invoiceItem) {
+                $amountHt = round($invoiceItem->quantity * $invoiceItem->unit_price, 2);
                 $centerId = null;
-                if ($item->category && $item->category->analytical_code_id) {
-                    $natureId = ($item->category->scope === CategoryScope::MEDICATION)
+
+                // On accède à la catégorie via l'Item
+                $category = $invoiceItem->item->category ?? null;
+
+                if ($category && $category->analytical_code_id) {
+                    $natureId = ($category->scope === CategoryScope::MEDICATION)
                         ? $healthNature->id
                         : $purchasesNature->id;
 
+                    // On pourrait optimiser ceci avec une requête groupée avant la boucle si beaucoup de lignes
                     $center = AnalyticalCenter::where('analytical_nature_id', $natureId)
-                        ->where('analytical_code_id', $item->category->analytical_code_id)
+                        ->where('analytical_code_id', $category->analytical_code_id)
                         ->first();
 
-                    if ($center) {
-                        $centerId = $center->id;
-                    }
+                    $centerId = $center?->id;
                 }
 
                 $lines[] = [
@@ -77,7 +85,6 @@ class ApproveSupplierInvoiceAction
                 ];
             }
 
-            // Credit Line (Supplier)
             $lines[] = [
                 'account_id' => $supplierAccount->id,
                 'debit' => 0,
@@ -85,6 +92,7 @@ class ApproveSupplierInvoiceAction
                 'analytical_center_id' => null,
             ];
 
+            // ... Suite identique à ton code (logAccountingEntryAction)
             $entryData = [
                 'financial_year_id' => $financialYear->id,
                 'accounting_journal_id' => $journal->id,
@@ -93,7 +101,7 @@ class ApproveSupplierInvoiceAction
                 'description' => 'Facture Fournisseur ' . ($invoice->reference ?? $invoice->id),
                 'lines' => $lines,
             ];
-
+            
             $this->logAccountingEntryAction->execute($entryData);
 
             return $invoice;

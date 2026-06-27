@@ -1,8 +1,6 @@
-// pages/Zootechnie/Species/Index.tsx
 import React, { useState } from 'react';
 import { router, useForm } from '@inertiajs/react';
 import { Plus, Edit2, Trash2, Dna, CheckCircle, XCircle } from 'lucide-react';
-import { speciesStore, speciesUpdate, speciesDestroy } from '@/routes';
 import { PaginatedData } from '@/types/pagination';
 import { DataTable, ColumnDef } from '@/components/ui/DataTable';
 import {
@@ -27,7 +25,7 @@ export default function Index({ species }: Props) {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingId, setEditingId] = useState<number | null>(null);
 
-    const { data, setData, post, put, processing, errors, reset } = useForm({
+    const { data, setData, post, put, processing, errors, reset, clearErrors } = useForm({
         name: '',
         is_active: true,
     });
@@ -35,11 +33,13 @@ export default function Index({ species }: Props) {
     const openCreateModal = () => {
         setEditingId(null);
         reset();
+        clearErrors();
         setIsModalOpen(true);
     };
 
     const openEditModal = (item: Species) => {
         setEditingId(item.id);
+        clearErrors();
         setData({
             name: item.name,
             is_active: Boolean(item.is_active),
@@ -49,22 +49,28 @@ export default function Index({ species }: Props) {
 
     const handleDelete = (id: number) => {
         if (confirm("Supprimer cette espèce ? Attention, cela impactera toutes les races et lots associés.")) {
-            router.delete(speciesDestroy.url(id), { preserveScroll: true });
+            // ROUTAGE STRICT : URI en dur
+            router.delete(`/zootechnie/species/${id}`, { preserveScroll: true });
         }
     };
 
-    const handleSubmit = (e: React.SubmitEvent) => {
+    const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+        
+        const options = {
+            preserveScroll: true,
+            onSuccess: () => { 
+                setIsModalOpen(false); 
+                reset(); 
+            }
+        };
+
         if (editingId) {
-            put(speciesUpdate.url(editingId), {
-                preserveScroll: true,
-                onSuccess: () => { setIsModalOpen(false); reset(); },
-            });
+            // ROUTAGE STRICT : URI en dur
+            put(`/zootechnie/species/${editingId}`, options);
         } else {
-            post(speciesStore.url(), {
-                preserveScroll: true,
-                onSuccess: () => { setIsModalOpen(false); reset(); },
-            });
+            // ROUTAGE STRICT : URI en dur
+            post('/zootechnie/species', options);
         }
     };
 

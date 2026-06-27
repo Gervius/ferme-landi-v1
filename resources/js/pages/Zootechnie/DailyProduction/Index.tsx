@@ -1,8 +1,6 @@
-// pages/Zootechnie/DailyProduction/Index.tsx
 import React, { useState, useMemo } from 'react';
 import { useForm, router } from '@inertiajs/react';
 import { Plus, CheckCircle, Clock, EggOff, Egg } from 'lucide-react';
-import { dailyProductionsStore, dailyProductionsApprove } from '@/routes';
 import { getGenerationDisplay } from '@/utils/zootechnieStrategy';
 import { PaginatedData } from '@/types/pagination';
 import { DataTable, ColumnDef } from '@/components/ui/DataTable';
@@ -12,7 +10,6 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog';
 
 interface DailyProduction {
@@ -37,7 +34,7 @@ export default function Index({ data, generations, categories, units }: Props) {
     const [isModalOpen, setIsModalOpen] = useState(false);
 
     // Initialisation du formulaire
-    const { data: formData, setData, post, processing, errors, reset } = useForm({
+    const { data: formData, setData, post, processing, errors, reset, clearErrors } = useForm({
         generation_id: '',
         date: new Date().toISOString().split('T')[0],
         unit_id: '',
@@ -46,254 +43,210 @@ export default function Index({ data, generations, categories, units }: Props) {
         broken_quantity: 0,
     });
 
-    // Soumission de la création (Brouillon)
-    const submitCreate = (e: React.SubmitEvent) => {
+    const openModal = () => {
+        reset();
+        clearErrors();
+        setIsModalOpen(true);
+    };
+
+    const submitForm = (e: React.FormEvent) => {
         e.preventDefault();
-        post(dailyProductionsStore.url(), {
-            preserveScroll: true,
+        // ROUTAGE STRICT : URI en dur (0 latence liée à Ziggy)
+        post('/zootechnie/daily-productions', {
             onSuccess: () => {
                 setIsModalOpen(false);
                 reset();
-            },
+            }
         });
     };
 
-    // Action d'approbation (Validation du stock)
-    const handleApprove = (id: number) => {
-        if (confirm("Confirmez-vous l'approbation ? Cette action mettra à jour les stocks définitivement.")) {
-            router.post(dailyProductionsApprove.url(id), {}, { preserveScroll: true });
+    const approveProduction = (id: number) => {
+        if (confirm("Voulez-vous valider cette production ? Cela impactera les stocks d'entrepôt.")) {
+            // ROUTAGE STRICT : URI en dur avec méthode POST (ou PUT selon ton web.php)
+            router.post(`/zootechnie/daily-productions/${id}/approve`, {}, {
+                preserveScroll: true,
+                preserveState: true,
+            });
         }
     };
 
-    // Statistiques rapides optimisées en RAM
-    const stats = useMemo(() => {
-        return data.data.reduce(
-            (acc, item) => {
-                acc.good += Number(item.good_quantity);
-                acc.broken += Number(item.broken_quantity);
-                return acc;
-            },
-            { good: 0, broken: 0 }
-        );
-    }, [data.data]);
-
-    // Définition des colonnes du DataTable
-    const columns: ColumnDef<DailyProduction>[] = [
+    // Configuration des colonnes du DataTable
+    const columns: ColumnDef<DailyProduction>[] = useMemo(() => [
         { 
             header: 'Date', 
-            className: 'font-medium',
-            cell: (item) => new Date(item.date).toLocaleDateString()
+            cell: (row) => new Date(row.date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' }) 
         },
         { 
             header: 'Lot (Génération)', 
-            cell: (item) => {
-                const { Icon, colorClass } = getGenerationDisplay(item.generation.type);
+            cell: (row) => {
+                const strat = getGenerationDisplay(row.generation.type);
                 return (
-                    <div className="flex items-center gap-2">
-                        <Icon className={`w-4 h-4 ${colorClass}`} strokeWidth={2} />
-                        <span className="font-semibold text-card-foreground">{item.generation.code}</span>
+                    <div className="flex items-center gap-2 font-medium">
+                        <strat.Icon size={16} className={strat.colorClass} />
+                        {row.generation.code}
                     </div>
                 );
             }
         },
         { 
-            header: 'Catégorie', 
-            cell: (item) => item.category ? item.category.name : <span className="text-muted-foreground italic">Standard</span>
+            header: 'Produit', 
+            cell: (row) => row.category?.name || '-' 
         },
         { 
-            header: 'Collecte Saine', 
-            className: 'text-right',
-            cell: (item) => (
-                <span className="font-bold text-primary">
-                    {Number(item.good_quantity)} <span className="text-xs font-normal text-muted-foreground">{item.unit.symbol}</span>
-                </span>
-            )
+            header: 'Qté Bonne', 
+            cell: (row) => <span className="font-semibold text-green-600">{row.good_quantity} {row.unit.symbol}</span> 
         },
         { 
-            header: 'Casses / Rebuts', 
-            className: 'text-right',
-            cell: (item) => (
-                <span className="font-bold text-destructive">
-                    {Number(item.broken_quantity)} <span className="text-xs font-normal text-muted-foreground">{item.unit.symbol}</span>
-                </span>
-            )
+            header: 'Qté Déclassée', 
+            cell: (row) => <span className="font-semibold text-amber-600">{row.broken_quantity} {row.unit.symbol}</span> 
         },
-        { 
-            header: 'Statut', 
-            cell: (item) => (
-                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold rounded-full ${
-                    item.status === 'approved' 
-                        ? 'bg-primary/10 text-primary border border-primary/20' 
-                        : 'bg-accent/10 text-accent-foreground border border-accent/20'
-                }`}>
-                    {item.status === 'approved' ? <CheckCircle size={12} /> : <Clock size={12} />}
-                    {item.status === 'approved' ? 'Approuvé' : 'Brouillon'}
-                </span>
-            )
+        {
+            header: 'Statut',
+            cell: (row) => row.status === 'approved'
+                ? <span className="inline-flex items-center gap-1 text-green-700 bg-green-100 px-2 py-1 rounded-md text-xs font-bold border border-green-200"><CheckCircle size={14}/> Validé</span>
+                : <span className="inline-flex items-center gap-1 text-amber-700 bg-amber-100 px-2 py-1 rounded-md text-xs font-bold border border-amber-200"><Clock size={14}/> Brouillon</span>
         },
         {
             header: 'Actions',
-            className: 'text-right',
-            cell: (item) => item.status === 'draft' ? (
-                <button 
-                    onClick={() => handleApprove(item.id)}
-                    className="text-xs font-bold bg-primary text-primary-foreground px-3 py-1.5 rounded-md hover:bg-primary/90 transition-colors shadow-sm"
+            cell: (row) => row.status === 'draft' && (
+                <button
+                    onClick={() => approveProduction(row.id)}
+                    className="text-primary hover:text-primary/80 font-semibold text-sm flex items-center gap-1.5 transition-colors"
                 >
-                    Approuver
+                    <CheckCircle size={16} /> Approuver
                 </button>
-            ) : (
-                <span className="text-xs text-muted-foreground italic">Verrouillé</span>
             )
         }
-    ];
+    ], []);
 
     return (
-        <div className="p-6 max-w-7xl mx-auto space-y-6 bg-background">
-            
-            {/* Header & Statistiques */}
-            <div className="flex flex-col md:flex-row justify-between gap-6 mb-8">
+        <div className="p-6 max-w-7xl mx-auto space-y-8 bg-background min-h-screen">
+            {/* Header */}
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
                 <div>
-                    <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-                        <Egg className="text-primary" /> Production Journalière
-                    </h1>
-                    <p className="text-muted-foreground text-sm mt-1">Saisissez et validez la ponte de vos lots actifs.</p>
+                    <h1 className="text-3xl font-bold text-primary tracking-tight">Productions Quotidiennes</h1>
+                    <p className="text-muted-foreground mt-1">Saisie des récoltes (œufs, etc.) et intégration aux stocks.</p>
                 </div>
-
-                <div className="flex gap-4">
-                    <div className="bg-card border border-border px-5 py-3 rounded-xl shadow-sm flex items-center gap-4">
-                        <div className="bg-primary/10 p-2 rounded-lg text-primary"><Egg size={20} /></div>
-                        <div>
-                            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Sains</p>
-                            <p className="text-xl font-bold text-foreground">{stats.good}</p>
-                        </div>
-                    </div>
-                    <div className="bg-card border border-border px-5 py-3 rounded-xl shadow-sm flex items-center gap-4">
-                        <div className="bg-destructive/10 p-2 rounded-lg text-destructive"><EggOff size={20} /></div>
-                        <div>
-                            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Casses</p>
-                            <p className="text-xl font-bold text-foreground">{stats.broken}</p>
-                        </div>
-                    </div>
-                </div>
+                <button 
+                    onClick={openModal}
+                    className="flex items-center gap-2 bg-primary text-primary-foreground px-5 py-2.5 rounded-xl hover:bg-primary/90 transition-colors font-medium shadow-sm"
+                >
+                    <Plus size={18} />
+                    Saisir une production
+                </button>
             </div>
 
-            {/* Barre de contrôle avec Dialog intégré */}
-            <div className="flex justify-end mb-4">
-                <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-                    <DialogTrigger asChild>
-                        <button className="flex items-center gap-2 bg-primary text-primary-foreground px-5 py-2.5 rounded-xl font-bold shadow-sm hover:opacity-90 transition-opacity">
-                            <Plus size={18} />
-                            Saisir une production
-                        </button>
-                    </DialogTrigger>
-                    
-                    <DialogContent className="sm:max-w-[600px]">
-                        <DialogHeader>
-                            <DialogTitle className="text-xl text-primary">Déclaration de Ponte</DialogTitle>
-                            <DialogDescription>
-                                Cette saisie sera enregistrée en mode "Brouillon". Elle ne mettra à jour les stocks qu'après approbation.
-                            </DialogDescription>
-                        </DialogHeader>
+            {/* Modal de Saisie (Shadcn Dialog) */}
+            <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+                <DialogContent className="sm:max-w-xl">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-xl">
+                            <Egg className="text-primary" size={24} />
+                            Déclarer une production
+                        </DialogTitle>
+                        <DialogDescription>
+                            Saisissez les quantités récoltées pour la journée.
+                        </DialogDescription>
+                    </DialogHeader>
 
-                        <form onSubmit={submitCreate} className="space-y-6 mt-4">
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-2 col-span-2">
-                                    <label className="text-sm font-medium text-foreground">Lot concerné (Pondeuses)</label>
-                                    <select 
-                                        value={formData.generation_id}
-                                        onChange={e => setData('generation_id', e.target.value)}
-                                        className="w-full bg-input border border-border rounded-lg p-2.5 focus:ring-ring"
-                                    >
-                                        <option value="">Sélectionner un lot actif</option>
-                                        {generations.map(gen => {
-                                            const { label } = getGenerationDisplay(gen.type);
-                                            return <option key={gen.id} value={gen.id}>{gen.code} - {label}</option>;
-                                        })}
-                                    </select>
-                                    {errors.generation_id && <span className="text-destructive text-xs">{errors.generation_id}</span>}
-                                </div>
-
-                                <div className="space-y-2">
-                                    <label className="text-sm font-medium text-foreground">Date de ramassage</label>
-                                    <input 
-                                        type="date" 
-                                        value={formData.date}
-                                        onChange={e => setData('date', e.target.value)}
-                                        className="w-full bg-input border border-border rounded-lg p-2.5 focus:ring-ring"
-                                    />
-                                    {errors.date && <span className="text-destructive text-xs">{errors.date}</span>}
-                                </div>
-
-                                <div className="space-y-2">
-                                    <label className="text-sm font-medium text-foreground">Catégorie / Calibre</label>
-                                    <select 
-                                        value={formData.item_category_id}
-                                        onChange={e => setData('item_category_id', e.target.value)}
-                                        className="w-full bg-input border border-border rounded-lg p-2.5 focus:ring-ring"
-                                    >
-                                        <option value="">Générique / Standard</option>
-                                        {categories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
-                                    </select>
-                                </div>
-
-                                <div className="space-y-2">
-                                    <label className="text-sm font-medium text-primary">Œufs Sains (Bons)</label>
-                                    <input 
-                                        type="number" min="0" step="0.01"
-                                        value={formData.good_quantity || ''}
-                                        onChange={e => setData('good_quantity', Number(e.target.value))}
-                                        className="w-full bg-primary/5 border border-primary/30 rounded-lg p-2.5 focus:ring-primary"
-                                    />
-                                    {errors.good_quantity && <span className="text-destructive text-xs">{errors.good_quantity}</span>}
-                                </div>
-
-                                <div className="space-y-2">
-                                    <label className="text-sm font-medium text-destructive">Casses et Rebuts</label>
-                                    <input 
-                                        type="number" min="0" step="0.01"
-                                        value={formData.broken_quantity || ''}
-                                        onChange={e => setData('broken_quantity', Number(e.target.value))}
-                                        className="w-full bg-destructive/5 border border-destructive/30 rounded-lg p-2.5 focus:ring-destructive"
-                                    />
-                                    {errors.broken_quantity && <span className="text-destructive text-xs">{errors.broken_quantity}</span>}
-                                </div>
-
-                                <div className="space-y-2 col-span-2">
-                                    <label className="text-sm font-medium text-foreground">Unité de mesure de la saisie</label>
-                                    <select 
-                                        value={formData.unit_id}
-                                        onChange={e => setData('unit_id', e.target.value)}
-                                        className="w-full bg-input border border-border rounded-lg p-2.5 focus:ring-ring"
-                                    >
-                                        <option value="">Sélectionner (ex: Alvéole de 30, Unité...)</option>
-                                        {units.map(unit => <option key={unit.id} value={unit.id}>{unit.name} ({unit.symbol})</option>)}
-                                    </select>
-                                    {errors.unit_id && <span className="text-destructive text-xs">{errors.unit_id}</span>}
-                                </div>
+                    <form onSubmit={submitForm} className="space-y-6 mt-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium text-foreground">Date</label>
+                                <input 
+                                    type="date" 
+                                    value={formData.date} 
+                                    onChange={e => setData('date', e.target.value)} 
+                                    className="w-full bg-input border border-border rounded-md p-2 text-sm focus:ring-primary focus:border-primary"
+                                />
+                                {errors.date && <span className="text-destructive text-xs">{errors.date}</span>}
                             </div>
 
-                            <div className="flex justify-end gap-3 pt-6 border-t border-border">
-                                <button 
-                                    type="button" 
-                                    onClick={() => setIsModalOpen(false)}
-                                    className="px-5 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium text-foreground">Génération (Lot)</label>
+                                <select 
+                                    value={formData.generation_id} 
+                                    onChange={e => setData('generation_id', e.target.value)} 
+                                    className="w-full bg-input border border-border rounded-md p-2 text-sm focus:ring-primary"
                                 >
-                                    Annuler
-                                </button>
-                                <button 
-                                    type="submit" 
-                                    disabled={processing}
-                                    className="bg-primary text-primary-foreground px-6 py-2.5 rounded-xl text-sm font-bold disabled:opacity-50 hover:bg-primary/90 transition-colors shadow-sm"
-                                >
-                                    Enregistrer le brouillon
-                                </button>
+                                    <option value="">Sélectionnez un lot</option>
+                                    {generations.map(g => <option key={g.id} value={g.id}>{g.code} ({g.type})</option>)}
+                                </select>
+                                {errors.generation_id && <span className="text-destructive text-xs">{errors.generation_id}</span>}
                             </div>
-                        </form>
-                    </DialogContent>
-                </Dialog>
-            </div>
 
-            {/* Tableau principal (Appel du DataTable Universel) */}
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium text-foreground">Type de produit</label>
+                                <select 
+                                    value={formData.item_category_id} 
+                                    onChange={e => setData('item_category_id', e.target.value)} 
+                                    className="w-full bg-input border border-border rounded-md p-2 text-sm focus:ring-primary"
+                                >
+                                    <option value="">Sélectionnez un produit</option>
+                                    {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                </select>
+                                {errors.item_category_id && <span className="text-destructive text-xs">{errors.item_category_id}</span>}
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium text-foreground">Unité de mesure</label>
+                                <select 
+                                    value={formData.unit_id} 
+                                    onChange={e => setData('unit_id', e.target.value)} 
+                                    className="w-full bg-input border border-border rounded-md p-2 text-sm focus:ring-primary"
+                                >
+                                    <option value="">Sélectionnez</option>
+                                    {units.map(u => <option key={u.id} value={u.id}>{u.name} ({u.symbol})</option>)}
+                                </select>
+                                {errors.unit_id && <span className="text-destructive text-xs">{errors.unit_id}</span>}
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium text-green-600 flex items-center gap-1"><CheckCircle size={14}/> Quantité Bonne</label>
+                                <input 
+                                    type="number" 
+                                    step="0.01"
+                                    value={formData.good_quantity} 
+                                    onChange={e => setData('good_quantity', Number(e.target.value))} 
+                                    className="w-full bg-input border-green-200 focus:border-green-500 focus:ring-green-500 rounded-md p-2 text-sm"
+                                />
+                                {errors.good_quantity && <span className="text-destructive text-xs">{errors.good_quantity}</span>}
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium text-amber-600 flex items-center gap-1"><EggOff size={14}/> Déclassée / Cassée</label>
+                                <input 
+                                    type="number" 
+                                    step="0.01"
+                                    value={formData.broken_quantity} 
+                                    onChange={e => setData('broken_quantity', Number(e.target.value))} 
+                                    className="w-full bg-input border-amber-200 focus:border-amber-500 focus:ring-amber-500 rounded-md p-2 text-sm"
+                                />
+                                {errors.broken_quantity && <span className="text-destructive text-xs">{errors.broken_quantity}</span>}
+                            </div>
+                        </div>
+
+                        <div className="flex justify-end gap-3 pt-6 border-t border-border">
+                            <button 
+                                type="button" 
+                                onClick={() => setIsModalOpen(false)}
+                                className="px-5 py-2 text-sm font-medium text-muted-foreground hover:bg-muted rounded-md transition-colors"
+                            >
+                                Annuler
+                            </button>
+                            <button 
+                                type="submit" 
+                                disabled={processing}
+                                className="bg-primary text-primary-foreground px-6 py-2 rounded-md text-sm font-bold disabled:opacity-50 hover:bg-primary/90 transition-colors shadow-sm"
+                            >
+                                Enregistrer le brouillon
+                            </button>
+                        </div>
+                    </form>
+                </DialogContent>
+            </Dialog>
+
+            {/* Tableau via DataTable Component */}
             <DataTable 
                 data={data} 
                 columns={columns} 

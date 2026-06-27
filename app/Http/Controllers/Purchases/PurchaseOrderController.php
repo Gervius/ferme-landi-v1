@@ -10,10 +10,10 @@ use App\Actions\Exports\GeneratePurchaseOrderPdfAction;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Purchases\StorePurchaseOrderRequest;
 use App\Http\Requests\Purchases\UpdatePurchaseOrderRequest;
-use App\Models\Category;
+use App\Models\Item; // Remplacement de Category
 use App\Models\PurchaseOrder;
 use App\Models\Supplier;
-use App\Models\site;
+use App\Models\Site;
 use App\Models\Unit;
 use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
@@ -32,18 +32,16 @@ class PurchaseOrderController extends Controller
         Gate::authorize('create', PurchaseOrder::class);
 
         $suppliers = Supplier::where('is_active', true)->get(['id', 'name']);
-        $categories = Category::whereIn('scope', [
-            \App\Enums\CategoryScope::FEED->value,
-            \App\Enums\CategoryScope::ANIMAL->value,
-            \App\Enums\CategoryScope::MEDICATION->value,
-            \App\Enums\CategoryScope::EQUIPMENT->value,
-        ])->get(['id', 'name']);
+        
+        // Chargement des Articles au lieu des Catégories
+        $items = Item::where('is_active', true)->select('id', 'name', 'default_unit_id')->get();
+        
         $units = Unit::where('is_active', true)->get(['id', 'name', 'symbol']);
         $sites = Site::where('is_active', true)->select('id', 'name')->get();
 
         return Inertia::render('Purchases/PurchaseOrder/Create', [
             'suppliers'  => $suppliers,
-            'categories' => $categories,
+            'items'      => $items, // Remplacement
             'units'      => $units,
             'sites'      => $sites,
         ]);
@@ -52,7 +50,9 @@ class PurchaseOrderController extends Controller
     public function store(StorePurchaseOrderRequest $request, LogPurchaseOrderAction $action)
     {
         $action->execute($request->validated(), $request->user()->id);
-        return redirect()->route('purchaseOrdersIndex')->with('success', 'Purchase order created.');
+        
+        // Routage Wayfinder (en dur)
+        return redirect('/purchase-orders')->with('success', 'Bon de commande créé avec succès.');
     }
 
     public function edit(PurchaseOrder $purchaseOrder)
@@ -60,18 +60,14 @@ class PurchaseOrderController extends Controller
         Gate::authorize('update', $purchaseOrder);
 
         $suppliers = Supplier::where('is_active', true)->get(['id', 'name']);
-        $categories = Category::whereIn('scope', [
-            \App\Enums\CategoryScope::FEED->value,
-            \App\Enums\CategoryScope::ANIMAL->value,
-            \App\Enums\CategoryScope::MEDICATION->value,
-            \App\Enums\CategoryScope::EQUIPMENT->value,
-        ])->get(['id', 'name']);
+        $items = Item::where('is_active', true)->select('id', 'name', 'default_unit_id')->get();
         $units = Unit::where('is_active', true)->get(['id', 'name', 'symbol']);
 
         return Inertia::render('Purchases/PurchaseOrder/Edit', [
-            'purchaseOrder' => $purchaseOrder->load('items', 'supplier'),
+            // Eager loading de l'article plutôt que de la catégorie
+            'purchaseOrder' => $purchaseOrder->load('items.item', 'supplier'),
             'suppliers'     => $suppliers,
-            'categories'    => $categories,
+            'items'         => $items,
             'units'         => $units,
         ]);
     }
@@ -79,14 +75,14 @@ class PurchaseOrderController extends Controller
     public function update(UpdatePurchaseOrderRequest $request, PurchaseOrder $purchaseOrder, UpdatePurchaseOrderAction $action)
     {
         $action->execute($purchaseOrder, $request->validated());
-        return redirect()->route('purchaseOrdersIndex')->with('success', 'Purchase order updated.');
+        return redirect('/purchase-orders')->with('success', 'Bon de commande mis à jour.');
     }
 
     public function destroy(PurchaseOrder $purchaseOrder, DeletePurchaseOrderAction $action)
     {
         Gate::authorize('delete', $purchaseOrder);
         $action->execute($purchaseOrder);
-        return redirect()->route('purchaseOrdersIndex')->with('success', 'Purchase order deleted.');
+        return redirect('/purchase-orders')->with('success', 'Bon de commande supprimé.');
     }
 
     public function generateReceipt(PurchaseOrder $purchaseOrder, GenerateReceiptFromOrderAction $action)
@@ -95,23 +91,21 @@ class PurchaseOrderController extends Controller
 
         $receipt = $action->execute($purchaseOrder, request()->user()->id);
 
-        return redirect()->route('purchaseReceiptsEdit', $receipt->id)
+        return redirect('/purchase-receipts/' . $receipt->id . '/edit')
             ->with('success', 'Bon de réception généré avec succès. Veuillez le vérifier.');
     }
 
     public function showApi(PurchaseOrder $purchaseOrder)
     {
         Gate::authorize('view', $purchaseOrder);
-
-        return response()->json($purchaseOrder->load(['items.category', 'items.unit']));
+        // Eager loading ajusté
+        return response()->json($purchaseOrder->load(['items.item', 'items.unit']));
     }
 
     public function downloadPdf(PurchaseOrder $purchaseOrder, GeneratePurchaseOrderPdfAction $action)
     {
         Gate::authorize('view', $purchaseOrder);
-
         $pdf = $action->execute($purchaseOrder);
-
         return $pdf->stream($purchaseOrder->reference . '.pdf');
     }
 }

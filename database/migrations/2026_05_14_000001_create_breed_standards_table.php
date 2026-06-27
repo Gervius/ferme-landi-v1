@@ -19,6 +19,8 @@ return new class extends Migration
             $table->decimal('peak_laying_rate', 5, 2);
             $table->decimal('target_daily_feed_intake', 8, 2);
             $table->timestamps();
+
+            $table->unique('breed_id', 'unique_breed_standard');
         });
     }
 

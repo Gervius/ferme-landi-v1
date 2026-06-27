@@ -1,8 +1,6 @@
-// pages/Zootechnie/HealthTreatment/Index.tsx
 import React, { useState, useMemo } from 'react';
 import { useForm, router } from '@inertiajs/react';
 import { Plus, CheckCircle, Clock, Stethoscope, Syringe, Pill } from 'lucide-react';
-import { healthTreatmentsStore, healthTreatmentsApprove } from '@/routes';
 import { getGenerationDisplay } from '@/utils/zootechnieStrategy';
 import { PaginatedData } from '@/types/pagination';
 import { DataTable, ColumnDef } from '@/components/ui/DataTable';
@@ -12,7 +10,6 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog';
 
 interface HealthTreatment {
@@ -41,7 +38,7 @@ export default function Index({ data, generations }: Props) {
     const [isModalOpen, setIsModalOpen] = useState(false);
 
     // Initialisation du formulaire selon StoreHealthTreatmentRequest
-    const { data: formData, setData, post, processing, errors, reset } = useForm({
+    const { data: formData, setData, post, processing, errors, reset, clearErrors } = useForm({
         generation_id: '',
         date: new Date().toISOString().split('T')[0],
         disease_description: '',
@@ -50,10 +47,17 @@ export default function Index({ data, generations }: Props) {
         veterinarian_name: '',
     });
 
+    const openModal = () => {
+        reset();
+        clearErrors();
+        setIsModalOpen(true);
+    };
+
     // Soumission de la création (Brouillon)
-    const submitCreate = (e: React.SubmitEvent) => {
+    const submitCreate = (e: React.FormEvent) => {
         e.preventDefault();
-        post(healthTreatmentsStore.url(), {
+        // ROUTAGE STRICT : URI en dur
+        post('/zootechnie/health-treatments', {
             preserveScroll: true,
             onSuccess: () => {
                 setIsModalOpen(false);
@@ -65,7 +69,8 @@ export default function Index({ data, generations }: Props) {
     // Action d'approbation
     const handleApprove = (id: number) => {
         if (confirm("Valider ce traitement ? Il sera inscrit définitivement dans le carnet de santé du lot.")) {
-            router.post(healthTreatmentsApprove.url(id), {}, { preserveScroll: true });
+            // ROUTAGE STRICT : URI en dur
+            router.post(`/zootechnie/health-treatments/${id}/approve`, {}, { preserveScroll: true });
         }
     };
 
@@ -77,7 +82,7 @@ export default function Index({ data, generations }: Props) {
     }, [data.data]);
 
     // Définition des colonnes du DataTable
-    const columns: ColumnDef<HealthTreatment>[] = [
+    const columns: ColumnDef<HealthTreatment>[] = useMemo(() => [
         { 
             header: 'Date', 
             className: 'font-medium',
@@ -147,12 +152,12 @@ export default function Index({ data, generations }: Props) {
                 <span className="text-xs text-muted-foreground italic">Historisé</span>
             )
         }
-    ];
+    ], []);
 
     return (
-        <div className="p-6 max-w-7xl mx-auto space-y-6 bg-background">
+        <div className="p-6 max-w-7xl mx-auto space-y-6 bg-background min-h-screen">
             
-            {/* Header & Statistiques */}
+            {/* Header & Statistiques (Design fidèle conservé) */}
             <div className="flex flex-col md:flex-row justify-between gap-6 mb-8">
                 <div>
                     <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
@@ -163,143 +168,143 @@ export default function Index({ data, generations }: Props) {
                     </p>
                 </div>
 
-                <div className="flex gap-4">
-                    <div className="bg-card border border-border px-5 py-3 rounded-xl shadow-sm flex items-center gap-4">
+                <div className="flex flex-wrap md:flex-nowrap items-center gap-4">
+                    <div className="bg-card border border-border px-5 py-3 rounded-xl shadow-sm flex items-center gap-4 h-full">
                         <div className="bg-primary/10 p-2 rounded-lg text-primary">
                             <Syringe size={20} />
                         </div>
                         <div>
-                            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Interventions récentes</p>
+                            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Interventions</p>
+                            {/* Ajustement pour refléter le total global si possible (data.total) sinon data.data.length */}
                             <p className="text-xl font-bold text-foreground">
-                                {stats.totalInterventions} <span className="text-sm font-normal text-muted-foreground">soins</span>
+                                {(data as any).total || stats.totalInterventions} <span className="text-sm font-normal text-muted-foreground">soins</span>
                             </p>
                         </div>
                     </div>
+
+                    <button 
+                        onClick={openModal}
+                        className="flex items-center justify-center gap-2 bg-primary text-primary-foreground px-5 py-3 rounded-xl font-bold shadow-sm hover:opacity-90 transition-opacity h-full"
+                    >
+                        <Plus size={18} />
+                        Déclarer un soin
+                    </button>
                 </div>
             </div>
 
-            {/* Barre d'action et Dialog */}
-            <div className="flex justify-end mb-4">
-                <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-                    <DialogTrigger asChild>
-                        <button className="flex items-center gap-2 bg-primary text-primary-foreground px-5 py-2.5 rounded-xl font-bold shadow-sm hover:opacity-90 transition-opacity">
-                            <Plus size={18} />
-                            Déclarer un soin
-                        </button>
-                    </DialogTrigger>
-                    
-                    <DialogContent className="sm:max-w-[600px]">
-                        <DialogHeader>
-                            <DialogTitle className="text-xl text-primary flex items-center gap-2">
-                                <Stethoscope size={20} /> Nouvelle Intervention
-                            </DialogTitle>
-                            <DialogDescription>
-                                Saisissez les détails du traitement. Cette déclaration sera ajoutée en brouillon.
-                            </DialogDescription>
-                        </DialogHeader>
+            {/* Modal de création */}
+            <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+                <DialogContent className="sm:max-w-[600px]">
+                    <DialogHeader>
+                        <DialogTitle className="text-xl text-primary flex items-center gap-2">
+                            <Stethoscope size={20} /> Nouvelle Intervention
+                        </DialogTitle>
+                        <DialogDescription>
+                            Saisissez les détails du traitement. Cette déclaration sera ajoutée en brouillon.
+                        </DialogDescription>
+                    </DialogHeader>
 
-                        <form onSubmit={submitCreate} className="space-y-6 mt-4">
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <label className="text-sm font-medium text-foreground">Lot traité</label>
-                                    <select 
-                                        value={formData.generation_id}
-                                        onChange={e => setData('generation_id', e.target.value)}
-                                        className="w-full bg-input border border-border rounded-lg p-2.5 focus:ring-ring"
-                                    >
-                                        <option value="">Sélectionner un lot actif</option>
-                                        {generations.map(gen => {
-                                            const { label } = getGenerationDisplay(gen.type);
-                                            return <option key={gen.id} value={gen.id}>{gen.code} - {label}</option>;
-                                        })}
-                                    </select>
-                                    {errors.generation_id && <span className="text-destructive text-xs">{errors.generation_id}</span>}
-                                </div>
-
-                                <div className="space-y-2">
-                                    <label className="text-sm font-medium text-foreground">Date d'intervention</label>
-                                    <input 
-                                        type="date" 
-                                        value={formData.date}
-                                        onChange={e => setData('date', e.target.value)}
-                                        className="w-full bg-input border border-border rounded-lg p-2.5 focus:ring-ring"
-                                    />
-                                    {errors.date && <span className="text-destructive text-xs">{errors.date}</span>}
-                                </div>
-
-                                <div className="space-y-2 col-span-2">
-                                    <label className="text-sm font-medium text-destructive">Maladie / Constat (Symptômes)</label>
-                                    <input 
-                                        type="text" 
-                                        value={formData.disease_description}
-                                        onChange={e => setData('disease_description', e.target.value)}
-                                        className="w-full bg-destructive/5 border border-destructive/30 text-foreground rounded-lg p-2.5 focus:ring-destructive"
-                                        placeholder="Ex: Coccidiose, toux, diarrhée..."
-                                    />
-                                    {errors.disease_description && <span className="text-destructive text-xs">{errors.disease_description}</span>}
-                                </div>
-
-                                <div className="space-y-2 col-span-2">
-                                    <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2 mt-2 border-b border-border pb-1">Protocole Médical</h3>
-                                </div>
-
-                                <div className="space-y-2">
-                                    <label className="text-sm font-medium text-primary">Médicament / Produit</label>
-                                    <input 
-                                        type="text" 
-                                        value={formData.medication_name}
-                                        onChange={e => setData('medication_name', e.target.value)}
-                                        className="w-full bg-primary/5 border border-primary/30 rounded-lg p-2.5 focus:ring-primary font-bold text-primary"
-                                        placeholder="Ex: Amprolium 20%"
-                                    />
-                                    {errors.medication_name && <span className="text-destructive text-xs">{errors.medication_name}</span>}
-                                </div>
-
-                                <div className="space-y-2">
-                                    <label className="text-sm font-medium text-foreground">Posologie / Dosage</label>
-                                    <input 
-                                        type="text" 
-                                        value={formData.dosage_description}
-                                        onChange={e => setData('dosage_description', e.target.value)}
-                                        className="w-full bg-input border border-border rounded-lg p-2.5 focus:ring-ring"
-                                        placeholder="Ex: 1g / L d'eau pendant 5 jours"
-                                    />
-                                    {errors.dosage_description && <span className="text-destructive text-xs">{errors.dosage_description}</span>}
-                                </div>
-
-                                <div className="space-y-2 col-span-2">
-                                    <label className="text-sm font-medium text-foreground">Vétérinaire ou Responsable (Optionnel)</label>
-                                    <input 
-                                        type="text" 
-                                        value={formData.veterinarian_name}
-                                        onChange={e => setData('veterinarian_name', e.target.value)}
-                                        className="w-full bg-input border border-border rounded-lg p-2.5 focus:ring-ring"
-                                        placeholder="Nom du praticien..."
-                                    />
-                                    {errors.veterinarian_name && <span className="text-destructive text-xs">{errors.veterinarian_name}</span>}
-                                </div>
+                    <form onSubmit={submitCreate} className="space-y-6 mt-4">
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium text-foreground">Lot traité</label>
+                                <select 
+                                    value={formData.generation_id}
+                                    onChange={e => setData('generation_id', e.target.value)}
+                                    className="w-full bg-input border border-border rounded-lg p-2.5 focus:ring-ring"
+                                >
+                                    <option value="">Sélectionner un lot actif</option>
+                                    {generations.map(gen => {
+                                        const { label } = getGenerationDisplay(gen.type);
+                                        return <option key={gen.id} value={gen.id}>{gen.code} - {label}</option>;
+                                    })}
+                                </select>
+                                {errors.generation_id && <span className="text-destructive text-xs">{errors.generation_id}</span>}
                             </div>
 
-                            <div className="flex justify-end gap-3 pt-6 border-t border-border">
-                                <button 
-                                    type="button" 
-                                    onClick={() => setIsModalOpen(false)}
-                                    className="px-5 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-                                >
-                                    Annuler
-                                </button>
-                                <button 
-                                    type="submit" 
-                                    disabled={processing}
-                                    className="bg-primary text-primary-foreground px-6 py-2.5 rounded-xl text-sm font-bold disabled:opacity-50 hover:bg-primary/90 transition-opacity shadow-sm"
-                                >
-                                    Enregistrer le soin
-                                </button>
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium text-foreground">Date d'intervention</label>
+                                <input 
+                                    type="date" 
+                                    value={formData.date}
+                                    onChange={e => setData('date', e.target.value)}
+                                    className="w-full bg-input border border-border rounded-lg p-2.5 focus:ring-ring"
+                                />
+                                {errors.date && <span className="text-destructive text-xs">{errors.date}</span>}
                             </div>
-                        </form>
-                    </DialogContent>
-                </Dialog>
-            </div>
+
+                            <div className="space-y-2 col-span-2">
+                                <label className="text-sm font-medium text-destructive">Maladie / Constat (Symptômes)</label>
+                                <input 
+                                    type="text" 
+                                    value={formData.disease_description}
+                                    onChange={e => setData('disease_description', e.target.value)}
+                                    className="w-full bg-destructive/5 border border-destructive/30 text-foreground rounded-lg p-2.5 focus:ring-destructive"
+                                    placeholder="Ex: Coccidiose, toux, diarrhée..."
+                                />
+                                {errors.disease_description && <span className="text-destructive text-xs">{errors.disease_description}</span>}
+                            </div>
+
+                            <div className="space-y-2 col-span-2">
+                                <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2 mt-2 border-b border-border pb-1">Protocole Médical</h3>
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium text-primary">Médicament / Produit</label>
+                                <input 
+                                    type="text" 
+                                    value={formData.medication_name}
+                                    onChange={e => setData('medication_name', e.target.value)}
+                                    className="w-full bg-primary/5 border border-primary/30 rounded-lg p-2.5 focus:ring-primary font-bold text-primary"
+                                    placeholder="Ex: Amprolium 20%"
+                                />
+                                {errors.medication_name && <span className="text-destructive text-xs">{errors.medication_name}</span>}
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium text-foreground">Posologie / Dosage</label>
+                                <input 
+                                    type="text" 
+                                    value={formData.dosage_description}
+                                    onChange={e => setData('dosage_description', e.target.value)}
+                                    className="w-full bg-input border border-border rounded-lg p-2.5 focus:ring-ring"
+                                    placeholder="Ex: 1g / L d'eau pendant 5 jours"
+                                />
+                                {errors.dosage_description && <span className="text-destructive text-xs">{errors.dosage_description}</span>}
+                            </div>
+
+                            <div className="space-y-2 col-span-2">
+                                <label className="text-sm font-medium text-foreground">Vétérinaire ou Responsable (Optionnel)</label>
+                                <input 
+                                    type="text" 
+                                    value={formData.veterinarian_name}
+                                    onChange={e => setData('veterinarian_name', e.target.value)}
+                                    className="w-full bg-input border border-border rounded-lg p-2.5 focus:ring-ring"
+                                    placeholder="Nom du praticien..."
+                                />
+                                {errors.veterinarian_name && <span className="text-destructive text-xs">{errors.veterinarian_name}</span>}
+                            </div>
+                        </div>
+
+                        <div className="flex justify-end gap-3 pt-6 border-t border-border">
+                            <button 
+                                type="button" 
+                                onClick={() => setIsModalOpen(false)}
+                                className="px-5 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+                            >
+                                Annuler
+                            </button>
+                            <button 
+                                type="submit" 
+                                disabled={processing}
+                                className="bg-primary text-primary-foreground px-6 py-2.5 rounded-xl text-sm font-bold disabled:opacity-50 hover:bg-primary/90 transition-opacity shadow-sm"
+                            >
+                                Enregistrer le soin
+                            </button>
+                        </div>
+                    </form>
+                </DialogContent>
+            </Dialog>
 
             {/* DataTable Universel */}
             <DataTable 

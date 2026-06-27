@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Zootechnie;
 
 use App\Actions\Zootechnie\RegisterBirthOrArrivalAction;
+use App\Actions\Zootechnie\UpdateGenerationAction;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Zootechnie\StoreGenerationRequest;
+use App\Http\Requests\Zootechnie\UpdateGenerationRequest;
 use App\Models\Breed;
 use App\Models\Generation;
 use App\Models\Site;
@@ -14,16 +16,22 @@ use Inertia\Inertia;
 use Illuminate\Http\Request;
 use Inertia\Response;
 
-class GenerationController extends Controller
+final class GenerationController extends Controller
 {
     public function index(Request $request): Response
     {
         Gate::authorize('viewAny', Generation::class);
 
-        // Construction dynamique de la requête
-        $query = Generation::with(['site', 'breed']);
+        // OPTIMISATION RAM & RÉSEAU : select() strict et with() bridé
+        $query = Generation::query()
+            ->select(['id', 'site_id', 'breed_id', 'code', 'type', 'start_date', 'initial_quantity', 'current_quantity', 'status', 'observation'])
+            ->with([
+                'site:id,name', 
+                'breed:id,name'
+            ]);
 
-        if ($request->filled('type')) {
+        // Filtrage optimisé
+        if ($request->filled('type') && $request->input('type') !== 'all') {
             $query->where('type', $request->input('type'));
         }
 
@@ -37,27 +45,21 @@ class GenerationController extends Controller
 
         $generations = $query->paginate(10)->withQueryString();
 
-        // Requête groupée pour les badges du Frontend (ex: statut 'actif')
+        // Données groupées légères
         $activeLotsCount = Generation::where('status', 'actif')
-            ->selectRaw('type, count(*) as count')
             ->groupBy('type')
+            ->selectRaw('type, count(*) as count')
             ->pluck('count', 'type');
+
+        // INJECTION POUR LES MODALS (On ne charge que ce qui est vital pour les balises <select>)
+        $sites = Site::where('is_active', true)->get(['id', 'name']);
+        $breeds = Breed::where('is_active', true)->get(['id', 'name']);
 
         return Inertia::render('Generations/Index', [
             'generations' => $generations,
             'activeLotsCount' => $activeLotsCount,
             'filters' => $request->only(['type', 'search', 'status']),
-        ]);
-    }
-
-    public function create(): Response
-    {
-        Gate::authorize('create', Generation::class);
-
-        $sites = Site::where('is_active', true)->select('id', 'name')->get();
-        $breeds = Breed::where('is_active', true)->select('id', 'name')->get();
-
-        return Inertia::render('Generations/Create', [
+            // Données pour alimenter les Modals Shadcn/Radix de Création et d'Édition
             'sites' => $sites,
             'breeds' => $breeds,
         ]);
@@ -66,39 +68,25 @@ class GenerationController extends Controller
     public function store(StoreGenerationRequest $request, RegisterBirthOrArrivalAction $createAction): RedirectResponse
     {
         $createAction->execute($request->validated());
-        return redirect()->route('generationsIndex')->with('success', 'Generation registered successfully.');
+        
+        // WAYFINDER STRICT : Hard URIs, pas de route()
+        return redirect('/zootechnie/generations')->with('success', 'Génération enregistrée avec succès.');
     }
 
-    public function edit(Generation $generation): Response
+    public function update(UpdateGenerationRequest $request, Generation $generation, UpdateGenerationAction $updateAction): RedirectResponse 
     {
-        Gate::authorize('update', $generation);
-
-        $sites = Site::where('is_active', true)->select('id', 'name')->get();
-        $breeds = Breed::where('is_active', true)->select('id', 'name')->get();
-
-        return Inertia::render('Generations/Edit', [
-            'generation' => $generation,
-            'sites' => $sites,
-            'breeds' => $breeds,
-        ]);
-    }
-
-    public function update(
-        \App\Http\Requests\Zootechnie\UpdateGenerationRequest $request,
-        Generation $generation,
-        \App\Actions\Zootechnie\UpdateGenerationAction $updateAction
-    ): RedirectResponse {
         $updateAction->execute($generation, $request->validated());
 
-        return redirect()->route('generationsIndex')->with('success', 'Generation updated successfully.');
+        // WAYFINDER STRICT
+        return redirect('/zootechnie/generations')->with('success', 'Lot mis à jour avec succès.');
     }
 
     public function destroy(Generation $generation): RedirectResponse
     {
         Gate::authorize('delete', $generation);
-
         $generation->delete();
 
-        return redirect()->route('generationsIndex')->with('success', 'Generation deleted successfully.');
+        // WAYFINDER STRICT
+        return redirect('/zootechnie/generations')->with('success', 'Lot supprimé.');
     }
 }

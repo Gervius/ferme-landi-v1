@@ -7,24 +7,37 @@ use App\Actions\Zootechnie\LogFeedConsumptionAction;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Zootechnie\StoreFeedConsumptionRequest;
 use App\Models\FeedConsumption;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
+use Inertia\Response;
 
-class FeedConsumptionController extends Controller
+final class FeedConsumptionController extends Controller
 {
-    public function index()
+    // AJOUT DU TYPE DE RETOUR : Response
+    public function index(): Response
     {
-        // 1. SÉCURITÉ : Restreindre l'accès à la liste
         Gate::authorize('viewAny', FeedConsumption::class);
 
-        // 2. DONNÉES DU TABLEAU
-        $data = FeedConsumption::with(['generation', 'unit', 'category'])->paginate(15);
+        $data = FeedConsumption::select([
+                'id', 'generation_id', 'item_category_id', 'unit_id', 'date',
+                'quantity', 'total_base_quantity', 'status', 'prepared_by',
+                'approved_by', 'approved_at'
+            ])
+            ->with([
+                'generation:id,code,type',
+                'unit:id,name,symbol',
+                'category:id,name'
+            ])
+            ->paginate(15);
 
-        // 3. DONNÉES POUR LA MODALE DE CRÉATION
-        $generations = \App\Models\Generation::where('status', 'actif')->get(['id', 'code', 'type']);
-        $units = \App\Models\Unit::where('is_active', true)->get(['id', 'name', 'symbol']);
-        $categories = \App\Models\Category::where('scope', \App\Enums\CategoryScope::FEED->value)->get(['id', 'name']);
+        $generations = \App\Models\Generation::where('status', 'actif')
+            ->get(['id', 'code', 'type']);
+        $units = \App\Models\Unit::where('is_active', true)
+            ->get(['id', 'name', 'symbol']);
+        $categories = \App\Models\Category::where('scope', \App\Enums\CategoryScope::FEED->value)
+            ->get(['id', 'name']);
 
         return Inertia::render('Zootechnie/FeedConsumption/Index', [
             'data' => $data,
@@ -34,22 +47,23 @@ class FeedConsumptionController extends Controller
         ]);
     }
 
-    public function store(StoreFeedConsumptionRequest $request, LogFeedConsumptionAction $action)
+    // AJOUT DU TYPE DE RETOUR : RedirectResponse
+    public function store(StoreFeedConsumptionRequest $request, LogFeedConsumptionAction $action): RedirectResponse
     {
         $action->execute($request->validated(), $request->user()->id);
 
-        return redirect()->route('feedConsumptionsIndex')
+        return redirect('/zootechnie/feed-consumptions')
             ->with('success', 'Consommation d\'aliment enregistrée en brouillon.');
     }
 
-    public function approve(Request $request, FeedConsumption $feedConsumption, ApproveFeedConsumptionAction $action)
+    // AJOUT DU TYPE DE RETOUR : RedirectResponse
+    public function approve(Request $request, FeedConsumption $feedConsumption, ApproveFeedConsumptionAction $action): RedirectResponse
     {
         Gate::authorize('manage generations');
 
-        // Utilisation propre de l'objet $request injecté (plus de soulignement rouge !)
         $action->execute($feedConsumption, $request->user()->id);
 
-        return redirect()->route('feedConsumptionsIndex')
+        return redirect('/zootechnie/feed-consumptions')
             ->with('success', 'Consommation validée et stock mis à jour.');
     }
 }

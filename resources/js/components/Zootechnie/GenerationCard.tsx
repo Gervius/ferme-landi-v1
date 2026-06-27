@@ -17,7 +17,7 @@ interface Generation {
     breed: { name: string };
 }
 
-export function GenerationCard({ generation }: { generation: Generation }) {
+export function GenerationCard({ generation, onEdit }: { generation: Generation, onEdit: () => void }) {
     const { label, Icon, colorClass } = getGenerationDisplay(generation.type);
     
     // Calculs défensifs locaux
@@ -94,13 +94,14 @@ export function GenerationCard({ generation }: { generation: Generation }) {
             </div>
 
             <div className="pt-4 mt-5 border-t border-border flex justify-end opacity-0 group-hover:opacity-100 transition-opacity">
-                <Link 
-                    href={generationsEdit.url(generation.id)}
+                {/* 2. REMPLACEMENT DU <Link> PAR UN <button> 0 LATENCE */}
+                <button 
+                    onClick={onEdit}
                     className="flex items-center gap-2 text-sm font-semibold text-primary hover:text-primary/80 transition-colors"
                 >
                     <Settings2 size={16} />
                     Gérer le lot
-                </Link>
+                </button>
             </div>
         </div>
     );

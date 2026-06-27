@@ -12,59 +12,56 @@ use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 use Inertia\Response;
 
-class BreedStandardController extends Controller
+final class BreedStandardController extends Controller
 {
     public function index(): Response
     {
         Gate::authorize('viewAny', BreedStandard::class);
 
-        $standards = BreedStandard::with('breed')->paginate(15);
+        // OPTIMISATION RAM : Seulement les colonnes utiles à la Data Table
+        $standards = BreedStandard::query()
+            ->select([
+                'id', 
+                'breed_id', 
+                'target_laying_start_age', 
+                'target_culling_age', 
+                'peak_laying_rate', 
+                'target_daily_feed_intake'
+            ])
+            ->with(['breed:id,name'])
+            ->paginate(15);
 
-        $breeds = Breed::where('is_active', true)->select('id', 'name')->get();
+        // Injection pour les Modals
+        $breeds = Breed::where('is_active', true)->get(['id', 'name']);
 
         return Inertia::render('Zootechnie/BreedStandard/Index', [
             'standards' => $standards,
-            'breeds' => $breeds, // Injection ici
+            'breeds' => $breeds, 
         ]);
     }
-
-    
 
     public function store(StoreBreedStandardRequest $request): RedirectResponse
     {
         BreedStandard::create($request->validated());
 
-        return redirect()->route('breedStandardsIndex')
-            ->with('success', 'Breed standard created successfully.');
-    }
-
-    public function edit(BreedStandard $breedStandard): Response
-    {
-        Gate::authorize('update', $breedStandard);
-
-        $breeds = Breed::where('is_active', true)->select('id', 'name')->get();
-
-        return Inertia::render('Zootechnie/BreedStandard/Edit', [
-            'breedStandard' => $breedStandard,
-            'breeds' => $breeds,
-        ]);
+        // WAYFINDER STRICT
+        return redirect('/zootechnie/breed-standards')->with('success', 'Standard de race créé avec succès.');
     }
 
     public function update(UpdateBreedStandardRequest $request, BreedStandard $breedStandard): RedirectResponse
     {
         $breedStandard->update($request->validated());
 
-        return redirect()->route('breedStandardsIndex')
-            ->with('success', 'Breed standard updated successfully.');
+        // WAYFINDER STRICT
+        return redirect('/zootechnie/breed-standards')->with('success', 'Standard mis à jour avec succès.');
     }
 
     public function destroy(BreedStandard $breedStandard): RedirectResponse
     {
         Gate::authorize('delete', $breedStandard);
-
         $breedStandard->delete();
 
-        return redirect()->route('breedStandardsIndex')
-            ->with('success', 'Breed standard deleted successfully.');
+        // WAYFINDER STRICT
+        return redirect('/zootechnie/breed-standards')->with('success', 'Standard supprimé avec succès.');
     }
 }

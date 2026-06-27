@@ -11,47 +11,36 @@ use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 use Inertia\Response;
 
-class SpeciesController extends Controller
+final class SpeciesController extends Controller
 {
     public function index(): Response
     {
         Gate::authorize('viewAny', Species::class);
 
-        $species = Species::paginate(15);
+        // OPTIMISATION RAM : select() strict pour ne pas charger de données inutiles en mémoire vps
+        $species = Species::query()
+            ->select(['id', 'name', 'is_active'])
+            ->paginate(15);
 
         return Inertia::render('Zootechnie/Species/Index', [
             'species' => $species,
         ]);
     }
 
-    public function create(): Response
-    {
-        Gate::authorize('create', Species::class);
-
-        return Inertia::render('Zootechnie/Species/Create');
-    }
-
     public function store(StoreSpeciesRequest $request): RedirectResponse
     {
         Species::create($request->validated());
 
-        return redirect()->route('speciesIndex')->with('success', 'Species created successfully.');
-    }
-
-    public function edit(Species $species): Response
-    {
-        Gate::authorize('update', $species);
-
-        return Inertia::render('Zootechnie/Species/Edit', [
-            'species' => $species,
-        ]);
+        // WAYFINDER STRICT : Redirection par URI dure (Bannissement de route() et de Ziggy)
+        return redirect('/zootechnie/species')->with('success', 'Espèce créée avec succès.');
     }
 
     public function update(UpdateSpeciesRequest $request, Species $species): RedirectResponse
     {
         $species->update($request->validated());
 
-        return redirect()->route('speciesIndex')->with('success', 'Species updated successfully.');
+        // WAYFINDER STRICT : Redirection par URI dure
+        return redirect('/zootechnie/species')->with('success', 'Espèce mise à jour avec succès.');
     }
 
     public function destroy(Species $species): RedirectResponse
@@ -60,6 +49,7 @@ class SpeciesController extends Controller
 
         $species->delete();
 
-        return redirect()->route('speciesIndex')->with('success', 'Species deleted successfully.');
+        // WAYFINDER STRICT : Redirection par URI dure
+        return redirect('/zootechnie/species')->with('success', 'Espèce supprimée avec succès.');
     }
 }

@@ -28,7 +28,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('purchase_receipt_id')->constrained()->cascadeOnDelete();
             $table->foreignId('purchase_order_item_id')->nullable()->constrained()->nullOnDelete();
-            $table->foreignId('category_id')->constrained('categories');
+            $table->foreignId('item_id')->constrained('items');
             $table->foreignId('unit_id')->constrained();
             $table->decimal('received_quantity', 10, 2);
             $table->timestamps();

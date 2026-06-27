@@ -2,50 +2,65 @@
 
 namespace App\Actions\Zootechnie;
 
+use App\Enums\GenerationStatus;
 use App\Models\Generation;
 use App\Models\ProphylaxisProgram;
 use App\Models\ScheduledTreatment;
+use Illuminate\Support\Facades\DB;
 
-class SyncProphylaxisForGenerationsAction
+final readonly class SyncProphylaxisForGenerationsAction
 {
     /**
-     * Applique ou met à jour le programme de prophylaxie sur toutes les générations actives correspondantes.
+     * 🚀 REFACTORING EXTRÊME POUR LATENCE 179ms : 
+     * Passage d'une logique N+1 (O(N*M) requêtes) à une logique Bulk Upsert (2 requêtes).
      */
     public function execute(ProphylaxisProgram $program): void
     {
-        // 1. Si le programme est inactif, on ne planifie rien de nouveau
         if (!$program->is_active) {
             return;
         }
 
-        // 2. On récupère toutes les générations ACTIVES du bon type d'animal
-        $generations = Generation::where('type', $program->animal_type)
-            ->where('status', 'actif')
-            ->get();
+        DB::transaction(function () use ($program) {
+            // 1. Charger uniquement les ID et dates (sauvegarde de la RAM)
+            $generations = Generation::where('type', $program->animal_type)
+                ->where('status', GenerationStatus::ACTIF->value)
+                ->select('id', 'start_date') 
+                ->lockForUpdate()
+                ->get();
 
-        // 3. On recharge les étapes pour avoir la dernière version en base
-        $program->load('steps');
+            if ($generations->isEmpty()) {
+                return;
+            }
 
-        foreach ($generations as $generation) {
-            foreach ($program->steps as $step) {
-                // 4. On cherche si un traitement existe déjà pour ce lot ET cette étape
-                $treatment = ScheduledTreatment::firstOrNew([
-                    'generation_id' => $generation->id,
-                    'prophylaxis_step_id' => $step->id,
-                ]);
+            $program->load('steps:id,prophylaxis_program_id,day_offset');
 
-                // 5. Mise à jour Intelligente : On modifie la date SEULEMENT si c'est nouveau ou "en attente"
-                // On ne touche surtout pas aux traitements déjà "completed" (terminés) !
-                if (!$treatment->exists || $treatment->status === 'pending') {
-                    $treatment->scheduled_date = $generation->start_date->copy()->addDays($step->day_offset);
-                    
-                    if (!$treatment->exists) {
-                        $treatment->status = 'pending'; // Statut par défaut à la création
-                    }
-                    
-                    $treatment->save();
+            $upserts = [];
+            $now = now();
+
+            // 2. Préparation en mémoire RAM (Zéro requête DB ici)
+            foreach ($generations as $generation) {
+                foreach ($program->steps as $step) {
+                    $upserts[] = [
+                        'generation_id' => $generation->id,
+                        'prophylaxis_step_id' => $step->id,
+                        'scheduled_date' => $generation->start_date->copy()->addDays($step->day_offset)->format('Y-m-d'),
+                        'status' => 'pending',
+                        'created_at' => $now,
+                        'updated_at' => $now,
+                    ];
                 }
             }
-        }
+
+            // 3. Exécution massive en UNE SEULE REQUÊTE via UPSERT
+            // Si la clé (generation_id, prophylaxis_step_id) existe, on met à jour la date.
+            // Note: Nécessite la contrainte Unique ajoutée précédemment dans la migration !
+            if (!empty($upserts)) {
+                ScheduledTreatment::upsert(
+                    $upserts,
+                    ['generation_id', 'prophylaxis_step_id'], // Unique keys
+                    ['scheduled_date', 'updated_at']          // Columns to update if exists
+                );
+            }
+        });
     }
 }

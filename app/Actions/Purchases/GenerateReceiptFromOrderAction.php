@@ -28,6 +28,8 @@ class GenerateReceiptFromOrderAction
             ]);
         }
 
+        $order->loadMissing('items');
+
         return DB::transaction(function () use ($order, $userId) {
             $receipt = PurchaseReceipt::create([
                 'site_id' => $order->site_id,
@@ -41,7 +43,7 @@ class GenerateReceiptFromOrderAction
             $itemsData = $order->items->map(function ($item) {
                 return [
                     'purchase_order_item_id' => $item->id,
-                    'category_id' => $item->category_id,
+                    'item_id' => $item->item_id,
                     'unit_id' => $item->unit_id,
                     'received_quantity' => $item->quantity,
                 ];

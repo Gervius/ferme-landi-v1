@@ -7,21 +7,24 @@ use App\Actions\Zootechnie\LogFlockCullingAction;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Zootechnie\StoreFlockCullingRequest;
 use App\Models\FlockCulling;
-use Illuminate\Http\Request; // Ajout de l'import Request
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 
-class FlockCullingController extends Controller
+final class FlockCullingController extends Controller
 {
     public function index()
     {
-        // 1. SÉCURITÉ
         Gate::authorize('viewAny', FlockCulling::class);
 
-        // 2. DONNÉES DU TABLEAU
-        $data = FlockCulling::with('generation')->paginate(15);
+        // OPTIMISATION : select() sur les champs nécessaires + relation restreinte
+        $data = FlockCulling::select([
+                'id', 'generation_id', 'date', 'quantity_culled', 'reason',
+                'weight_kg', 'status', 'prepared_by', 'approved_by', 'approved_at'
+            ])
+            ->with(['generation:id,code,type,current_quantity'])
+            ->paginate(15);
 
-        // 3. DONNÉES POUR LA MODALE (Déplacées depuis l'ancienne méthode create)
         $generations = \App\Models\Generation::where('status', 'actif')
             ->get(['id', 'code', 'type', 'current_quantity']);
 
@@ -35,7 +38,8 @@ class FlockCullingController extends Controller
     {
         $action->execute($request->validated(), $request->user()->id);
 
-        return redirect()->route('flockCullingsIndex')
+        // WAYFINDER : URI dure
+        return redirect('/zootechnie/flock-cullings')
             ->with('success', 'Réforme enregistrée en brouillon.');
     }
 
@@ -43,10 +47,10 @@ class FlockCullingController extends Controller
     {
         Gate::authorize('manage generations');
 
-        // Utilisation de l'objet $request injecté
         $action->execute($flockCulling, $request->user()->id);
 
-        return redirect()->route('flockCullingsIndex')
+        // WAYFINDER : URI dure
+        return redirect('/zootechnie/flock-cullings')
             ->with('success', 'Réforme validée et cheptel mis à jour.');
     }
 }

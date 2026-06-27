@@ -4,7 +4,7 @@ namespace App\Actions\Zootechnie;
 
 use App\Models\HealthTreatment;
 
-class ApproveHealthTreatmentAction
+final readonly class ApproveHealthTreatmentAction
 {
     /**
      * Approve a health treatment record.

@@ -22,9 +22,9 @@ class PurchaseOrderItem extends Model
         return $this->belongsTo(PurchaseOrder::class);
     }
 
-    public function category(): BelongsTo
+    public function item(): BelongsTo
     {
-        return $this->belongsTo(Category::class);
+        return $this->belongsTo(Item::class);
     }
 
     public function unit(): BelongsTo

@@ -39,13 +39,15 @@ class SupplierPaymentController extends Controller
     public function store(StoreSupplierPaymentRequest $request, LogSupplierPaymentAction $action)
     {
         $action->execute($request->validated(), $request->user()->id);
-        return redirect()->route('supplierPaymentsIndex')->with('success', 'Supplier payment created in draft.');
+        // Routage Wayfinder
+        return redirect('/supplier-payments')->with('success', 'Paiement fournisseur créé en brouillon.');
     }
 
     public function approve(SupplierPayment $supplierPayment, ApproveSupplierPaymentAction $action)
     {
         Gate::authorize('manage purchases');
         $action->execute($supplierPayment, request()->user()->id);
-        return redirect()->route('supplierPaymentsIndex')->with('success', 'Supplier payment approved.');
+        // Routage Wayfinder
+        return redirect('/supplier-payments')->with('success', 'Paiement fournisseur approuvé.');
     }
 }

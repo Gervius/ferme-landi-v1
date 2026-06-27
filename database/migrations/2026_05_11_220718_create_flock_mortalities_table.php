@@ -27,6 +27,8 @@ return new class extends Migration
 
             $table->timestamps();
             $table->softDeletes();
+
+            $table->unique(['generation_id', 'date'], 'unique_flock_mortality');
         });
     }
 

@@ -1,8 +1,6 @@
-// pages/Zootechnie/FlockMortality/Index.tsx
 import React, { useState, useMemo } from 'react';
 import { useForm, router } from '@inertiajs/react';
 import { Plus, CheckCircle, Clock, Skull, TrendingDown, AlertTriangle } from 'lucide-react';
-import { flockMortalitiesStore, flockMortalitiesApprove } from '@/routes';
 import { getGenerationDisplay } from '@/utils/zootechnieStrategy';
 import { PaginatedData } from '@/types/pagination';
 import { DataTable, ColumnDef } from '@/components/ui/DataTable';
@@ -12,7 +10,6 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog';
 
 interface FlockMortality {
@@ -41,279 +38,258 @@ export default function Index({ data, generations }: Props) {
     const [isModalOpen, setIsModalOpen] = useState(false);
 
     // Initialisation du formulaire
-    const { data: formData, setData, post, processing, errors, reset } = useForm({
+    const { data: formData, setData, post, processing, errors, reset, clearErrors } = useForm({
         generation_id: '',
         date: new Date().toISOString().split('T')[0],
         quantity: 0,
         cause: '',
-        estimated_financial_loss: 0,
+        estimated_financial_loss: '',
     });
 
-    // UX : Récupérer le lot sélectionné pour afficher des infos d'aide dynamiques
-    const selectedGeneration = useMemo(() => {
-        if (!formData.generation_id) return null;
-        return generations.find(g => g.id === Number(formData.generation_id)) || null;
-    }, [formData.generation_id, generations]);
+    // 🔴 STATISTIQUES MÉTIER (Maintenues fidèlement)
+    const stats = useMemo(() => {
+        if (data.data.length === 0) return { totalDead: 0, totalLoss: 0 };
+        
+        let totalDead = 0;
+        let totalLoss = 0;
 
-    // Soumission de la création (Brouillon)
-    const submitCreate = (e: React.SubmitEvent) => {
+        data.data.forEach(item => {
+            totalDead += Number(item.quantity);
+            totalLoss += Number(item.estimated_financial_loss || 0);
+        });
+
+        return {
+            totalDead,
+            totalLoss: totalLoss.toFixed(2)
+        };
+    }, [data.data]);
+
+    const openModal = () => {
+        reset();
+        clearErrors();
+        setIsModalOpen(true);
+    };
+
+    const submitForm = (e: React.FormEvent) => {
         e.preventDefault();
-        post(flockMortalitiesStore.url(), {
-            preserveScroll: true,
+        // ROUTAGE STRICT : URI en dur
+        post('/zootechnie/flock-mortalities', {
             onSuccess: () => {
                 setIsModalOpen(false);
                 reset();
-            },
+            }
         });
     };
 
-    // Action d'approbation (Déduit les animaux du cheptel)
-    const handleApprove = (id: number) => {
-        if (confirm("Valider définitivement cette perte ? Le nombre d'animaux vivants sera immédiatement déduit du lot.")) {
-            router.post(flockMortalitiesApprove.url(id), {}, { preserveScroll: true });
+    const approveMortality = (id: number) => {
+        if (confirm("Voulez-vous valider cette mortalité ? L'effectif du lot sera définitivement réduit.")) {
+            // ROUTAGE STRICT : URI en dur
+            router.post(`/zootechnie/flock-mortalities/${id}/approve`, {}, {
+                preserveScroll: true,
+                preserveState: true,
+            });
         }
     };
 
-    // Calculs agrégés pour le tableau de bord (RAM)
-    const stats = useMemo(() => {
-        return data.data.reduce(
-            (acc, item) => {
-                acc.totalDead += Number(item.quantity);
-                acc.totalLoss += Number(item.estimated_financial_loss || 0);
-                return acc;
-            },
-            { totalDead: 0, totalLoss: 0 }
-        );
-    }, [data.data]);
-
-    // Définition des colonnes du DataTable
-    const columns: ColumnDef<FlockMortality>[] = [
+    // Configuration des colonnes du DataTable
+    const columns: ColumnDef<FlockMortality>[] = useMemo(() => [
         { 
             header: 'Date', 
-            className: 'font-medium',
-            cell: (item) => new Date(item.date).toLocaleDateString()
+            cell: (row) => new Date(row.date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' }) 
         },
         { 
             header: 'Lot (Génération)', 
-            cell: (item) => {
-                const { Icon, colorClass } = getGenerationDisplay(item.generation.type);
+            cell: (row) => {
+                const strat = getGenerationDisplay(row.generation.type);
                 return (
-                    <div className="flex items-center gap-2">
-                        <Icon className={`w-4 h-4 ${colorClass}`} strokeWidth={2} />
-                        <span className="font-semibold text-card-foreground">{item.generation.code}</span>
+                    <div className="flex items-center gap-2 font-medium">
+                        <strat.Icon size={16} className={strat.colorClass} />
+                        {row.generation.code}
                     </div>
                 );
             }
         },
         { 
-            header: 'Pertes', 
-            className: 'text-right',
-            cell: (item) => (
-                <span className="font-bold text-destructive">
-                    {Number(item.quantity)} <span className="text-xs font-normal text-muted-foreground">têtes</span>
-                </span>
-            )
+            header: 'Pertes (Têtes)', 
+            cell: (row) => <span className="font-bold text-destructive">{row.quantity}</span> 
         },
         { 
-            header: 'Cause suspectée', 
-            cell: (item) => item.cause ? (
-                <span className="text-sm text-card-foreground">{item.cause}</span>
-            ) : (
-                <span className="text-sm text-muted-foreground italic">Non renseignée</span>
-            )
+            header: 'Cause', 
+            cell: (row) => <span className="text-muted-foreground">{row.cause || '-'}</span> 
         },
         { 
-            header: 'Perte estimée', 
-            className: 'text-right',
-            cell: (item) => item.estimated_financial_loss ? (
-                <span className="font-medium text-foreground">
-                    {Number(item.estimated_financial_loss).toLocaleString()} <span className="text-xs text-muted-foreground">FCFA</span>
+            header: 'Perte Financière', 
+            cell: (row) => (
+                <span className="font-medium text-amber-600">
+                    {row.estimated_financial_loss ? `${row.estimated_financial_loss} FCFA` : '-'}
                 </span>
-            ) : (
-                <span className="text-muted-foreground">-</span>
-            )
+            ) 
         },
-        { 
-            header: 'Statut', 
-            cell: (item) => (
-                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold rounded-full ${
-                    item.status === 'approved' 
-                        ? 'bg-primary/10 text-primary border border-primary/20' 
-                        : 'bg-accent/10 text-accent-foreground border border-accent/20'
-                }`}>
-                    {item.status === 'approved' ? <CheckCircle size={12} /> : <Clock size={12} />}
-                    {item.status === 'approved' ? 'Approuvé' : 'Brouillon'}
-                </span>
-            )
+        {
+            header: 'Statut',
+            cell: (row) => row.status === 'approved'
+                ? <span className="inline-flex items-center gap-1 text-green-700 bg-green-100 px-2 py-1 rounded-md text-xs font-bold border border-green-200"><CheckCircle size={14}/> Validé</span>
+                : <span className="inline-flex items-center gap-1 text-amber-700 bg-amber-100 px-2 py-1 rounded-md text-xs font-bold border border-amber-200"><Clock size={14}/> Brouillon</span>
         },
         {
             header: 'Actions',
-            className: 'text-right',
-            cell: (item) => item.status === 'draft' ? (
-                <button 
-                    onClick={() => handleApprove(item.id)}
-                    className="text-xs font-bold bg-destructive text-destructive-foreground px-3 py-1.5 rounded-md hover:opacity-90 transition-opacity shadow-sm"
+            cell: (row) => row.status === 'draft' && (
+                <button
+                    onClick={() => approveMortality(row.id)}
+                    className="text-primary hover:text-primary/80 font-semibold text-sm flex items-center gap-1.5 transition-colors"
                 >
-                    Valider la perte
+                    <CheckCircle size={16} /> Approuver
                 </button>
-            ) : (
-                <span className="text-xs text-muted-foreground italic">Définitif</span>
             )
         }
-    ];
+    ], []);
 
     return (
-        <div className="p-6 max-w-7xl mx-auto space-y-6 bg-background">
-            
-            {/* Header & Statistiques */}
+        <div className="p-6 max-w-7xl mx-auto space-y-8 bg-background min-h-screen">
+            {/* Header et Statistiques (Design fidèle) */}
             <div className="flex flex-col md:flex-row justify-between gap-6 mb-8">
                 <div>
                     <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-                        <Skull className="text-destructive" /> Registre de Mortalité
+                        <Skull className="text-destructive" /> Déclarations de Mortalité
                     </h1>
                     <p className="text-muted-foreground text-sm mt-1">
-                        Déclarez les pertes pour maintenir l'inventaire de vos lots à jour.
+                        Suivez les pertes de votre cheptel et ajustez vos effectifs en temps réel.
                     </p>
                 </div>
 
-                <div className="flex gap-4">
+                <div className="flex flex-wrap md:flex-nowrap items-center gap-4">
                     <div className="bg-card border border-border px-5 py-3 rounded-xl shadow-sm flex items-center gap-4">
                         <div className="bg-destructive/10 p-2 rounded-lg text-destructive">
                             <TrendingDown size={20} />
                         </div>
                         <div>
-                            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Pertes</p>
+                            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Têtes Perdues</p>
                             <p className="text-xl font-bold text-foreground">
-                                {stats.totalDead} <span className="text-sm font-normal text-muted-foreground">têtes</span>
+                                {stats.totalDead} <span className="text-sm font-normal text-muted-foreground">sujets</span>
+                            </p>
+                        </div>
+                        <div className="h-8 w-px bg-border mx-2"></div>
+                        <div>
+                            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Perte Financière</p>
+                            <p className="text-xl font-bold text-amber-600">
+                                {stats.totalLoss} <span className="text-sm font-normal text-muted-foreground">FCFA</span>
                             </p>
                         </div>
                     </div>
+
+                    <button 
+                        onClick={openModal}
+                        className="flex items-center gap-2 bg-destructive text-destructive-foreground px-5 py-3 rounded-xl hover:opacity-90 transition-opacity font-medium shadow-sm h-full"
+                    >
+                        <Plus size={18} />
+                        Déclarer une perte
+                    </button>
                 </div>
             </div>
 
-            {/* Barre d'action et Dialog */}
-            <div className="flex justify-end mb-4">
-                <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-                    <DialogTrigger asChild>
-                        <button className="flex items-center gap-2 bg-destructive text-destructive-foreground px-5 py-2.5 rounded-xl font-bold shadow-sm hover:opacity-90 transition-opacity">
-                            <Plus size={18} />
+            {/* Modal de Saisie */}
+            <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+                <DialogContent className="sm:max-w-xl">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-xl">
+                            <AlertTriangle className="text-destructive" size={24} />
                             Déclarer une mortalité
-                        </button>
-                    </DialogTrigger>
-                    
-                    <DialogContent className="sm:max-w-[600px]">
-                        <DialogHeader>
-                            <DialogTitle className="text-xl text-destructive flex items-center gap-2">
-                                <AlertTriangle size={20} /> Nouvelle déclaration
-                            </DialogTitle>
-                            <DialogDescription>
-                                Saisissez les informations relatives à la perte. L'opération restera en brouillon jusqu'à sa validation.
-                            </DialogDescription>
-                        </DialogHeader>
+                        </DialogTitle>
+                        <DialogDescription>
+                            Saisissez les pertes constatées sur un lot. L'effectif sera mis à jour à la validation.
+                        </DialogDescription>
+                    </DialogHeader>
 
-                        <form onSubmit={submitCreate} className="space-y-6 mt-4">
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-2 col-span-2">
-                                    <label className="text-sm font-medium text-foreground flex justify-between">
-                                        Lot concerné
-                                        {selectedGeneration && (
-                                            <span className="text-xs text-primary font-bold">
-                                                Vivants : {selectedGeneration.current_quantity} têtes
-                                            </span>
-                                        )}
-                                    </label>
-                                    <select 
-                                        value={formData.generation_id}
-                                        onChange={e => setData('generation_id', e.target.value)}
-                                        className="w-full bg-input border border-border rounded-lg p-2.5 focus:ring-ring"
-                                    >
-                                        <option value="">Sélectionner un lot actif</option>
-                                        {generations.map(gen => {
-                                            const { label } = getGenerationDisplay(gen.type);
-                                            return <option key={gen.id} value={gen.id}>{gen.code} - {label}</option>;
-                                        })}
-                                    </select>
-                                    {errors.generation_id && <span className="text-destructive text-xs">{errors.generation_id}</span>}
-                                </div>
-
-                                <div className="space-y-2">
-                                    <label className="text-sm font-medium text-foreground">Date du constat</label>
-                                    <input 
-                                        type="date" 
-                                        value={formData.date}
-                                        onChange={e => setData('date', e.target.value)}
-                                        className="w-full bg-input border border-border rounded-lg p-2.5 focus:ring-ring"
-                                    />
-                                    {errors.date && <span className="text-destructive text-xs">{errors.date}</span>}
-                                </div>
-
-                                <div className="space-y-2">
-                                    <label className="text-sm font-medium text-destructive">Nombre de têtes perdues</label>
-                                    <input 
-                                        type="number" min="1"
-                                        max={selectedGeneration ? selectedGeneration.current_quantity : undefined}
-                                        value={formData.quantity || ''}
-                                        onChange={e => setData('quantity', Number(e.target.value))}
-                                        className="w-full bg-destructive/5 border border-destructive/30 rounded-lg p-2.5 focus:ring-destructive font-bold text-destructive"
-                                        placeholder="Ex: 3"
-                                    />
-                                    {errors.quantity && <span className="text-destructive text-xs">{errors.quantity}</span>}
-                                </div>
-
-                                <div className="space-y-2 col-span-2">
-                                    <label className="text-sm font-medium text-foreground">Cause de la mortalité</label>
-                                    <input 
-                                        type="text" 
-                                        value={formData.cause}
-                                        onChange={e => setData('cause', e.target.value)}
-                                        className="w-full bg-input border border-border rounded-lg p-2.5 focus:ring-ring"
-                                        placeholder="Ex: Étouffement, suspicion de maladie..."
-                                    />
-                                    {errors.cause && <span className="text-destructive text-xs">{errors.cause}</span>}
-                                </div>
-
-                                <div className="space-y-2 col-span-2">
-                                    <label className="text-sm font-medium text-foreground">
-                                        Perte financière estimée (Optionnel)
-                                    </label>
-                                    <div className="relative">
-                                        <input 
-                                            type="number" min="0" step="0.01"
-                                            value={formData.estimated_financial_loss || ''}
-                                            onChange={e => setData('estimated_financial_loss', Number(e.target.value))}
-                                            className="w-full bg-input border border-border rounded-lg p-2.5 pr-16 focus:ring-ring"
-                                            placeholder="Ex: 15000"
-                                        />
-                                        <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-muted-foreground font-medium">
-                                            FCFA
-                                        </span>
-                                    </div>
-                                    {errors.estimated_financial_loss && <span className="text-destructive text-xs">{errors.estimated_financial_loss}</span>}
-                                </div>
+                    <form onSubmit={submitForm} className="space-y-6 mt-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium text-foreground">Date</label>
+                                <input 
+                                    type="date" 
+                                    value={formData.date} 
+                                    onChange={e => setData('date', e.target.value)} 
+                                    className="w-full bg-input border border-border rounded-md p-2 text-sm focus:ring-destructive focus:border-destructive"
+                                />
+                                {errors.date && <span className="text-destructive text-xs">{errors.date}</span>}
                             </div>
 
-                            <div className="flex justify-end gap-3 pt-6 border-t border-border">
-                                <button 
-                                    type="button" 
-                                    onClick={() => setIsModalOpen(false)}
-                                    className="px-5 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium text-foreground">Génération (Lot)</label>
+                                <select 
+                                    value={formData.generation_id} 
+                                    onChange={e => setData('generation_id', e.target.value)} 
+                                    className="w-full bg-input border border-border rounded-md p-2 text-sm focus:ring-destructive"
                                 >
-                                    Annuler
-                                </button>
-                                <button 
-                                    type="submit" 
-                                    disabled={processing}
-                                    className="bg-destructive text-destructive-foreground px-6 py-2.5 rounded-xl text-sm font-bold disabled:opacity-50 hover:opacity-90 transition-opacity shadow-sm"
-                                >
-                                    Enregistrer le brouillon
-                                </button>
+                                    <option value="">Sélectionnez un lot</option>
+                                    {generations.map(g => (
+                                        <option key={g.id} value={g.id}>
+                                            {g.code} ({g.current_quantity} vivants)
+                                        </option>
+                                    ))}
+                                </select>
+                                {errors.generation_id && <span className="text-destructive text-xs">{errors.generation_id}</span>}
                             </div>
-                        </form>
-                    </DialogContent>
-                </Dialog>
-            </div>
 
-            {/* Tableau principal (DataTable) */}
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium text-destructive flex items-center gap-1"><Skull size={14}/> Nombre de têtes perdues</label>
+                                <input 
+                                    type="number" 
+                                    min="1"
+                                    value={formData.quantity} 
+                                    onChange={e => setData('quantity', Number(e.target.value))} 
+                                    className="w-full bg-input border-destructive/50 focus:border-destructive focus:ring-destructive rounded-md p-2 text-sm"
+                                    placeholder="Ex: 5"
+                                />
+                                {errors.quantity && <span className="text-destructive text-xs block">{errors.quantity}</span>}
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium text-foreground flex items-center gap-1"><TrendingDown size={14}/> Perte financière estimée</label>
+                                <input 
+                                    type="number" 
+                                    step="0.01"
+                                    min="0"
+                                    value={formData.estimated_financial_loss} 
+                                    onChange={e => setData('estimated_financial_loss', e.target.value)} 
+                                    className="w-full bg-input border border-border focus:border-destructive focus:ring-destructive rounded-md p-2 text-sm"
+                                    placeholder="Valeur en FCFA"
+                                />
+                                {errors.estimated_financial_loss && <span className="text-destructive text-xs block">{errors.estimated_financial_loss}</span>}
+                            </div>
+                        </div>
+
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-foreground">Cause / Observations</label>
+                            <textarea 
+                                value={formData.cause} 
+                                onChange={e => setData('cause', e.target.value)} 
+                                className="w-full bg-input border border-border rounded-md p-2 text-sm min-h-[80px] resize-none focus:ring-destructive focus:border-destructive"
+                                placeholder="Maladie présumée, incident matériel, prédateur..."
+                            />
+                            {errors.cause && <span className="text-destructive text-xs">{errors.cause}</span>}
+                        </div>
+
+                        <div className="flex justify-end gap-3 pt-6 border-t border-border">
+                            <button 
+                                type="button" 
+                                onClick={() => setIsModalOpen(false)}
+                                className="px-5 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+                            >
+                                Annuler
+                            </button>
+                            <button 
+                                type="submit" 
+                                disabled={processing}
+                                className="bg-destructive text-destructive-foreground px-6 py-2.5 rounded-xl text-sm font-bold disabled:opacity-50 hover:opacity-90 transition-opacity shadow-sm"
+                            >
+                                Enregistrer le brouillon
+                            </button>
+                        </div>
+                    </form>
+                </DialogContent>
+            </Dialog>
+
+            {/* DataTable Universel */}
             <DataTable 
                 data={data} 
                 columns={columns} 

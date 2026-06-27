@@ -2,8 +2,10 @@
 
 namespace App\Http\Requests\Zootechnie;
 
+use App\Enums\GenerationType;
 use App\Models\Generation;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class StoreGenerationRequest extends FormRequest
 {
@@ -17,10 +19,10 @@ class StoreGenerationRequest extends FormRequest
         return [
             'site_id' => ['required', 'exists:sites,id'],
             'breed_id' => ['required', 'exists:breeds,id'],
-            'type' => ['required', 'string', 'in:pondeuse,chair,porc'],
+            'type' => ['required', Rule::enum(GenerationType::class)], // Sécurité absolue
             'start_date' => ['required', 'date'],
             'initial_quantity' => ['required', 'integer', 'min:1'],
-            'observation' => ['required', 'string'],
+            'observation' => ['nullable', 'string'], // Corrigé : c'est nullable en base de données
         ];
     }
 }

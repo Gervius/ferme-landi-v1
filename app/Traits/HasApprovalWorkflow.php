@@ -3,13 +3,15 @@
 namespace App\Traits;
 
 use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 trait HasApprovalWorkflow
 {
     /**
      * Scope a query to only include drafted items.
      */
-    public function scopeDraft($query)
+    public function scopeDraft(Builder $query): Builder
     {
         return $query->where('status', 'draft');
     }
@@ -17,7 +19,7 @@ trait HasApprovalWorkflow
     /**
      * Scope a query to only include approved items.
      */
-    public function scopeApproved($query)
+    public function scopeApproved(Builder $query): Builder
     {
         return $query->where('status', 'approved');
     }
@@ -25,7 +27,7 @@ trait HasApprovalWorkflow
     /**
      * Scope a query to only include rejected items.
      */
-    public function scopeRejected($query)
+    public function scopeRejected(Builder $query): Builder
     {
         return $query->where('status', 'rejected');
     }
@@ -35,7 +37,7 @@ trait HasApprovalWorkflow
      */
     public function isApproved(): bool
     {
-        return $this->status === 'approved';
+        return $this->status === 'approved'; // Ou utiliser ton Enum WorkflowStatus
     }
 
     /**
@@ -81,23 +83,25 @@ trait HasApprovalWorkflow
 
         return $this->update([
             'status' => 'rejected',
-            'approved_by' => $userId, // We keep the user ID to trace who rejected it
+            'approved_by' => $userId,
             'approved_at' => now(),
         ]);
     }
 
     /**
      * Relationship to the user who prepared this record.
+     * TYPAGE STRICT PHP 8.4+
      */
-    public function preparer()
+    public function preparer(): BelongsTo
     {
         return $this->belongsTo(User::class, 'prepared_by');
     }
 
     /**
      * Relationship to the user who approved or rejected this record.
+     * TYPAGE STRICT PHP 8.4+
      */
-    public function approver()
+    public function approver(): BelongsTo
     {
         return $this->belongsTo(User::class, 'approved_by');
     }

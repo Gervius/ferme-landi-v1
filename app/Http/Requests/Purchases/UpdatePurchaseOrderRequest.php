@@ -17,10 +17,10 @@ class UpdatePurchaseOrderRequest extends FormRequest
         return [
             'supplier_id'          => ['required', 'exists:suppliers,id'],
             'order_date'           => ['required', 'date'],
-            'reference'            => ['required', 'string', 'max:255', 'unique:purchase_orders,reference,' . $this->route('purchase_order')->id],
-            'status'               => ['nullable', 'string', 'in:draft,validated,partially_received,received,cancelled'],
+
+            
             'items'                => ['required', 'array', 'min:1'],
-            'items.*.category_id'  => ['required', 'exists:categories,id'],
+            'items.*.item_id'      => ['required', 'exists:items,id'], 
             'items.*.unit_id'      => ['required', 'exists:units,id'],
             'items.*.quantity'     => ['required', 'numeric', 'min:0.01'],
             'items.*.unit_price'   => ['required', 'numeric', 'min:0'],

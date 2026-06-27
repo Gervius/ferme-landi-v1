@@ -5,7 +5,7 @@ namespace App\Actions\Zootechnie;
 use App\Models\FlockMortality;
 use Illuminate\Support\Facades\DB;
 
-class LogMortalityAction
+final readonly class LogMortalityAction
 {
     public function execute(array $data, int $preparedById): FlockMortality
     {

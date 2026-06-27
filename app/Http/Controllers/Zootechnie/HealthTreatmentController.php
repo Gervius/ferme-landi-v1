@@ -8,21 +8,28 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Zootechnie\StoreHealthTreatmentRequest;
 use App\Models\Generation;
 use App\Models\HealthTreatment;
-use Illuminate\Http\Request; // Ajout de l'import Request
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
+use Inertia\Response;
 
-class HealthTreatmentController extends Controller
+final class HealthTreatmentController extends Controller
 {
-    public function index()
+    // AJOUT TYPE DE RETOUR PHP 8.4+
+    public function index(): Response
     {
-        // 1. SÉCURITÉ
         Gate::authorize('viewAny', HealthTreatment::class);
 
-        // 2. DONNÉES DU TABLEAU
-        $data = HealthTreatment::with('generation')->paginate(15);
+        // 🔴 CORRECTION BUG SQL : Réalignement des colonnes sur la vraie structure de la table
+        $data = HealthTreatment::select([
+                'id', 'generation_id', 'date', 'disease_description',
+                'medication_name', 'dosage_description', 'veterinarian_name',
+                'status', 'prepared_by', 'approved_by', 'approved_at'
+            ])
+            ->with(['generation:id,code,type'])
+            ->paginate(15);
 
-        // 3. DONNÉES POUR LA MODALE (Déplacées depuis l'ancienne méthode create)
         $generations = Generation::where('status', 'actif')
             ->get(['id', 'code', 'type']);
 
@@ -32,22 +39,25 @@ class HealthTreatmentController extends Controller
         ]);
     }
 
-    public function store(StoreHealthTreatmentRequest $request, LogHealthTreatmentAction $action)
+    // AJOUT TYPE DE RETOUR PHP 8.4+
+    public function store(StoreHealthTreatmentRequest $request, LogHealthTreatmentAction $action): RedirectResponse
     {
         $action->execute($request->validated(), $request->user()->id);
 
-        return redirect()->route('healthTreatmentsIndex')
+        // WAYFINDER STRICT
+        return redirect('/zootechnie/health-treatments')
             ->with('success', 'Traitement sanitaire enregistré en brouillon.');
     }
 
-    public function approve(Request $request, HealthTreatment $healthTreatment, ApproveHealthTreatmentAction $action)
+    // AJOUT TYPE DE RETOUR PHP 8.4+
+    public function approve(Request $request, HealthTreatment $healthTreatment, ApproveHealthTreatmentAction $action): RedirectResponse
     {
         Gate::authorize('manage generations');
 
-        // Utilisation de l'objet $request injecté
         $action->execute($healthTreatment, $request->user()->id);
 
-        return redirect()->route('healthTreatmentsIndex')
+        // WAYFINDER STRICT
+        return redirect('/zootechnie/health-treatments')
             ->with('success', 'Traitement sanitaire validé avec succès.');
     }
 }

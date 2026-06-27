@@ -5,7 +5,7 @@ namespace App\Actions\Zootechnie;
 use App\Models\FlockCulling;
 use Illuminate\Support\Facades\DB;
 
-class LogFlockCullingAction
+final readonly class LogFlockCullingAction
 {
     public function execute(array $data, int $preparedById): FlockCulling
     {

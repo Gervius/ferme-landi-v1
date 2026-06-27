@@ -26,6 +26,7 @@ return new class extends Migration
 
             $table->unique(['generation_id', 'date']);
             $table->timestamps();
+            
         });
     }
 

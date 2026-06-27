@@ -1,8 +1,6 @@
-// pages/Zootechnie/Breed/Index.tsx
 import React, { useState } from 'react';
 import { router, useForm } from '@inertiajs/react';
 import { Plus, Edit2, Trash2, Component, CheckCircle, XCircle } from 'lucide-react';
-import { breedsStore, breedsUpdate, breedsDestroy } from '@/routes';
 import { PaginatedData } from '@/types/pagination';
 import { DataTable, ColumnDef } from '@/components/ui/DataTable';
 import {
@@ -55,22 +53,28 @@ export default function Index({ breeds, species }: Props) {
 
     const handleDelete = (id: number) => {
         if (confirm("Supprimer cette race ? Cela pourrait affecter les lots historiques.")) {
-            router.delete(breedsDestroy.url(id), { preserveScroll: true });
+            // ROUTAGE STRICT : URI en dur
+            router.delete(`/zootechnie/breeds/${id}`, { preserveScroll: true });
         }
     };
 
-    const handleSubmit = (e: React.SubmitEvent) => {
+    const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+        
+        const options = {
+            preserveScroll: true,
+            onSuccess: () => { 
+                setIsModalOpen(false); 
+                reset(); 
+            }
+        };
+
         if (editingId) {
-            put(breedsUpdate.url(editingId), {
-                preserveScroll: true,
-                onSuccess: () => { setIsModalOpen(false); reset(); },
-            });
+            // ROUTAGE STRICT : URI en dur
+            put(`/zootechnie/breeds/${editingId}`, options);
         } else {
-            post(breedsStore.url(), {
-                preserveScroll: true,
-                onSuccess: () => { setIsModalOpen(false); reset(); },
-            });
+            // ROUTAGE STRICT : URI en dur
+            post('/zootechnie/breeds', options);
         }
     };
 

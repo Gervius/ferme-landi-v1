@@ -7,7 +7,7 @@ use App\Models\StockMovement;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
-class LogStockMovementAction
+final readonly class LogStockMovementAction
 {
     public function execute(array $data, int $userId): StockMovement
     {
@@ -20,7 +20,7 @@ class LogStockMovementAction
             $balance = StockBalance::firstOrCreate(
                 [
                     'site_id' => $data['site_id'],
-                    'category_id' => $data['category_id'],
+                    'item_id' => $data['item_id'], // Cible l'Item
                     'unit_id' => $data['unit_id'],
                 ],
                 ['quantity' => 0]
@@ -30,23 +30,27 @@ class LogStockMovementAction
             $type = $data['type'];
 
             if ($type === 'in') {
-                $balance->quantity += $quantity;
+                $balance->increment('quantity', $quantity);
             } elseif ($type === 'out') {
-                if ($balance->quantity < $quantity) {
-                    throw ValidationException::withMessages([
-                        'quantity' => 'Stock insuffisant pour cette opération.',
-                    ]);
+                // Délégation du contrôle de concurrence à PostgreSQL
+                try {
+                    $balance->decrement('quantity', $quantity);
+                } catch (\Illuminate\Database\QueryException $e) {
+                    // Code 23514 = Violation de la contrainte CHECK (quantity >= 0)
+                    if ($e->getCode() === '23514') {
+                        throw ValidationException::withMessages([
+                            'quantity' => 'Stock insuffisant : une autre opération concurrente vient de consommer ce stock.',
+                        ]);
+                    }
+                    throw $e;
                 }
-                $balance->quantity -= $quantity;
             } elseif ($type === 'adjustment') {
-                $balance->quantity = $quantity;
+                $balance->update(['quantity' => $quantity]);
             } else {
                 throw ValidationException::withMessages([
                     'type' => 'Type de mouvement non reconnu.',
                 ]);
             }
-
-            $balance->save();
 
             return $movement;
         });

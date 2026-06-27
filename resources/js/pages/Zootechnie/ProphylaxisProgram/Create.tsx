@@ -2,7 +2,6 @@
 import React from 'react';
 import { useForm, Link } from '@inertiajs/react';
 import { Plus, Trash2, ShieldPlus, ArrowLeft, Layers } from 'lucide-react';
-import { prophylaxisProgramsIndex, prophylaxisProgramsStore } from '@/routes';
 import { getGenerationDisplay } from '@/utils/zootechnieStrategy';
 
 interface MedicationCategory {
@@ -57,9 +56,10 @@ export default function Create({ medicationCategories }: Props) {
         setData('steps', updatedSteps);
     };
 
-    const handleSubmit = (e: React.SubmitEvent) => {
+    const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        post(prophylaxisProgramsStore.url());
+        // ROUTAGE STRICT : URI en dur
+        post('/zootechnie/prophylaxis-programs');
     };
 
     const strategy = getGenerationDisplay(data.animal_type);
@@ -68,7 +68,8 @@ export default function Create({ medicationCategories }: Props) {
         <div className="p-6 max-w-5xl mx-auto space-y-6 bg-background text-foreground">
             {/* Fil d'Ariane / Retour */}
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Link href={prophylaxisProgramsIndex.url()} className="hover:text-foreground transition-colors flex items-center gap-1">
+                {/* ROUTAGE STRICT : URI en dur */}
+                <Link href="/zootechnie/prophylaxis-programs" className="hover:text-foreground transition-colors flex items-center gap-1">
                     <ArrowLeft size={14} /> Programmes
                 </Link>
                 <span>/</span>
@@ -237,7 +238,8 @@ export default function Create({ medicationCategories }: Props) {
                 {/* Boutons de soumission */}
                 <div className="flex justify-end gap-4">
                     <Link 
-                        href={prophylaxisProgramsIndex.url()}
+                        // ROUTAGE STRICT : URI en dur
+                        href="/zootechnie/prophylaxis-programs"
                         className="px-5 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
                     >
                         Annuler

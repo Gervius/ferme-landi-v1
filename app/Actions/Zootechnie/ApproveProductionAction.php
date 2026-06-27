@@ -5,51 +5,49 @@ namespace App\Actions\Zootechnie;
 use App\Models\DailyProduction;
 use App\Actions\Stocks\LogStockMovementAction;
 use App\Services\Logistics\UnitConversionService;
+use Illuminate\Support\Facades\DB;
+use InvalidArgumentException;
 
-class ApproveProductionAction
+final readonly class ApproveProductionAction
 {
     public function __construct(
-        private readonly UnitConversionService $unitConversionService,
-        private readonly LogStockMovementAction $logStockMovementAction // INJECTION DU NOUVEAU SYSTÈME
-    ) {
-    }
+        private UnitConversionService $unitConversionService,
+        private LogStockMovementAction $logStockMovementAction
+    ) {}
 
-    /**
-     * Approve a daily production record and calculate the total base quantity.
-     *
-     * @param DailyProduction $production
-     * @param int $approverId
-     * @return DailyProduction
-     */
-    public function execute(DailyProduction $production, int $approverId): DailyProduction
+    public function execute(int $productionId, int $approverId): DailyProduction
     {
-        if (! $production->isDraft()) {
-            throw new \InvalidArgumentException("Only draft production records can be approved.");
-        }
+        return DB::transaction(function () use ($productionId, $approverId) {
+            // VERROU DE CONCURRENCE
+            $production = DailyProduction::where('id', $productionId)->lockForUpdate()->firstOrFail();
 
-        return \Illuminate\Support\Facades\DB::transaction(function () use ($production, $approverId) {
-            // Chargement de la relation pour accéder au site_id
-            $production->loadMissing('generation');
+            if ($production->status !== 'draft') {
+                throw new InvalidArgumentException("Cette production a déjà été traitée.");
+            }
 
-            // Calculate total base quantity
+            // 🔴 OPTIMISATION RAM & N+1 : On charge le site_id ET les données de l'unité
+            $production->loadMissing([
+                'generation:id,site_id',
+                'unit:id,conversion_rate,base_unit_id'
+            ]);
+
             $totalQuantity = $production->good_quantity + $production->broken_quantity;
             $totalBaseQuantity = $this->unitConversionService->toBase($totalQuantity, $production->unit);
 
-            // Update total base quantity
-            $production->total_base_quantity = $totalBaseQuantity;
-            $production->save();
+            $production->update([
+                'total_base_quantity' => $totalBaseQuantity,
+                'status' => 'approved',
+                'approved_by' => $approverId,
+                'approved_at' => now(),
+            ]);
 
-            // Approve the record
-            $production->approve($approverId);
-
-            // NOUVEAU SYSTÈME : Mouvement de stock ENTRANT pour les œufs
             if ($production->item_category_id) {
                 $this->logStockMovementAction->execute([
                     'site_id' => $production->generation->site_id,
                     'category_id' => $production->item_category_id,
                     'unit_id' => $production->unit_id,
                     'type' => 'in',
-                    'quantity' => $production->good_quantity, // On met en stock uniquement les bons œufs
+                    'quantity' => $production->good_quantity,
                     'reference_type' => $production->getMorphClass(),
                     'reference_id' => $production->id,
                     'date' => $production->date->format('Y-m-d'),

@@ -5,7 +5,7 @@ namespace App\Actions\Zootechnie;
 use App\Models\DailyProduction;
 use Illuminate\Support\Facades\DB;
 
-class LogProductionAction
+final readonly class LogProductionAction
 {
     /**
      * Log a new daily production record in draft status.

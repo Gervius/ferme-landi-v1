@@ -30,7 +30,8 @@ class SupplierController extends Controller
     public function store(StoreSupplierRequest $request, CreateSupplierAction $action)
     {
         $action->execute($request->validated());
-        return redirect()->route('suppliersIndex')->with('success', 'Supplier created.');
+        // Routage Wayfinder
+        return redirect('/suppliers')->with('success', 'Fournisseur créé avec succès.');
     }
 
     public function edit(Supplier $supplier)
@@ -44,13 +45,15 @@ class SupplierController extends Controller
     public function update(UpdateSupplierRequest $request, Supplier $supplier, UpdateSupplierAction $action)
     {
         $action->execute($supplier, $request->validated());
-        return redirect()->route('suppliersIndex')->with('success', 'Supplier updated.');
+        // Routage Wayfinder
+        return redirect('/suppliers')->with('success', 'Fournisseur mis à jour.');
     }
 
     public function destroy(Supplier $supplier, DeleteSupplierAction $action)
     {
         Gate::authorize('delete', $supplier);
         $action->execute($supplier);
-        return redirect()->route('suppliersIndex')->with('success', 'Supplier deleted.');
+        // Routage Wayfinder
+        return redirect('/suppliers')->with('success', 'Fournisseur supprimé.');
     }
 }

@@ -23,8 +23,6 @@ class Supplier extends Model
         'is_active' => 'boolean',
     ];
 
-    protected $appends = ['outstanding_debt'];
-
     public function invoices()
     {
         return $this->hasMany(SupplierInvoice::class);
@@ -35,16 +33,5 @@ class Supplier extends Model
         return $this->hasMany(SupplierPayment::class);
     }
 
-    public function getOutstandingDebtAttribute(): float
-    {
-        $totalInvoices = $this->invoices()
-            ->whereIn('status', ['validated', 'partially_paid', 'paid'])
-            ->sum('total_amount');
-
-        $totalPayments = $this->payments()
-            ->where('status', 'approved')
-            ->sum('amount');
-
-        return (float) ($totalInvoices - $totalPayments);
-    }
+    
 }

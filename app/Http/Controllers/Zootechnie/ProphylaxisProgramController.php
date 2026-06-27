@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers\Zootechnie;
 
-use App\Actions\Zootechnie\SyncProphylaxisForGenerationsAction; // Import du moteur de Synchro
+use App\Actions\Zootechnie\SyncProphylaxisForGenerationsAction;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Zootechnie\StoreProphylaxisProgramRequest;
 use App\Http\Requests\Zootechnie\UpdateProphylaxisProgramRequest;
@@ -14,19 +14,26 @@ use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 use Inertia\Response;
 
-class ProphylaxisProgramController extends Controller
+
+final class ProphylaxisProgramController extends Controller
 {
     public function index(): Response
     {
         Gate::authorize('viewAny', ProphylaxisProgram::class);
 
-        $programs = ProphylaxisProgram::with('steps.medicationCategory')->paginate(15);
+        // OPTIMISATION RAM : On ne charge de la relation steps que ce qui est utile pour compter (length)
+        $programs = ProphylaxisProgram::select(['id', 'name', 'animal_type', 'is_active', 'created_at', 'updated_at'])
+            ->with([
+                'steps:id,prophylaxis_program_id'
+            ])
+            ->paginate(15);
 
         return Inertia::render('Zootechnie/ProphylaxisProgram/Index', [
             'programs' => $programs,
         ]);
     }
 
+    // 🔴 MÉTHODE RÉTABLIE
     public function create(): Response
     {
         Gate::authorize('create', ProphylaxisProgram::class);
@@ -55,18 +62,24 @@ class ProphylaxisProgramController extends Controller
                 $program->steps()->createMany($data['steps']);
             }
 
-            // MAGIE : Applique le programme aux lots créés AVANT le programme
             $syncAction->execute($program);
         });
 
-        return redirect()->route('prophylaxisProgramsIndex')->with('success', 'Programme créé et appliqué aux lots avec succès.');
+        // WAYFINDER STRICT : URI en dur
+        return redirect('/zootechnie/prophylaxis-programs')
+            ->with('success', 'Programme créé et appliqué aux lots avec succès.');
     }
 
+    // 🔴 MÉTHODE RÉTABLIE
     public function edit(ProphylaxisProgram $prophylaxisProgram): Response
     {
         Gate::authorize('update', $prophylaxisProgram);
 
-        $prophylaxisProgram->load('steps');
+        // On hydrate l'objet avec ses étapes pour le formulaire
+        $prophylaxisProgram->load([
+            'steps:id,prophylaxis_program_id,day_offset,alert_days_before,medication_category_id,description'
+        ]);
+
         $medicationCategories = Category::where('is_active', true)
             ->where('scope', \App\Enums\CategoryScope::MEDICATION->value)
             ->get(['id', 'name']);
@@ -88,7 +101,6 @@ class ProphylaxisProgramController extends Controller
                 'is_active' => $data['is_active'] ?? true,
             ]);
 
-            // MISE À JOUR INTELLIGENTE : Fini la "terre brûlée" !
             $existingStepIds = [];
             if (!empty($data['steps'])) {
                 foreach ($data['steps'] as $stepData) {
@@ -105,14 +117,13 @@ class ProphylaxisProgramController extends Controller
                 }
             }
 
-            // On ne supprime que les étapes que l'utilisateur a VRAIMENT cliqué pour retirer
             $prophylaxisProgram->steps()->whereNotIn('id', $existingStepIds)->delete();
-
-            // MAGIE : Met à jour les dates des traitements en cours sans casser l'historique !
             $syncAction->execute($prophylaxisProgram);
         });
 
-        return redirect()->route('prophylaxisProgramsIndex')->with('success', 'Programme mis à jour avec succès.');
+        // WAYFINDER STRICT : URI en dur
+        return redirect('/zootechnie/prophylaxis-programs')
+            ->with('success', 'Programme mis à jour avec succès.');
     }
 
     public function destroy(ProphylaxisProgram $prophylaxisProgram): RedirectResponse
@@ -121,6 +132,8 @@ class ProphylaxisProgramController extends Controller
 
         $prophylaxisProgram->delete();
 
-        return redirect()->route('prophylaxisProgramsIndex')->with('success', 'Programme supprimé avec succès.');
+        // WAYFINDER STRICT : URI en dur
+        return redirect('/zootechnie/prophylaxis-programs')
+            ->with('success', 'Programme supprimé avec succès.');
     }
 }

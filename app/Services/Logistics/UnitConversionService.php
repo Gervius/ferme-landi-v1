@@ -4,7 +4,10 @@ namespace App\Services\Logistics;
 
 use App\Models\Unit;
 
-class UnitConversionService
+/**
+ * Service verrouillé en final readonly pour optimisation RAM (stateless).
+ */
+final readonly class UnitConversionService
 {
     /**
      * Convert a given value from the provided unit to its base unit.
@@ -15,10 +18,6 @@ class UnitConversionService
             return $value;
         }
 
-        // Using property hook or getter simulation concept from PHP 8.4
-        // Assume conversion_rate is a multiplier from derived to base
-        // i.e., 1 Plateau de 30 (derived) = 30 Unités (base). conversion_rate = 30.
-        // value in derived * conversion_rate = value in base
         return $value * (float) $unit->conversion_rate;
     }
 

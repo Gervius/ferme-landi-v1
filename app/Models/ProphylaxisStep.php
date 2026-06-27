@@ -4,19 +4,29 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class ProphylaxisStep extends Model
+final class ProphylaxisStep extends Model
 {
     use HasFactory;
 
-    protected $guarded = ['id'];
+    // Déclaration explicite des attributs modifiables
+    protected $fillable = [
+        'prophylaxis_program_id',
+        'day_offset',
+        'medication_category_id',
+        'description',
+        'alert_days_before',
+    ];
 
-    public function program()
+    // Typage strict du retour de la relation
+    public function program(): BelongsTo
     {
         return $this->belongsTo(ProphylaxisProgram::class, 'prophylaxis_program_id');
     }
 
-    public function medicationCategory()
+    // Typage strict du retour de la relation
+    public function medicationCategory(): BelongsTo
     {
         return $this->belongsTo(Category::class, 'medication_category_id');
     }

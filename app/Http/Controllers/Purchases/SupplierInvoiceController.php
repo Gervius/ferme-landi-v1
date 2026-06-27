@@ -37,13 +37,15 @@ class SupplierInvoiceController extends Controller
     public function store(StoreSupplierInvoiceRequest $request, LogSupplierInvoiceAction $action)
     {
         $action->execute($request->validated(), $request->user()->id);
-        return redirect()->route('supplierInvoicesIndex')->with('success', 'Supplier invoice created in draft.');
+        // Routage Wayfinder
+        return redirect('/supplier-invoices')->with('success', 'Facture fournisseur créée en brouillon.');
     }
 
     public function approve(SupplierInvoice $supplierInvoice, ApproveSupplierInvoiceAction $action)
     {
         Gate::authorize('manage purchases');
         $action->execute($supplierInvoice, request()->user()->id);
-        return redirect()->route('supplierInvoicesIndex')->with('success', 'Supplier invoice approved.');
+        // Routage Wayfinder
+        return redirect('/supplier-invoices')->with('success', 'Facture fournisseur validée (Écriture comptable générée).');
     }
 }

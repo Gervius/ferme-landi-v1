@@ -26,9 +26,9 @@ class PurchaseReceiptItem extends Model
         return $this->belongsTo(PurchaseOrderItem::class);
     }
 
-    public function category(): BelongsTo
+    public function item(): BelongsTo
     {
-        return $this->belongsTo(Category::class);
+        return $this->belongsTo(Item::class);
     }
 
     public function unit(): BelongsTo

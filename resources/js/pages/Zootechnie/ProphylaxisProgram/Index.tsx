@@ -2,7 +2,6 @@
 import React from 'react';
 import { Link, router } from '@inertiajs/react';
 import { Plus, Edit2, Trash2, ShieldPlus, ShieldCheck, ShieldAlert } from 'lucide-react';
-import { prophylaxisProgramsCreate, prophylaxisProgramsEdit, prophylaxisProgramsDestroy } from '@/routes';
 import { getGenerationDisplay } from '@/utils/zootechnieStrategy';
 import { PaginatedData } from '@/types/pagination';
 import { DataTable, ColumnDef } from '@/components/ui/DataTable';
@@ -32,7 +31,8 @@ export default function Index({ programs }: Props) {
     // Action de suppression
     const handleDelete = (id: number) => {
         if (confirm("Êtes-vous sûr de vouloir supprimer ce programme ? Cela n'affectera pas les traitements déjà planifiés, mais il ne pourra plus être assigné à de nouveaux lots.")) {
-            router.delete(prophylaxisProgramsDestroy.url(id), { preserveScroll: true });
+            // ROUTAGE STRICT : URI en dur
+            router.delete(`/zootechnie/prophylaxis-programs/${id}`, { preserveScroll: true });
         }
     };
 
@@ -83,7 +83,8 @@ export default function Index({ programs }: Props) {
             cell: (item) => (
                 <div className="flex items-center justify-end gap-3">
                     <Link 
-                        href={prophylaxisProgramsEdit.url(item.id)}
+                        // ROUTAGE STRICT : URI en dur
+                        href={`/zootechnie/prophylaxis-programs/${item.id}/edit`}
                         className="text-muted-foreground hover:text-primary transition-colors"
                         title="Modifier le programme"
                     >
@@ -116,7 +117,8 @@ export default function Index({ programs }: Props) {
                 </div>
 
                 <Link 
-                    href={prophylaxisProgramsCreate.url()}
+                    // ROUTAGE STRICT : URI en dur
+                    href="/zootechnie/prophylaxis-programs/create"
                     className="flex items-center justify-center gap-2 bg-primary text-primary-foreground px-5 py-2.5 rounded-xl font-bold shadow-sm hover:bg-primary/90 transition-colors"
                 >
                     <Plus size={18} />

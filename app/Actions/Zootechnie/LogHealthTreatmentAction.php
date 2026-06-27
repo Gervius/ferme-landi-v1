@@ -5,7 +5,7 @@ namespace App\Actions\Zootechnie;
 use App\Models\HealthTreatment;
 use Illuminate\Support\Facades\DB;
 
-class LogHealthTreatmentAction
+final readonly class LogHealthTreatmentAction
 {
     public function execute(array $data, int $userId): HealthTreatment
     {

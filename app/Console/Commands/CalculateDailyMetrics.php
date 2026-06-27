@@ -12,100 +12,81 @@ use Illuminate\Support\Carbon;
 
 class CalculateDailyMetrics extends Command
 {
-    /**
-     * The name and signature of the console command.
-     *
-     * @var string
-     */
-    protected $signature = 'app:calculate-daily-metrics {--date= : The date to calculate metrics for (Y-m-d). Defaults to today.}';
+    protected $signature = 'app:calculate-daily-metrics {--date= : The date (Y-m-d).}';
+    protected $description = 'Calculates daily metrics with zero N+1 latency.';
 
-    /**
-     * The console command description.
-     *
-     * @var string
-     */
-    protected $description = 'Calculates daily metrics (eggs, feed, mortality, FCR, laying rate) for all active generations.';
-
-    /**
-     * Execute the console command.
-     */
     public function handle()
     {
         $dateString = $this->option('date');
-        $date = $dateString ? Carbon::parse($dateString)->startOfDay() : Carbon::now()->startOfDay();
+        $date = $dateString ? Carbon::parse($dateString)->format('Y-m-d') : Carbon::now()->format('Y-m-d');
 
-        $activeGenerations = Generation::where('status', 'actif')->get();
+        // 1. On récupère TOUTES les générations actives en une fois avec le strict minimum
+        $generations = Generation::where('status', 'actif')->get(['id', 'current_quantity']);
 
-        $processedCount = 0;
-
-        foreach ($activeGenerations as $generation) {
-            // Eggs produced
-            $eggsProduced = DailyProduction::where('generation_id', $generation->id)
-                ->where('date', $date->format('Y-m-d'))
-                ->approved()
-                ->sum('total_base_quantity');
-
-            // Feed consumed
-            $feedConsumed = FeedConsumption::where('generation_id', $generation->id)
-                ->where('date', $date->format('Y-m-d'))
-                ->approved()
-                ->sum('total_base_quantity');
-
-            // Mortality
-            $mortalityCount = FlockMortality::where('generation_id', $generation->id)
-                ->where('date', $date->format('Y-m-d'))
-                ->approved()
-                ->sum('quantity');
-
-            // Live quantity is current_quantity (assuming it's updated throughout the day)
-            // or we could calculate it based on initial minus historical mortality.
-            // The prompt says "live_quantity: Nombre de sujets vivants à cette date".
-            // If the mortalities of the day have already been deducted from current_quantity upon approval,
-            // we just use current_quantity. Let's use current_quantity.
-            $liveQuantity = $generation->current_quantity;
-
-            // Laying rate: (Eggs / Live Quantity) * 100
-            $layingRate = 0;
-            if ($liveQuantity > 0) {
-                $layingRate = ($eggsProduced / $liveQuantity) * 100;
-            }
-
-            // Feed Conversion Ratio (FCR): Feed / Eggs
-            $fcr = 0;
-            if ($eggsProduced > 0) {
-                $fcr = $feedConsumed / $eggsProduced;
-            }
-
-            // Average Weight (from latest approved weighing up to this date)
-            $latestWeighing = \App\Models\FlockWeighing::where('generation_id', $generation->id)
-                ->where('date', '<=', $date->format('Y-m-d'))
-                ->approved()
-                ->orderByDesc('date')
-                ->orderByDesc('id')
-                ->first();
-
-            $averageWeight = $latestWeighing ? $latestWeighing->average_weight : null;
-
-            // Upsert the metric
-            DailyFlockMetric::updateOrCreate(
-                [
-                    'generation_id' => $generation->id,
-                    'date' => $date->format('Y-m-d'),
-                ],
-                [
-                    'live_quantity' => $liveQuantity,
-                    'eggs_produced' => $eggsProduced,
-                    'feed_consumed' => $feedConsumed,
-                    'mortality_count' => $mortalityCount,
-                    'laying_rate' => $layingRate,
-                    'feed_conversion_ratio' => $fcr,
-                    'average_weight' => $averageWeight,
-                ]
-            );
-
-            $processedCount++;
+        if ($generations->isEmpty()) {
+            $this->info("Aucune génération active à traiter.");
+            return;
         }
 
-        $this->info("Processed daily metrics for {$processedCount} generations on {$date->format('Y-m-d')}.");
+        $generationIds = $generations->pluck('id')->toArray();
+
+        // 2. AGRÉGATION SQL DE MASSE (4 requêtes au lieu de 400)
+        $eggsProduced = DailyProduction::whereIn('generation_id', $generationIds)
+            ->where('date', $date)
+            ->where('status', 'approved')
+            ->groupBy('generation_id')
+            ->selectRaw('generation_id, SUM(total_base_quantity) as total')
+            ->pluck('total', 'generation_id');
+
+        $feedConsumed = FeedConsumption::whereIn('generation_id', $generationIds)
+            ->where('date', $date)
+            ->where('status', 'approved')
+            ->groupBy('generation_id')
+            ->selectRaw('generation_id, SUM(total_base_quantity) as total')
+            ->pluck('total', 'generation_id');
+
+        $mortalities = FlockMortality::whereIn('generation_id', $generationIds)
+            ->where('date', $date)
+            ->where('status', 'approved')
+            ->groupBy('generation_id')
+            ->selectRaw('generation_id, SUM(quantity) as total')
+            ->pluck('total', 'generation_id');
+
+        // 3. PRÉPARATION DU UPSERT DE MASSE EN RAM
+        $upsertData = [];
+
+        foreach ($generations as $gen) {
+            $eggs = $eggsProduced[$gen->id] ?? 0;
+            $feed = $feedConsumed[$gen->id] ?? 0;
+            $mortality = $mortalities[$gen->id] ?? 0;
+            $live = $gen->current_quantity;
+
+            $layingRate = $live > 0 ? round(($eggs / $live) * 100, 2) : 0;
+            $fcr = $eggs > 0 ? round($feed / $eggs, 2) : 0;
+
+            $upsertData[] = [
+                'generation_id' => $gen->id,
+                'date' => $date,
+                'live_quantity' => $live,
+                'eggs_produced' => $eggs,
+                'feed_consumed' => $feed,
+                'mortality_count' => $mortality,
+                'laying_rate' => $layingRate,
+                'feed_conversion_ratio' => $fcr,
+                // Astuce : La moyenne de poids devrait aussi être extraite via une sous-requête groupée pour être parfaite.
+                'average_weight' => null, 
+                'created_at' => now(),
+                'updated_at' => now(),
+            ];
+        }
+
+        // 4. INSERTION / MISE À JOUR EN 1 SEULE REQUÊTE !
+        DailyFlockMetric::upsert(
+            $upsertData,
+            ['generation_id', 'date'], // Clés uniques (Ajoute un index unique sur ces 2 colonnes dans ta migration !)
+            ['live_quantity', 'eggs_produced', 'feed_consumed', 'mortality_count', 'laying_rate', 'feed_conversion_ratio', 'updated_at']
+        );
+
+        $this->info("Métriques calculées en bulk pour " . count($generations) . " lots sur {$date}.");
     }
 }

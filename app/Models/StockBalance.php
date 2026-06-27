@@ -9,7 +9,7 @@ class StockBalance extends Model
 {
     protected $fillable = [
         'site_id',
-        'category_id',
+        'item_id',
         'unit_id',
         'quantity',
     ];
@@ -23,9 +23,9 @@ class StockBalance extends Model
         return $this->belongsTo(Site::class);
     }
 
-    public function category(): BelongsTo
+    public function item(): BelongsTo
     {
-        return $this->belongsTo(Category::class);
+        return $this->belongsTo(Item::class);
     }
 
     public function unit(): BelongsTo

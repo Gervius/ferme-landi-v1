@@ -5,7 +5,7 @@ namespace App\Actions\Zootechnie;
 use App\Models\FlockWeighing;
 use Illuminate\Support\Facades\DB;
 
-class LogWeighingAction
+final readonly class LogWeighingAction
 {
     public function execute(array $data, int $userId): FlockWeighing
     {

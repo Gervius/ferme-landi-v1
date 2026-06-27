@@ -4,7 +4,7 @@ namespace App\Actions\Zootechnie;
 
 use App\Models\FlockWeighing;
 
-class ApproveWeighingAction
+final readonly class ApproveWeighingAction
 {
     /**
      * Approve a flock weighing record.

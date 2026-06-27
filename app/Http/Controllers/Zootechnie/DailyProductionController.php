@@ -10,20 +10,29 @@ use App\Models\DailyProduction;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use Inertia\Response;
+use Illuminate\Http\RedirectResponse;
 
-class DailyProductionController extends Controller
+final class DailyProductionController extends Controller
 {
-    public function index()
+    public function index(): Response
     {
-        // 1. SÉCURITÉ : On bloque l'accès à ceux qui n'ont pas le droit de voir les productions
         Gate::authorize('viewAny', DailyProduction::class);
 
-        // 2. DONNÉES DU TABLEAU
-        $data = DailyProduction::with(['generation', 'unit', 'category'])->paginate(15);
+        // OPTIMISATION ABSOLUE DU SELECT
+        $data = DailyProduction::query()
+            ->select(['id', 'generation_id', 'unit_id', 'item_category_id', 'date', 'good_quantity', 'broken_quantity', 'status', 'prepared_by'])
+            ->with([
+                'generation:id,code,type', 
+                'unit:id,name,symbol', 
+                'category:id,name'
+            ])
+            ->orderByDesc('date')
+            ->paginate(15);
 
-        // 3. DONNÉES POUR LA MODALE DE CRÉATION (Demande du Frontend)
+        // INJECTION MODALE
         $generations = \App\Models\Generation::where('status', 'actif')->get(['id', 'code', 'type']);
-        $categories = \App\Models\Category::where('scope', \App\Enums\CategoryScope::PRODUCT->value)->get(['id', 'name']);
+        $categories = \App\Models\Category::where('scope', 'product')->get(['id', 'name']);
         $units = \App\Models\Unit::where('is_active', true)->get(['id', 'name', 'symbol']);
 
         return Inertia::render('Zootechnie/DailyProduction/Index', [
@@ -34,24 +43,22 @@ class DailyProductionController extends Controller
         ]);
     }
 
-    // ASTUCE ARCHITECTURE : La méthode create() a été supprimée car elle est devenue inutile.
-
-    public function store(StoreDailyProductionRequest $request, LogProductionAction $action)
+    public function store(StoreDailyProductionRequest $request, LogProductionAction $action): RedirectResponse
     {
         $action->execute($request->validated(), $request->user()->id);
 
-        return redirect()->route('dailyProductionsIndex')
-            ->with('success', 'Production enregistrée en brouillon.');
+        // WAYFINDER STRICT
+        return redirect('/zootechnie/daily-productions')->with('success', 'Production enregistrée en brouillon.');
     }
 
-    public function approve(Request $request, DailyProduction $dailyProduction, ApproveProductionAction $action)
+    public function approve(Request $request, DailyProduction $dailyProduction, ApproveProductionAction $action): RedirectResponse
     {
         Gate::authorize('manage generations');
 
-        // On utilise l'objet $request injecté !
-        $action->execute($dailyProduction, $request->user()->id);
+        // Passage de l'ID pour le lockForUpdate dans l'Action
+        $action->execute($dailyProduction->id, $request->user()->id);
 
-        return redirect()->route('dailyProductionsIndex')
-            ->with('success', 'Production validée et stock mis à jour.');
+        // WAYFINDER STRICT
+        return redirect('/zootechnie/daily-productions')->with('success', 'Production validée et stock mis à jour.');
     }
 }

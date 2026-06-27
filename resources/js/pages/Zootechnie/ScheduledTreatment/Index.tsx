@@ -2,7 +2,6 @@
 import React, { useMemo } from 'react';
 import { Link, router } from '@inertiajs/react';
 import { CalendarCheck, CheckCircle2, Clock, AlertCircle, Syringe, Filter, XCircle } from 'lucide-react';
-import { scheduledTreatmentsIndex, scheduledTreatmentsMarkAsDone } from '@/routes';
 import { getGenerationDisplay } from '@/utils/zootechnieStrategy';
 import { PaginatedData } from '@/types/pagination';
 
@@ -28,8 +27,9 @@ export default function Index({ treatments, filters, generations }: Props) {
     
     // Filtrage dynamique au changement de lot
     const handleFilterChange = (generationId: string) => {
+        // ROUTAGE STRICT : URI en dur
         router.get(
-            scheduledTreatmentsIndex.url(),
+            '/zootechnie/scheduled-treatments',
             { generation_id: generationId || undefined },
             { preserveState: true, preserveScroll: true }
         );
@@ -38,7 +38,8 @@ export default function Index({ treatments, filters, generations }: Props) {
     // Action pour valider un soin
     const handleMarkAsDone = (id: number) => {
         if (confirm("Confirmez-vous que ce traitement a bien été administré au lot ?")) {
-            router.post(scheduledTreatmentsMarkAsDone.url(id), {}, { preserveScroll: true });
+            // ROUTAGE STRICT : URI en dur
+            router.post(`/zootechnie/scheduled-treatments/${id}/mark-as-done`, {}, { preserveScroll: true });
         }
     };
 
@@ -119,7 +120,7 @@ export default function Index({ treatments, filters, generations }: Props) {
                                         <div className="flex items-center gap-2 mb-1">
                                             <timing.icon size={16} className={timing.color} />
                                             <span className={`text-sm font-bold ${timing.color}`}>
-                                                {timing.label} • {new Date(treatment.scheduled_date).toLocaleDateString()}
+                                                {timing.label} • {new Date(treatment.scheduled_date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })}
                                             </span>
                                         </div>
                                         <h3 className={`text-lg font-bold ${treatment.status === 'completed' ? 'text-muted-foreground line-through' : 'text-foreground'}`}>
@@ -173,7 +174,7 @@ export default function Index({ treatments, filters, generations }: Props) {
                 )}
             </div>
 
-            {/* Pagination simple (Remplacement du DataTable) */}
+            {/* Pagination simple */}
             {treatments.last_page > 1 && (
                 <div className="flex items-center justify-between bg-card p-4 rounded-xl border border-border shadow-sm">
                     <span className="text-sm text-muted-foreground">

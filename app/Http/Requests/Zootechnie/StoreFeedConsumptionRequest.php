@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Zootechnie;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class StoreFeedConsumptionRequest extends FormRequest
 {
@@ -15,10 +16,27 @@ class StoreFeedConsumptionRequest extends FormRequest
     {
         return [
             'generation_id' => ['required', 'exists:generations,id'],
-            'date' => ['required', 'date'],
             'item_category_id' => ['required', 'exists:categories,id'],
             'unit_id' => ['required', 'exists:units,id'],
             'quantity' => ['required', 'numeric', 'min:0'],
+            
+            // 🔴 BOUCLIER ANTI-DOUBLONS (Race Conditions HTTP)
+            // On empêche la double saisie du même aliment, le même jour, pour le même lot
+            'date' => [
+                'required', 
+                'date',
+                Rule::unique('feed_consumptions')->where(function ($query) {
+                    return $query->where('generation_id', $this->generation_id)
+                                 ->where('item_category_id', $this->item_category_id);
+                })
+            ],
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'date.unique' => 'Une consommation a déjà été saisie pour ce lot et cet aliment à cette date.',
         ];
     }
 }

@@ -5,7 +5,7 @@ namespace App\Actions\Zootechnie;
 use App\Models\FeedConsumption;
 use Illuminate\Support\Facades\DB;
 
-class LogFeedConsumptionAction
+final readonly class LogFeedConsumptionAction
 {
     public function execute(array $data, int $userId): FeedConsumption
     {
