@@ -17,10 +17,14 @@ class StoreSupplierPaymentRequest extends FormRequest
     public function rules(): array
     {
         return [
+            // AJOUT : La référence de la pièce et la facture liée (lettrage)
+            'reference'           => ['required', 'string', 'max:255', 'unique:supplier_payments,reference'],
+            'supplier_invoice_id' => ['nullable', 'exists:supplier_invoices,id'],
+
             'supplier_id' => [
                 'required', 
                 'exists:suppliers,id',
-                // 🛡️ Bouclier HTTP Anti-Doublon de Paiement
+                // Bouclier HTTP Anti-Doublon de Paiement
                 Rule::unique('supplier_payments')->where(function ($query) {
                     return $query->where('amount', $this->input('amount'))
                                  ->where('payment_date', $this->input('payment_date'))

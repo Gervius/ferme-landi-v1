@@ -41,10 +41,10 @@ final readonly class ApproveProductionAction
                 'approved_at' => now(),
             ]);
 
-            if ($production->item_category_id) {
+            if ($production->item_id) { // Remplacé
                 $this->logStockMovementAction->execute([
                     'site_id' => $production->generation->site_id,
-                    'category_id' => $production->item_category_id,
+                    'item_id' => $production->item_id, // Remplacé
                     'unit_id' => $production->unit_id,
                     'type' => 'in',
                     'quantity' => $production->good_quantity,

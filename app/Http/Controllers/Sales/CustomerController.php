@@ -15,7 +15,8 @@ class CustomerController extends Controller
     {
         Gate::authorize('viewAny', Customer::class);
         return Inertia::render('Sales/Customer/Index', [
-            'data' => Customer::paginate(15),
+            // On charge tous les clients, sans filtre spatial
+            'data' => Customer::latest()->paginate(15), 
         ]);
     }
 

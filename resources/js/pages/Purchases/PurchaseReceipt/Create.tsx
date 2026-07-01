@@ -2,36 +2,36 @@
 import React, { useMemo } from 'react';
 import { useForm, Link } from '@inertiajs/react';
 import { Plus, Trash2, ArrowLeft, PackageOpen, ArrowDownToLine } from 'lucide-react';
-import { purchaseReceiptsIndex, purchaseReceiptsStore } from '@/routes';
+
 
 interface SelectionItem { id: number; name: string; symbol?: string; reference?: string }
 
 interface Props {
-    purchaseOrders: SelectionItem[]; // Commandes en attente de livraison
-    categories: SelectionItem[];     // Liste des articles
-    units: SelectionItem[];          // Référentiel des unités
-    sites?: SelectionItem[];         // Entrepôts/Fermes de stockage
+    purchaseOrders: SelectionItem[];
+    items: SelectionItem[]; // ALIAS: Sera renommé en catalogItems
+    units: SelectionItem[];
+    sites?: SelectionItem[];
 }
 
-interface ReceiptItem {
+interface FormReceiptItem {
     purchase_order_item_id: string | number | null;
-    category_id: string | number;
+    item_id: string | number;
     unit_id: string | number;
     received_quantity: number;
 }
 
-export default function Create({ purchaseOrders, categories, units, sites = [] }: Props) {
+export default function Create({ purchaseOrders, items: catalogItems, units, sites = [] }: Props) {
     const { data, setData, post, processing, errors } = useForm({
         site_id: '',
         purchase_order_id: '',
         receipt_date: new Date().toISOString().split('T')[0],
-        reference: '',
-        items: [{ purchase_order_item_id: null, category_id: '', unit_id: '', received_quantity: 1 }] as ReceiptItem[],
+        // reference: '', // SUPPRIMER : Géré par PostgreSQL
+        items: [{ purchase_order_item_id: null, item_id: '', unit_id: '', received_quantity: 1 }] as FormReceiptItem[],
     });
 
     // Insertion et suppression dynamique de lignes
     const addLine = () => {
-        setData('items', [...data.items, { purchase_order_item_id: null, category_id: '', unit_id: '', received_quantity: 1 }]);
+        setData('items', [...data.items, { purchase_order_item_id: null, item_id: '', unit_id: '', received_quantity: 1 }]);
     };
 
     const removeLine = (index: number) => {
@@ -40,7 +40,7 @@ export default function Create({ purchaseOrders, categories, units, sites = [] }
         }
     };
 
-    const updateLine = (index: number, field: keyof ReceiptItem, value: any) => {
+    const updateLine = (index: number, field: keyof FormReceiptItem, value: any) => {
         const updatedItems = data.items.map((item, i) => {
             if (i === index) return { ...item, [field]: value };
             return item;
@@ -55,13 +55,13 @@ export default function Create({ purchaseOrders, categories, units, sites = [] }
 
     const handleSubmit = (e: React.SubmitEvent) => {
         e.preventDefault();
-        post(purchaseReceiptsStore.url());
+        post('/purchases/purchase-receipts');
     };
 
     return (
         <div className="p-6 max-w-6xl mx-auto space-y-6 bg-background text-foreground">
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Link href={purchaseReceiptsIndex.url()} className="hover:text-foreground flex items-center gap-1">
+                <Link href="/purchases/purchase-receipts" className="hover:text-foreground flex items-center gap-1">
                     <ArrowLeft size={14} /> Réceptions
                 </Link>
                 <span>/</span><span className="text-foreground font-medium">Nouveau bon d'entrée</span>
@@ -75,17 +75,7 @@ export default function Create({ purchaseOrders, categories, units, sites = [] }
                 
                 {/* Informations logistiques générales */}
                 <div className="bg-card border border-border rounded-xl p-6 shadow-sm grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <div className="space-y-1">
-                        <label className="text-sm font-semibold">Numéro de Réception / BL</label>
-                        <input 
-                            type="text" 
-                            value={data.reference} 
-                            onChange={e => setData('reference', e.target.value)} 
-                            className="w-full bg-input border border-border rounded-lg p-2.5" 
-                            placeholder="Ex: BR-2026-0001" 
-                        />
-                        {errors.reference && <span className="text-destructive text-xs font-medium">{errors.reference}</span>}
-                    </div>
+                    
 
                     <div className="space-y-1">
                         <label className="text-sm font-semibold">Associer à une Commande d'Achat (Optionnel)</label>
@@ -154,14 +144,14 @@ export default function Create({ purchaseOrders, categories, units, sites = [] }
                                 <tr key={index} className="hover:bg-muted/10">
                                     <td className="p-3">
                                         <select 
-                                            value={item.category_id} 
-                                            onChange={e => updateLine(index, 'category_id', e.target.value)} 
+                                            value={item.item_id} 
+                                            onChange={e => updateLine(index, 'item_id', e.target.value)} 
                                             className="w-full bg-input border border-border rounded-md p-2"
                                         >
                                             <option value="">Sélectionner l'article</option>
-                                            {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                            {catalogItems.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                                         </select>
-                                        {errors[`items.${index}.category_id` as keyof typeof errors] && (
+                                        {errors[`items.${index}.item_id` as keyof typeof errors] && (
                                             <span className="text-destructive text-xs block mt-0.5">Requis</span>
                                         )}
                                     </td>
@@ -215,7 +205,7 @@ export default function Create({ purchaseOrders, categories, units, sites = [] }
 
                 {/* Boutons d'enregistrements */}
                 <div className="flex justify-end gap-4">
-                    <Link href={purchaseReceiptsIndex.url()} className="px-5 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground">
+                    <Link href="/purchases/purchase-receipts" className="px-5 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground">
                         Annuler
                     </Link>
                     <button 

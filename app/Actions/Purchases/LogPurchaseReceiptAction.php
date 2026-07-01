@@ -14,8 +14,8 @@ class LogPurchaseReceiptAction
             $sequence = DB::selectOne("SELECT nextval('purchase_receipt_ref_seq') AS next_val")->next_val;
             $reference = sprintf('BR-%s-%04d', date('ym'), $sequence);
 
-
             $receipt = PurchaseReceipt::create([
+                'site_id'           => $data['site_id'], // 🔴 LA CORRECTION EST ICI
                 'purchase_order_id' => $data['purchase_order_id'] ?? null,
                 'receipt_date'      => $data['receipt_date'],
                 'reference'         => $reference,

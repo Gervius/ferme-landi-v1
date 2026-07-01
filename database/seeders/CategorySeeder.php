@@ -2,40 +2,58 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
-use Illuminate\Support\Str;
 use App\Models\Category;
+use App\Enums\CategoryScope;
+use Illuminate\Database\Seeder;
 
 class CategorySeeder extends Seeder
 {
     public function run(): void
     {
-        $createCategory = function ($name, $scope) {
-            Category::create([
-                'name' => $name,
-                'slug' => Str::slug($name),
-                'scope' => $scope,
-                'is_active' => true,
-            ]);
-        };
+        // Création des catégories principales
+        $categories = [
+            // Aliments
+            ['name' => 'Aliments', 'slug' => 'aliments', 'scope' => CategoryScope::FEED->value],
+            ['name' => 'Aliment Pondeuses', 'slug' => 'aliment-pondeuses', 'scope' => CategoryScope::FEED->value, 'parent_slug' => 'aliments'],
+            ['name' => 'Aliment Croissance', 'slug' => 'aliment-croissance', 'scope' => CategoryScope::FEED->value, 'parent_slug' => 'aliments'],
+            ['name' => 'Aliment Porc', 'slug' => 'aliment-porc', 'scope' => CategoryScope::FEED->value, 'parent_slug' => 'aliments'],
+            // Médicaments
+            ['name' => 'Médicaments', 'slug' => 'medicaments', 'scope' => CategoryScope::MEDICATION->value],
+            ['name' => 'Vaccins', 'slug' => 'vaccins', 'scope' => CategoryScope::MEDICATION->value, 'parent_slug' => 'medicaments'],
+            ['name' => 'Antibiotiques', 'slug' => 'antibiotiques', 'scope' => CategoryScope::MEDICATION->value, 'parent_slug' => 'medicaments'],
+            ['name' => 'Vermifuges', 'slug' => 'vermifuges', 'scope' => CategoryScope::MEDICATION->value, 'parent_slug' => 'medicaments'],
+            // Produits
+            ['name' => 'Produits finis', 'slug' => 'produits-finis', 'scope' => CategoryScope::PRODUCT->value],
+            ['name' => 'Œufs', 'slug' => 'oeufs', 'scope' => CategoryScope::PRODUCT->value, 'parent_slug' => 'produits-finis'],
+            ['name' => 'Poulets de chair', 'slug' => 'poulets-chair', 'scope' => CategoryScope::PRODUCT->value, 'parent_slug' => 'produits-finis'],
+            ['name' => 'Porcs charcutiers', 'slug' => 'porcs', 'scope' => CategoryScope::PRODUCT->value, 'parent_slug' => 'produits-finis'],
+            // Animaux
+            ['name' => 'Animaux', 'slug' => 'animaux', 'scope' => CategoryScope::ANIMAL->value],
+            ['name' => 'Poulettes', 'slug' => 'poulettes', 'scope' => CategoryScope::ANIMAL->value, 'parent_slug' => 'animaux'],
+            ['name' => 'Porcelets', 'slug' => 'porcelets', 'scope' => CategoryScope::ANIMAL->value, 'parent_slug' => 'animaux'],
+            // Équipements
+            ['name' => 'Équipements', 'slug' => 'equipements', 'scope' => CategoryScope::EQUIPMENT->value],
+            ['name' => 'Cages', 'slug' => 'cages', 'scope' => CategoryScope::EQUIPMENT->value, 'parent_slug' => 'equipements'],
+            ['name' => 'Abreuvoirs', 'slug' => 'abreuvoirs', 'scope' => CategoryScope::EQUIPMENT->value, 'parent_slug' => 'equipements'],
+            ['name' => 'Mangeoires', 'slug' => 'mangeoires', 'scope' => CategoryScope::EQUIPMENT->value, 'parent_slug' => 'equipements'],
+        ];
 
-        // Produits finis (Ventes)
-        $createCategory('Plateau d\'Oeufs (Gros)', \App\Enums\CategoryScope::PRODUCT->value);
-        $createCategory('Plateau d\'Oeufs (Moyen)', \App\Enums\CategoryScope::PRODUCT->value);
+        foreach ($categories as $cat) {
+            $parentSlug = $cat['parent_slug'] ?? null;
+            unset($cat['parent_slug']);
 
-        // Animaux Vivants (Achats et Ventes)
-        $createCategory('Porc Charcutier (Sur pied)', \App\Enums\CategoryScope::ANIMAL->value);
-        $createCategory('Poulet de Chair (Vivant)', \App\Enums\CategoryScope::ANIMAL->value);
-        $createCategory('Poussin d\'un jour (Pondeuse)', \App\Enums\CategoryScope::ANIMAL->value);
-        $createCategory('Porcelet', \App\Enums\CategoryScope::ANIMAL->value);
+            $parentId = null;
+            if ($parentSlug) {
+                $parent = Category::where('slug', $parentSlug)->first();
+                if ($parent) {
+                    $parentId = $parent->id;
+                }
+            }
 
-        // Alimentation (Achats et Consommation)
-        $createCategory('Aliment Pondeuse Phase 1', \App\Enums\CategoryScope::FEED->value);
-        $createCategory('Maïs Grains', \App\Enums\CategoryScope::FEED->value);
-
-        // Santé (Achats et Traitements)
-        $createCategory('Vaccin Newcastle', \App\Enums\CategoryScope::MEDICATION->value);
-        $createCategory('Vitamines Anti-stress', \App\Enums\CategoryScope::MEDICATION->value);
-        $createCategory('Déparasitant Porcin', \App\Enums\CategoryScope::MEDICATION->value);
+            Category::firstOrCreate(
+                ['slug' => $cat['slug']],
+                array_merge($cat, ['parent_id' => $parentId])
+            );
+        }
     }
 }

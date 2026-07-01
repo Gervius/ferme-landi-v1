@@ -7,7 +7,7 @@ use App\Models\FinancialYear;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
-class LogAccountingEntryAction
+final readonly class LogAccountingEntryAction
 {
     public function execute(array $data): AccountingEntry
     {
@@ -23,12 +23,9 @@ class LogAccountingEntryAction
         $totalCredit = 0;
 
         foreach ($data['lines'] as $line) {
-            $totalDebit += (float) $line['debit'];
-            $totalCredit += (float) $line['credit'];
+            $totalDebit += (int) $line['debit'];
+            $totalCredit += (int) $line['credit'];
         }
-
-        $totalDebit = round($totalDebit, 2);
-        $totalCredit = round($totalCredit, 2);
 
         if ($totalDebit !== $totalCredit) {
             throw ValidationException::withMessages([
@@ -36,12 +33,21 @@ class LogAccountingEntryAction
             ]);
         }
 
-        return DB::transaction(function () use ($data) {
-            $headerData = collect($data)->except('lines')->toArray();
+        return DB::transaction(function () use ($data, $financialYear) {
+            $headerData = collect($data)->except(['lines', 'reference'])->toArray();
             $headerData['status'] = AccountingEntry::STATUS_DRAFT;
 
-            $entry = AccountingEntry::create($headerData);
+            // ⚡ APPEL ATOMIQUE POSTGRESQL (Zéro Lock)
+            $sequence = DB::selectOne("SELECT nextval('accounting_entry_ref_seq') AS next_val");
+            
+            // Formatage de la référence finale (ex: PC-2026-00001)
+            $headerData['reference'] = sprintf(
+                'PC-%s-%05d', 
+                $financialYear->year, 
+                $sequence->next_val
+            );
 
+            $entry = AccountingEntry::create($headerData);
             $entry->lines()->createMany($data['lines']);
 
             return $entry;

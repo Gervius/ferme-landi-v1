@@ -16,12 +16,15 @@ class CustomerPaymentController extends Controller
     public function index()
     {
         Gate::authorize('viewAny', CustomerPayment::class);
-        $data = CustomerPayment::with('customer')->paginate(15);
-        $customers = \App\Models\Customer::where('is_active', true)->get(['id', 'name']);
-
+        // Utilisation de la pagination au lieu de charger tous les clients
+        $data = CustomerPayment::where('site_id', auth()->user()->current_site_id)
+            ->with('customer')
+            ->paginate(15);
+            
         return Inertia::render('Sales/CustomerPayment/Index', [
             'data' => $data,
-            'customers' => $customers
+            // Ne jamais charger tous les clients ici. 
+            // Utilise un composant de recherche asynchrone (API) dans ton Front-End.
         ]);
     }
 

@@ -19,16 +19,16 @@ final class FeedConsumptionController extends Controller
     public function index(): Response
     {
         Gate::authorize('viewAny', FeedConsumption::class);
-
+        
         $data = FeedConsumption::select([
-                'id', 'generation_id', 'item_category_id', 'unit_id', 'date',
+                'id', 'generation_id', 'item_id', 'unit_id', 'date', // item_id au lieu de item_category_id
                 'quantity', 'total_base_quantity', 'status', 'prepared_by',
                 'approved_by', 'approved_at'
             ])
             ->with([
                 'generation:id,code,type',
                 'unit:id,name,symbol',
-                'category:id,name'
+                'item:id,name' // item au lieu de category
             ])
             ->paginate(15);
 
@@ -36,14 +36,19 @@ final class FeedConsumptionController extends Controller
             ->get(['id', 'code', 'type']);
         $units = \App\Models\Unit::where('is_active', true)
             ->get(['id', 'name', 'symbol']);
-        $categories = \App\Models\Category::where('scope', \App\Enums\CategoryScope::FEED->value)
+            
+        // Chargement des articles (Items) filtrés par la catégorie "Aliment"
+        $items = \App\Models\Item::whereHas('category', function ($query) {
+                $query->where('scope', \App\Enums\CategoryScope::FEED->value);
+            })
+            ->where('is_active', true)
             ->get(['id', 'name']);
 
         return Inertia::render('Zootechnie/FeedConsumption/Index', [
             'data' => $data,
             'generations' => $generations,
             'units' => $units,
-            'categories' => $categories,
+            'items' => $items, // items au lieu de categories
         ]);
     }
 

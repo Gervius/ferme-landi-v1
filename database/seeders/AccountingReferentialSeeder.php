@@ -39,6 +39,8 @@ class AccountingReferentialSeeder extends Seeder
             ['number' => '4111', 'name' => 'Clients'],
             ['number' => '4011', 'name' => 'Fournisseurs'],
             ['number' => '6011', 'name' => 'Achats de matières premières'],
+            // AJOUT DU COMPTE DE SALAIRES
+            ['number' => '6611', 'name' => 'Charges de personnel'],
             ['number' => '7011', 'name' => 'Ventes de produits finis'],
             ['number' => '5211', 'name' => 'Banque'],
             ['number' => '5711', 'name' => 'Caisse'],

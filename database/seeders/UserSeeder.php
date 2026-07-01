@@ -4,30 +4,52 @@ namespace Database\Seeders;
 
 use App\Models\User;
 use Illuminate\Database\Seeder;
+use Spatie\Permission\Models\Role;
 use Illuminate\Support\Facades\Hash;
 
 class UserSeeder extends Seeder
 {
     public function run(): void
     {
-        $password = Hash::make('password'); // Mot de passe universel pour les tests
-
         $users = [
-            ['name' => 'Administrateur', 'email' => 'admin@ferme.bf', 'role' => 'Super Admin'],
-            ['name' => 'Oumar (Gestionnaire)', 'email' => 'oumar@ferme.bf', 'role' => 'Gestionnaire'],
-            ['name' => 'Awa (Comptable)', 'email' => 'awa@ferme.bf', 'role' => 'Comptable'],
-            ['name' => 'Drissa (Zootechnicien)', 'email' => 'drissa@ferme.bf', 'role' => 'Chef Zootechnicien'],
-            ['name' => 'Salif (Magasinier)', 'email' => 'salif@ferme.bf', 'role' => 'Magasinier'],
+            [
+                'name' => 'Admin',
+                'email' => 'admin@ferme.com',
+                'password' => 'password',
+                'role' => 'Super Admin',
+            ],
+            [
+                'name' => 'Gestionnaire',
+                'email' => 'gestionnaire@ferme.com',
+                'password' => 'password',
+                'role' => 'gestionnaire',
+            ],
+            [
+                'name' => 'Secrétaire',
+                'email' => 'secretaire@ferme.com',
+                'password' => 'password',
+                'role' => 'secretaire',
+            ],
+            [
+                'name' => 'Manager',
+                'email' => 'manager@ferme.com',
+                'password' => 'password',
+                'role' => 'manager',
+            ],
         ];
 
         foreach ($users as $userData) {
             $user = User::firstOrCreate(
                 ['email' => $userData['email']],
-                ['name' => $userData['name'], 'password' => $password]
+                [
+                    'name' => $userData['name'],
+                    'password' => Hash::make($userData['password']),
+                ]
             );
-            // On s'assure qu'il a le bon rôle
-            if (!$user->hasRole($userData['role'])) {
-                $user->assignRole($userData['role']);
+            // Assigner le rôle
+            $role = Role::where('name', $userData['role'])->first();
+            if ($role) {
+                $user->assignRole($role);
             }
         }
     }

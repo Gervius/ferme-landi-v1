@@ -1,12 +1,12 @@
 <?php
 
-namespace App\Http\Controllers\Logistics;
+namespace App\Http\Controllers\Stocks;
 
-use App\Actions\Logistics\CreateItemAction;
-use App\Actions\Logistics\UpdateItemAction;
+use App\Actions\Stocks\CreateItemAction;
+use App\Actions\Stocks\UpdateItemAction;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Logistics\StoreItemRequest;
-use App\Http\Requests\Logistics\UpdateItemRequest;
+use App\Http\Requests\Stocks\StoreItemRequest;
+use App\Http\Requests\Stocks\UpdateItemRequest;
 use App\Models\Category;
 use App\Models\Item;
 use App\Models\Unit;
@@ -19,11 +19,19 @@ class ItemController extends Controller
     {
         Gate::authorize('viewAny', Item::class);
         
-        // Eager loading restreint pour soulager la RAM du VPS
+        // 🔴 CORRECTION 1 : Eager loading avec alias 'default_unit' pour correspondre à ton interface TS
         $items = Item::with(['category:id,name,scope', 'defaultUnit:id,name,symbol'])
             ->paginate(15);
             
-        return Inertia::render('Items/ItemsIndex', ['items' => $items]);
+        // 🔴 CORRECTION 2 : On charge les catégories et les unités pour que le formulaire (Modale) ait les données
+        $categories = Category::where('is_active', true)->select('id', 'name')->get();
+        $units = Unit::where('is_active', true)->select('id', 'name', 'symbol')->get();
+
+        return Inertia::render('Items/ItemsIndex', [
+            'items'      => $items,
+            'categories' => $categories, // AJOUTÉ
+            'units'      => $units,      // AJOUTÉ
+        ]);
     }
 
     public function create()

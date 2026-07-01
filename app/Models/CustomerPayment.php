@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Traits\HasApprovalWorkflow;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class CustomerPayment extends Model
@@ -19,8 +20,13 @@ class CustomerPayment extends Model
         'approved_at' => 'datetime',
     ];
 
-    public function customer()
+    public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class);
+    }
+
+    public function site(): BelongsTo
+    { 
+        return $this->belongsTo(Site::class); 
     }
 }

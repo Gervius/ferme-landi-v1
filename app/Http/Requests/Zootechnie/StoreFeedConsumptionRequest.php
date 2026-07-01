@@ -16,18 +16,16 @@ class StoreFeedConsumptionRequest extends FormRequest
     {
         return [
             'generation_id' => ['required', 'exists:generations,id'],
-            'item_category_id' => ['required', 'exists:categories,id'],
+            'item_id' => ['required', 'exists:items,id'], // Remplacé
             'unit_id' => ['required', 'exists:units,id'],
             'quantity' => ['required', 'numeric', 'min:0'],
             
-            // 🔴 BOUCLIER ANTI-DOUBLONS (Race Conditions HTTP)
-            // On empêche la double saisie du même aliment, le même jour, pour le même lot
             'date' => [
                 'required', 
                 'date',
                 Rule::unique('feed_consumptions')->where(function ($query) {
                     return $query->where('generation_id', $this->generation_id)
-                                 ->where('item_category_id', $this->item_category_id);
+                                 ->where('item_id', $this->item_id); // Remplacé
                 })
             ],
         ];

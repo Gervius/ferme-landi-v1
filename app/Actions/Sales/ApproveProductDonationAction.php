@@ -3,25 +3,15 @@
 namespace App\Actions\Sales;
 
 use App\Models\ProductDonation;
-use App\Services\Inventory\StockService;
-use App\Services\Logistics\UnitConversionService;
+use App\Actions\Stocks\LogStockMovementAction;
 use Illuminate\Support\Facades\DB;
 
 class ApproveProductDonationAction
 {
     public function __construct(
-        private readonly UnitConversionService $unitConversionService,
-        private readonly StockService $stockService
-    ) {
-    }
+        private readonly LogStockMovementAction $logStockMovementAction
+    ) {}
 
-    /**
-     * Approve a product donation and deduct from stock.
-     *
-     * @param ProductDonation $donation
-     * @param int $approverId
-     * @return ProductDonation
-     */
     public function execute(ProductDonation $donation, int $approverId): ProductDonation
     {
         if (! $donation->isDraft()) {
@@ -31,16 +21,15 @@ class ApproveProductDonationAction
         return DB::transaction(function () use ($donation, $approverId) {
             $donation->approve($approverId);
 
-            $baseQuantity = $this->unitConversionService->toBase($donation->quantity, $donation->unit);
-
-            $this->stockService->recordMovement(
-                $donation->category_id,
-                'out',
-                $baseQuantity,
-                $donation,
-                $donation->date->format('Y-m-d'),
-                $approverId
-            );
+            $this->logStockMovementAction->execute([
+                'site_id' => $donation->site_id,
+                'item_id' => $donation->item_id, // Ciblage physique
+                'type' => 'out',
+                'quantity' => $donation->quantity,
+                'date' => $donation->date->format('Y-m-d'),
+                'reference_type' => ProductDonation::class,
+                'reference_id' => $donation->id,
+            ], $approverId);
 
             return $donation;
         });

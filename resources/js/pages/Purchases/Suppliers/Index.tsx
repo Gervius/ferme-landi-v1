@@ -14,7 +14,7 @@ import {
     XCircle, 
     Users
 } from 'lucide-react';
-import { suppliersStore, suppliersUpdate, suppliersDestroy } from '@/routes';
+
 import { PaginatedData } from '@/types/pagination';
 import { DataTable, ColumnDef } from '@/components/ui/DataTable';
 import { 
@@ -86,14 +86,14 @@ export default function Index({ data }: Props) {
 
     const handleDelete = (id: number) => {
         if (confirm("Êtes-vous sûr de vouloir supprimer ce fournisseur ? Cette action peut impacter l'historique des commandes d'achat associés.")) {
-            router.delete(suppliersDestroy.url(id), { preserveScroll: true });
+            router.delete(`/purchases/suppliers/${id}`, { preserveScroll: true });
         }
     };
 
-    const handleSubmit = (e: React.SubmitEvent) => {
+    const handleSubmit = (e: SubmitEvent) => {
         e.preventDefault();
         if (editingId) {
-            put(suppliersUpdate.url(editingId), {
+            put(`/purchases/suppliers/${editingId}`, {
                 preserveScroll: true,
                 onSuccess: () => {
                     setIsModalOpen(false);
@@ -101,7 +101,7 @@ export default function Index({ data }: Props) {
                 },
             });
         } else {
-            post(suppliersStore.url(), {
+            post('/purchases/suppliers', {
                 preserveScroll: true,
                 onSuccess: () => {
                     setIsModalOpen(false);
@@ -239,7 +239,7 @@ export default function Index({ data }: Props) {
                         </DialogDescription>
                     </DialogHeader>
 
-                    <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+                    <form onSubmit={handleSubmit as unknown as React.FormEventHandler<HTMLFormElement>} className="space-y-4 mt-4">
                         <div className="space-y-1">
                             <label className="text-sm font-semibold text-foreground">Raison sociale / Nom complet</label>
                             <input 

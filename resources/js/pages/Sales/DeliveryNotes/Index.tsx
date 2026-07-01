@@ -2,7 +2,6 @@
 import React from 'react';
 import { Link, router } from '@inertiajs/react';
 import { Plus, CheckCircle, Clock, FileDown, Truck, PackageCheck } from 'lucide-react';
-import { deliveryNotesCreate, deliveryNotesApprove, deliveryNotesPdf } from '@/routes';
 import { PaginatedData } from '@/types/pagination';
 import { DataTable, ColumnDef } from '@/components/ui/DataTable';
 
@@ -22,7 +21,7 @@ export default function Index({ deliveryNotes }: Props) {
     
     const handleApprove = (id: number) => {
         if (confirm("Confirmez-vous la validation de ce bon de livraison ? Le stock sera automatiquement décrémenté.")) {
-            router.post(deliveryNotesApprove.url(id), {}, { preserveScroll: true });
+            router.post(`/sales/delivery-notes/${id}/approve`, {}, { preserveScroll: true });
         }
     };
 
@@ -51,7 +50,7 @@ export default function Index({ deliveryNotes }: Props) {
             className: 'text-right',
             cell: (item) => (
                 <div className="flex items-center justify-end gap-2">
-                    <a href={deliveryNotesPdf.url(item.id)} target="_blank" className="p-1.5 hover:bg-muted text-muted-foreground rounded-lg">
+                    <a href={`/sales/delivery-notes/${item.id}/pdf`} target="_blank" className="p-1.5 hover:bg-muted text-muted-foreground rounded-lg">
                         <FileDown size={16} />
                     </a>
                     {item.status === 'draft' && (
@@ -71,7 +70,7 @@ export default function Index({ deliveryNotes }: Props) {
                     <h1 className="text-2xl font-bold flex items-center gap-2"><Truck className="text-secondary" /> Bons de Livraison</h1>
                     <p className="text-muted-foreground text-sm">Gestion des sorties physiques de produits.</p>
                 </div>
-                <Link href={deliveryNotesCreate.url()} className="bg-secondary text-secondary-foreground px-5 py-2.5 rounded-xl font-bold hover:opacity-90">
+                <Link href="/sales/delivery-notes/create" className="bg-secondary text-secondary-foreground px-5 py-2.5 rounded-xl font-bold hover:opacity-90">
                     <Plus size={18} /> Nouveau BL
                 </Link>
             </div>

@@ -1,34 +1,31 @@
 import React, { useMemo } from 'react';
-import { Head, useForm, Link } from '@inertiajs/react';
+import { Head, useForm, Link, usePage } from '@inertiajs/react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import { 
-    Save, 
-    ArrowLeft, 
-    ShoppingCart, 
-    Plus, 
-    Trash2, 
-    Info, 
-    Package, 
-    BadgeEuro,
-    Calculator
+    Save, ArrowLeft, ShoppingCart, Plus, Trash2, Info, Package
 } from 'lucide-react';
-import { saleOrdersIndex, saleOrdersStore } from '@/routes';
+
+interface ItemResource {
+    id: number;
+    name: string;
+    category: { id: number; name: string };
+    default_unit: { id: number; symbol: string };
+}
 
 interface Props {
     customers: { id: number; name: string }[];
-    categories: { id: number; name: string }[];
-    units: { id: number; name: string; symbol: string }[];
-    sites?: { id: number; name: string; symbol?: string }[];
+    items: ItemResource[];
 }
 
-export default function CreateSaleOrder({ customers, categories, units, sites = [] }: Props) {
-    const { data, setData, post, processing, errors } = useForm({
-        site_id: '',
+export default function CreateSaleOrder({ customers, items }: Props) {
+    const { auth } = usePage<any>().props;
+    
+    const { data, setData, post, processing, errors, transform } = useForm({
+        site_id: auth.user.current_site_id,
         customer_id: '',
         order_date: new Date().toISOString().split('T')[0],
-        reference: `CMD-${Date.now().toString().slice(-6)}`, // Pré-remplissage simple
         items: [
-            { category_id: '', unit_id: '', quantity: 1, unit_price: 0 }
+            { item_id: '', quantity: 1, unit_price: 0 }
         ],
     });
 
@@ -38,17 +35,17 @@ export default function CreateSaleOrder({ customers, categories, units, sites = 
 
     const breadcrumbs = [
         { title: 'Ventes', href: '#' },
-        { title: 'Commandes', href: saleOrdersIndex.url() },
+        { title: 'Commandes', href: '/sales/sale-orders' },
         { title: 'Nouvelle Commande', href: '#' },
     ];
 
-    // Calcul du montant total HT en temps réel
     const totalHT = useMemo(() => {
+        // On travaille en entiers (FCFA brut). Si tu veux gérer les centimes, multiplie par 100
         return data.items.reduce((acc, item) => acc + (item.quantity * item.unit_price), 0);
     }, [data.items]);
 
     const addItem = () => {
-        setData('items', [...data.items, { category_id: '', unit_id: '', quantity: 1, unit_price: 0 }]);
+        setData('items', [...data.items, { item_id: '', quantity: 1, unit_price: 0 }]);
     };
 
     const removeItem = (index: number) => {
@@ -63,7 +60,20 @@ export default function CreateSaleOrder({ customers, categories, units, sites = 
 
     const handleSubmit = (e: React.SubmitEvent) => {
         e.preventDefault();
-        post(saleOrdersStore.url());
+
+        // 1. On transforme les données courantes juste avant l'envoi
+        transform((currentData) => ({
+            ...currentData,
+            items: currentData.items.map(item => ({
+                ...item,
+                // Sécurité mathématique : Entiers stricts
+                quantity: Math.round(item.quantity),
+                unit_price: Math.round(item.unit_price)
+            }))
+        }));
+
+        // 2. On lance le post normalement, il utilisera les données transformées
+        post('/sales/sale-orders');
     };
 
     return (
@@ -72,7 +82,7 @@ export default function CreateSaleOrder({ customers, categories, units, sites = 
             
             <div className="flex justify-between items-center">
                 <Breadcrumbs breadcrumbs={breadcrumbs} />
-                <Link href={saleOrdersIndex.url()} className="text-muted-foreground hover:text-foreground flex items-center gap-1 text-sm">
+                <Link href="/sales/sale-orders" className="text-muted-foreground hover:text-foreground flex items-center gap-1 text-sm">
                     <ArrowLeft className="w-4 h-4" /> Retour
                 </Link>
             </div>
@@ -83,6 +93,7 @@ export default function CreateSaleOrder({ customers, categories, units, sites = 
                         Certaines lignes ou certains champs contiennent des erreurs de saisie. Veuillez vérifier les éléments indiqués en rouge.
                     </div>
                 )}
+
                 {/* ENTÊTE DE COMMANDE */}
                 <div className="bg-card rounded-xl border border-border shadow-lg overflow-hidden">
                     <div className="p-5 border-b border-border bg-primary/5 flex items-center gap-3">
@@ -93,7 +104,7 @@ export default function CreateSaleOrder({ customers, categories, units, sites = 
                         </div>
                     </div>
 
-                    <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-1.5">
                             <label className="text-xs font-bold uppercase text-muted-foreground">Client</label>
                             <select
@@ -105,26 +116,6 @@ export default function CreateSaleOrder({ customers, categories, units, sites = 
                                 {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                             </select>
                             {errors.customer_id && <p className="text-destructive text-[10px] font-bold">{errors.customer_id}</p>}
-                        </div>
-
-                        <div className="space-y-1">
-                            <label className="text-sm font-semibold">Site de destination</label>
-                            <select value={data.site_id} onChange={e => setData('site_id', e.target.value)} className="w-full bg-input border border-border rounded-lg p-2.5">
-                                <option value="">Sélectionner</option>
-                                {sites.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                            </select>
-                            {errors.site_id && <span className="text-destructive text-xs">{errors.site_id}</span>}
-                        </div>
-
-                        <div className="space-y-1.5">
-                            <label className="text-xs font-bold uppercase text-muted-foreground">Référence Commande</label>
-                            <input
-                                type="text"
-                                value={data.reference}
-                                onChange={e => setData('reference', e.target.value)}
-                                className="w-full bg-background border border-border rounded-lg px-3 py-2.5 font-mono font-bold"
-                            />
-                            {errors.reference && <p className="text-destructive text-[10px] font-bold">{errors.reference}</p>}
                         </div>
 
                         <div className="space-y-1.5">
@@ -140,7 +131,7 @@ export default function CreateSaleOrder({ customers, categories, units, sites = 
                     </div>
                 </div>
 
-                {/* DÉTAIL DES ARTICLES (DYNAMIC TABLE) */}
+                {/* DÉTAIL DES ARTICLES */}
                 <div className="bg-card rounded-xl border border-border shadow-lg overflow-hidden">
                     <div className="p-4 border-b border-border bg-muted/30 flex justify-between items-center">
                         <h3 className="font-bold text-foreground flex items-center gap-2">
@@ -160,7 +151,7 @@ export default function CreateSaleOrder({ customers, categories, units, sites = 
                         <table className="w-full text-left border-collapse">
                             <thead className="bg-muted/20 text-[10px] uppercase font-black text-muted-foreground border-b border-border">
                                 <tr>
-                                    <th className="px-6 py-3 w-1/3">Produit (Catégorie)</th>
+                                    <th className="px-6 py-3 w-1/3">Produit (Physique)</th>
                                     <th className="px-4 py-3">Unité</th>
                                     <th className="px-4 py-3">Quantité</th>
                                     <th className="px-4 py-3">Prix Unitaire (FCFA)</th>
@@ -173,29 +164,23 @@ export default function CreateSaleOrder({ customers, categories, units, sites = 
                                     <tr key={index} className="group hover:bg-primary/[0.02]">
                                         <td className="px-6 py-3 border-b border-border align-top">
                                             <select
-                                                value={item.category_id}
-                                                onChange={e => updateItem(index, 'category_id', e.target.value)}
-                                                className={`w-full bg-transparent border-none focus:ring-0 text-sm font-bold text-foreground ${getLineError(index, 'category_id') ? 'text-destructive' : ''}`}
+                                                value={item.item_id}
+                                                onChange={e => updateItem(index, 'item_id', e.target.value)}
+                                                className={`w-full bg-transparent border-none focus:ring-0 text-sm font-bold text-foreground ${getLineError(index, 'item_id') ? 'text-destructive' : ''}`}
                                             >
                                                 <option value="">Choisir produit...</option>
-                                                {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                                {items.map(i => (
+                                                    <option key={i.id} value={i.id}>
+                                                        {i.name} ({i.category?.name})
+                                                    </option>
+                                                ))}
                                             </select>
-                                            {getLineError(index, 'category_id') && (
-                                                <p className="text-destructive text-[10px] font-bold mt-1 px-1">{getLineError(index, 'category_id')}</p>
+                                            {getLineError(index, 'item_id') && (
+                                                <p className="text-destructive text-[10px] font-bold mt-1 px-1">{getLineError(index, 'item_id')}</p>
                                             )}
                                         </td>
-                                        <td className="px-4 py-3 border-b border-border align-top">
-                                            <select
-                                                value={item.unit_id}
-                                                onChange={e => updateItem(index, 'unit_id', e.target.value)}
-                                                className="w-full bg-transparent border-none focus:ring-0 text-sm"
-                                            >
-                                                <option value="">Unité...</option>
-                                                {units.map(u => <option key={u.id} value={u.id}>{u.symbol}</option>)}
-                                            </select>
-                                            {getLineError(index, 'unit_id') && (
-                                                <p className="text-destructive text-[10px] font-bold mt-1 px-1">{getLineError(index, 'unit_id')}</p>
-                                            )}
+                                        <td className="px-4 py-3 border-b border-border align-top pt-4 text-sm font-medium text-muted-foreground">
+                                            {item.item_id ? items.find(i => i.id === Number(item.item_id))?.default_unit?.symbol || '-' : '-'}
                                         </td>
                                         <td className="px-4 py-3 border-b border-border align-top">
                                             <input

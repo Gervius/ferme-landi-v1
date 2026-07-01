@@ -20,17 +20,17 @@ interface DailyProduction {
     status: 'draft' | 'approved';
     generation: { id: number; code: string; type: string };
     unit: { id: number; symbol: string };
-    category?: { id: number; name: string };
+    item?: { id: number; name: string }; // Remplacé : category devient item
 }
 
 interface Props {
     data: PaginatedData<DailyProduction>;
     generations: { id: number; code: string; type: string }[];
-    categories: { id: number; name: string }[];
+    items: { id: number; name: string }[]; // Remplacé : categories devient items
     units: { id: number; name: string; symbol: string }[];
 }
 
-export default function Index({ data, generations, categories, units }: Props) {
+export default function Index({ data, generations, items, units }: Props) {
     const [isModalOpen, setIsModalOpen] = useState(false);
 
     // Initialisation du formulaire
@@ -38,7 +38,7 @@ export default function Index({ data, generations, categories, units }: Props) {
         generation_id: '',
         date: new Date().toISOString().split('T')[0],
         unit_id: '',
-        item_category_id: '',
+        item_id: '', // Remplacé : item_category_id devient item_id
         good_quantity: 0,
         broken_quantity: 0,
     });
@@ -49,7 +49,7 @@ export default function Index({ data, generations, categories, units }: Props) {
         setIsModalOpen(true);
     };
 
-    const submitForm = (e: React.FormEvent) => {
+    const submitForm = (e: React.SubmitEvent) => {
         e.preventDefault();
         // ROUTAGE STRICT : URI en dur (0 latence liée à Ziggy)
         post('/zootechnie/daily-productions', {
@@ -90,7 +90,8 @@ export default function Index({ data, generations, categories, units }: Props) {
         },
         { 
             header: 'Produit', 
-            cell: (row) => row.category?.name || '-' 
+            // Remplacé : row.category?.name devient row.item?.name
+            cell: (row) => row.item?.name || '-' 
         },
         { 
             header: 'Qté Bonne', 
@@ -178,14 +179,15 @@ export default function Index({ data, generations, categories, units }: Props) {
                             <div className="space-y-2">
                                 <label className="text-sm font-medium text-foreground">Type de produit</label>
                                 <select 
-                                    value={formData.item_category_id} 
-                                    onChange={e => setData('item_category_id', e.target.value)} 
+                                    value={formData.item_id} 
+                                    onChange={e => setData('item_id', e.target.value)} 
                                     className="w-full bg-input border border-border rounded-md p-2 text-sm focus:ring-primary"
                                 >
                                     <option value="">Sélectionnez un produit</option>
-                                    {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                    {/* Remplacé : categories par items */}
+                                    {items.map(i => <option key={i.id} value={i.id}>{i.name}</option>)}
                                 </select>
-                                {errors.item_category_id && <span className="text-destructive text-xs">{errors.item_category_id}</span>}
+                                {errors.item_id && <span className="text-destructive text-xs">{errors.item_id}</span>}
                             </div>
 
                             <div className="space-y-2">

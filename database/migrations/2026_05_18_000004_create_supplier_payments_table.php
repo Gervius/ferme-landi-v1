@@ -11,6 +11,7 @@ return new class extends Migration
         Schema::create('supplier_payments', function (Blueprint $table) {
             $table->id();
             $table->foreignId('supplier_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('supplier_invoice_id')->nullable()->constrained()->nullOnDelete();
             $table->date('payment_date');
             $table->string('reference')->unique();
             $table->decimal('amount', 12, 2);

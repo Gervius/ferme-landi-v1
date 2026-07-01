@@ -2,7 +2,6 @@
 import React from 'react';
 import { Link, router } from '@inertiajs/react';
 import { Plus, Edit2, FileText, CheckCircle, Clock, FileDown, Receipt } from 'lucide-react';
-import { supplierInvoicesCreate, supplierInvoicesApprove, invoicesPdf } from '@/routes'; // InvoicesPdf mappé dans web.php
 import { PaginatedData } from '@/types/pagination';
 import { DataTable, ColumnDef } from '@/components/ui/DataTable';
 
@@ -25,7 +24,8 @@ export default function Index({ data }: Props) {
     // Approbation de la facture (Validation comptable définitive)
     const handleApprove = (id: number) => {
         if (confirm("Confirmez-vous l'approbation de cette facture ? Cette action générera les écritures comptables associées et verrouillera le document.")) {
-            router.post(supplierInvoicesApprove.url(id), {}, { preserveScroll: true });
+            // URL absolue Wayfinder avec le préfixe
+            router.post(`/purchases/supplier-invoices/${id}/approve`, {}, { preserveScroll: true });
         }
     };
 
@@ -74,7 +74,7 @@ export default function Index({ data }: Props) {
                 <div className="flex items-center justify-end gap-2">
                     {/* Impression PDF native via web.php */}
                     <a 
-                        href={invoicesPdf.url(item.id)} // Mappé sur downloadPdf du InvoiceController
+                        href={`/purchases/supplier-invoices/${item.id}/pdf`} 
                         target="_blank" 
                         rel="noreferrer"
                         className="p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground rounded-lg transition-colors"
@@ -110,7 +110,7 @@ export default function Index({ data }: Props) {
                     </p>
                 </div>
                 <Link 
-                    href={supplierInvoicesCreate.url()} 
+                    href="/purchases/supplier-invoices/create" 
                     className="flex items-center gap-2 bg-secondary text-secondary-foreground px-5 py-2.5 rounded-xl font-bold shadow-sm hover:opacity-90 transition-opacity"
                 >
                     <Plus size={18} /> Enregistrer une Facture

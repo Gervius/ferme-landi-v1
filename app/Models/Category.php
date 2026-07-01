@@ -40,8 +40,15 @@ class Category extends Model
         return $this->belongsTo(Category::class, 'parent_id');
     }
 
+    // On GARDE children pour les sous-catégories
     public function children(): HasMany
     {
         return $this->hasMany(Category::class, 'parent_id');
+    }
+
+    // AJOUT : La catégorie connaît les articles physiques qui la composent
+    public function items(): HasMany
+    {
+        return $this->hasMany(Item::class, 'category_id');
     }
 }

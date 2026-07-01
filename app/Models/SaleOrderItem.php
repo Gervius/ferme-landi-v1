@@ -21,9 +21,9 @@ class SaleOrderItem extends Model
         return $this->belongsTo(SaleOrder::class);
     }
 
-    public function category()
+    public function item()
     {
-        return $this->belongsTo(Category::class);
+        return $this->belongsTo(Item::class);
     }
 
     public function unit()

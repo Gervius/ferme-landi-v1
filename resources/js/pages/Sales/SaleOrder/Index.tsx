@@ -2,9 +2,9 @@
 import React from 'react';
 import { Link, router } from '@inertiajs/react';
 import { Plus, Edit2, FileText, ShoppingCart, Truck, ClipboardList } from 'lucide-react';
-import { saleOrdersCreate, saleOrdersEdit, saleOrdersGenerateDeliveryNote } from '@/routes';
 import { PaginatedData } from '@/types/pagination';
 import { DataTable, ColumnDef } from '@/components/ui/DataTable';
+
 
 interface SaleOrder {
     id: number;
@@ -21,9 +21,9 @@ interface Props {
 export default function Index({ data }: Props) {
     
     // Génération du Bon de Livraison (Flux métier Odoo)
-    const handleGenerateDeliveryNote = (id: number) => {
+   const handleGenerateDeliveryNote = (id: number) => {
         if (confirm("Générer le Bon de Livraison pour cette commande ?")) {
-            router.post(saleOrdersGenerateDeliveryNote.url(id));
+            router.post(`/sales/sale-orders/${id}/generate-delivery-note`);
         }
     };
 
@@ -68,7 +68,7 @@ export default function Index({ data }: Props) {
                         </button>
                     )}
                     {['draft', 'validated'].includes(item.status) && (
-                        <Link href={saleOrdersEdit.url(item.id)} className="p-1.5 hover:bg-muted text-muted-foreground rounded-lg">
+                        <Link href={`/sales/sale-orders/${item.id}/edit`} className="p-1.5 hover:bg-muted text-muted-foreground rounded-lg">
                             <Edit2 size={16} />
                         </Link>
                     )}
@@ -86,7 +86,7 @@ export default function Index({ data }: Props) {
                     </h1>
                     <p className="text-muted-foreground text-sm mt-1">Gérez le carnet de commandes et le flux de sortie.</p>
                 </div>
-                <Link href={saleOrdersCreate.url()} className="flex items-center gap-2 bg-primary text-primary-foreground px-5 py-2.5 rounded-xl font-bold shadow-sm hover:opacity-90">
+                <Link href="/sales/sale-orders/create" className="flex items-center gap-2 bg-primary text-primary-foreground px-5 py-2.5 rounded-xl font-bold shadow-sm hover:opacity-90">
                     <Plus size={18} /> Nouvelle Commande
                 </Link>
             </div>

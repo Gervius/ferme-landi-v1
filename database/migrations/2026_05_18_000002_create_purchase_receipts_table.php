@@ -13,6 +13,7 @@ return new class extends Migration
             $table->foreignId('purchase_order_id')->nullable()->constrained()->nullOnDelete();
             $table->date('receipt_date');
             $table->string('reference')->unique();
+            $table->foreignId('site_id')->nullable()->constrained('sites');
 
             // Workflow columns
             $table->string('status')->default('draft');

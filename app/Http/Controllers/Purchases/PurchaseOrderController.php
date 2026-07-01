@@ -10,7 +10,9 @@ use App\Actions\Exports\GeneratePurchaseOrderPdfAction;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Purchases\StorePurchaseOrderRequest;
 use App\Http\Requests\Purchases\UpdatePurchaseOrderRequest;
+use App\Actions\Purchases\ApprovePurchaseOrderAction;
 use App\Models\Item; // Remplacement de Category
+use Illuminate\Http\Request;
 use App\Models\PurchaseOrder;
 use App\Models\Supplier;
 use App\Models\Site;
@@ -51,8 +53,8 @@ class PurchaseOrderController extends Controller
     {
         $action->execute($request->validated(), $request->user()->id);
         
-        // Routage Wayfinder (en dur)
-        return redirect('/purchase-orders')->with('success', 'Bon de commande créé avec succès.');
+        
+        return redirect('/purchases/purchase-orders')->with('success', 'Bon de commande créé avec succès.');
     }
 
     public function edit(PurchaseOrder $purchaseOrder)
@@ -75,14 +77,24 @@ class PurchaseOrderController extends Controller
     public function update(UpdatePurchaseOrderRequest $request, PurchaseOrder $purchaseOrder, UpdatePurchaseOrderAction $action)
     {
         $action->execute($purchaseOrder, $request->validated());
-        return redirect('/purchase-orders')->with('success', 'Bon de commande mis à jour.');
+        return redirect('/purchases/purchase-orders')->with('success', 'Bon de commande mis à jour.');
     }
 
     public function destroy(PurchaseOrder $purchaseOrder, DeletePurchaseOrderAction $action)
     {
         Gate::authorize('delete', $purchaseOrder);
         $action->execute($purchaseOrder);
-        return redirect('/purchase-orders')->with('success', 'Bon de commande supprimé.');
+        return redirect('/purchases/purchase-orders')->with('success', 'Bon de commande supprimé.');
+    }
+
+    public function approve(PurchaseOrder $purchaseOrder, ApprovePurchaseOrderAction $action, Request $request)
+    {
+        Gate::authorize('update', $purchaseOrder); // Ou 'approve' si tu as une politique spécifique
+
+        $action->execute($purchaseOrder, $request->user()->id);
+
+        return redirect('/purchases/purchase-orders')
+            ->with('success', 'La commande a été validée avec succès.');
     }
 
     public function generateReceipt(PurchaseOrder $purchaseOrder, GenerateReceiptFromOrderAction $action)
@@ -91,8 +103,8 @@ class PurchaseOrderController extends Controller
 
         $receipt = $action->execute($purchaseOrder, request()->user()->id);
 
-        return redirect('/purchase-receipts/' . $receipt->id . '/edit')
-            ->with('success', 'Bon de réception généré avec succès. Veuillez le vérifier.');
+        return redirect('/purchases/purchase-receipts/' . $receipt->id . '/edit')
+        ->with('success', 'Bon de réception généré avec succès. Veuillez le vérifier.');
     }
 
     public function showApi(PurchaseOrder $purchaseOrder)

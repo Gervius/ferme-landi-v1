@@ -18,26 +18,29 @@ class SupplierController extends Controller
     {
         Gate::authorize('viewAny', Supplier::class);
         $data = Supplier::paginate(15);
-        return Inertia::render('Purchases/Supplier/Index', ['data' => $data]);
+        
+        // Nommage strict du composant préfixé
+        return Inertia::render('Purchases/Suppliers/Index', ['data' => $data]);
     }
 
     public function create()
     {
         Gate::authorize('create', Supplier::class);
-        return Inertia::render('Purchases/Supplier/Create');
+        return Inertia::render('Purchases/Suppliers/Create');
     }
 
     public function store(StoreSupplierRequest $request, CreateSupplierAction $action)
     {
         $action->execute($request->validated());
-        // Routage Wayfinder
-        return redirect('/suppliers')->with('success', 'Fournisseur créé avec succès.');
+        
+        // Routage Wayfinder absolu avec préfixe correct
+        return redirect('/purchases/suppliers')->with('success', 'Fournisseur créé avec succès.');
     }
 
     public function edit(Supplier $supplier)
     {
         Gate::authorize('update', $supplier);
-        return Inertia::render('Purchases/Supplier/Edit', [
+        return Inertia::render('Purchases/Suppliers/Edit', [
             'supplier' => $supplier,
         ]);
     }
@@ -45,15 +48,13 @@ class SupplierController extends Controller
     public function update(UpdateSupplierRequest $request, Supplier $supplier, UpdateSupplierAction $action)
     {
         $action->execute($supplier, $request->validated());
-        // Routage Wayfinder
-        return redirect('/suppliers')->with('success', 'Fournisseur mis à jour.');
+        return redirect('/purchases/suppliers')->with('success', 'Fournisseur mis à jour.');
     }
 
     public function destroy(Supplier $supplier, DeleteSupplierAction $action)
     {
         Gate::authorize('delete', $supplier);
         $action->execute($supplier);
-        // Routage Wayfinder
-        return redirect('/suppliers')->with('success', 'Fournisseur supprimé.');
+        return redirect('/purchases/suppliers')->with('success', 'Fournisseur supprimé.');
     }
 }

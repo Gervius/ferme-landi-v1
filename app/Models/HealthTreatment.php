@@ -13,12 +13,13 @@ final class HealthTreatment extends Model
     use HasFactory, SoftDeletes, HasApprovalWorkflow;
 
     // Remplacement du $guarded par un $fillable strict
-    protected $fillable = [
+   protected $fillable = [
         'generation_id',
         'date',
         'disease_description',
-        'medication_name',
-        'dosage_description',
+        'item_id', // AJOUT : Pointeur physique
+        'quantity', // AJOUT : Quantité consommée
+        'unit_id', // AJOUT : Unité de la quantité
         'veterinarian_name',
         'status',
         'prepared_by',
@@ -35,5 +36,15 @@ final class HealthTreatment extends Model
     public function generation(): BelongsTo
     {
         return $this->belongsTo(Generation::class);
+    }
+
+    public function item(): BelongsTo
+    {
+        return $this->belongsTo(Item::class);
+    }
+
+    public function unit(): BelongsTo
+    {
+        return $this->belongsTo(Unit::class);
     }
 }

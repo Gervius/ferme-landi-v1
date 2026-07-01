@@ -31,23 +31,32 @@ class SupplierPaymentController extends Controller
 
         $suppliers = Supplier::where('is_active', true)->get(['id', 'name']);
 
+        // On récupère les factures validées (qui ont généré de la dette)
+        // Idéalement, on filtrerait aussi celles qui sont DÉJÀ payées, 
+        // mais c'est un bon début.
+        $invoices = \App\Models\SupplierInvoice::with('supplier:id,name')
+            ->where('status', 'approved') 
+            ->select('id', 'supplier_id', 'reference', 'total_amount')
+            ->get();
+
         return Inertia::render('Purchases/SupplierPayment/Create', [
             'suppliers' => $suppliers,
+            'pendingInvoices' => $invoices, // Nouvel ajout
         ]);
     }
 
     public function store(StoreSupplierPaymentRequest $request, LogSupplierPaymentAction $action)
     {
         $action->execute($request->validated(), $request->user()->id);
-        // Routage Wayfinder
-        return redirect('/supplier-payments')->with('success', 'Paiement fournisseur créé en brouillon.');
+        // Routage Wayfinder avec le bon préfixe
+        return redirect('/purchases/supplier-payments')->with('success', 'Paiement fournisseur créé en brouillon.');
     }
 
     public function approve(SupplierPayment $supplierPayment, ApproveSupplierPaymentAction $action)
     {
         Gate::authorize('manage purchases');
         $action->execute($supplierPayment, request()->user()->id);
-        // Routage Wayfinder
-        return redirect('/supplier-payments')->with('success', 'Paiement fournisseur approuvé.');
+        // Routage Wayfinder avec le bon préfixe
+        return redirect('/purchases/supplier-payments')->with('success', 'Paiement fournisseur approuvé.');
     }
 }

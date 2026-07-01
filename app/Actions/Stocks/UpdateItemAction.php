@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Actions\Logistics;
+namespace App\Actions\Stocks;
 
 use App\Models\Item;
 use Illuminate\Support\Facades\DB;

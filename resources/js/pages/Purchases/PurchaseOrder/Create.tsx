@@ -2,36 +2,36 @@
 import React, { useMemo } from 'react';
 import { useForm, Link } from '@inertiajs/react';
 import { Plus, Trash2, ClipboardList, ArrowLeft, Layers, ShoppingBag } from 'lucide-react';
-import { purchaseOrdersIndex, purchaseOrdersStore } from '@/routes';
+
 
 interface SelectionItem { id: number; name: string; symbol?: string }
 
 interface Props {
     suppliers: SelectionItem[];
-    categories: SelectionItem[];
+    items: SelectionItem[]; // Remplacement de categories
     units: SelectionItem[];
-    sites?: SelectionItem[]; // Ajout défensif pour l'affectation du stock
+    sites?: SelectionItem[];
 }
 
 interface OrderItem {
-    category_id: string | number;
+    item_id: string | number; // Remplacement de category_id
     unit_id: string | number;
     quantity: number;
     unit_price: number;
 }
 
-export default function Create({ suppliers, categories, units, sites = [] }: Props) {
+export default function Create({ suppliers, items, units, sites = [] }: Props) {
     const { data, setData, post, processing, errors } = useForm({
         site_id: '',
         supplier_id: '',
         order_date: new Date().toISOString().split('T')[0],
-        reference: '',
-        items: [{ category_id: '', unit_id: '', quantity: 1, unit_price: 0 }] as OrderItem[],
+        // Le champ "reference" est supprimé ici
+        items: [{ item_id: '', unit_id: '', quantity: 1, unit_price: 0 }] as OrderItem[],
     });
 
     // Gestion des lignes dynamiques
     const addItemLine = () => {
-        setData('items', [...data.items, { category_id: '', unit_id: '', quantity: 1, unit_price: 0 }]);
+        setData('items', [...data.items, { item_id: '', unit_id: '', quantity: 1, unit_price: 0 }]);
     };
 
     const removeItemLine = (index: number) => {
@@ -55,13 +55,13 @@ export default function Create({ suppliers, categories, units, sites = [] }: Pro
 
     const handleSubmit = (e: React.SubmitEvent) => {
         e.preventDefault();
-        post(purchaseOrdersStore.url());
+        post('/purchases/purchase-orders');
     };
 
     return (
         <div className="p-6 max-w-6xl mx-auto space-y-6 bg-background text-foreground">
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Link href={purchaseOrdersIndex.url()} className="hover:text-foreground flex items-center gap-1"><ArrowLeft size={14} /> Commandes</Link>
+                <Link href="/purchases/purchase-orders" className="hover:text-foreground flex items-center gap-1"><ArrowLeft size={14} /> Commandes</Link>
                 <span>/</span><span className="text-foreground font-medium">Nouvel ordre</span>
             </div>
 
@@ -70,11 +70,7 @@ export default function Create({ suppliers, categories, units, sites = [] }: Pro
             <form onSubmit={handleSubmit} className="space-y-6">
                 {/* Métadonnées de l'entête */}
                 <div className="bg-card border border-border rounded-xl p-6 shadow-sm grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <div className="space-y-1">
-                        <label className="text-sm font-semibold">Référence Interne</label>
-                        <input type="text" value={data.reference} onChange={e => setData('reference', e.target.value)} className="w-full bg-input border border-border rounded-lg p-2.5" placeholder="Ex: BC-2026-001" />
-                        {errors.reference && <span className="text-destructive text-xs">{errors.reference}</span>}
-                    </div>
+                    
 
                     <div className="space-y-1">
                         <label className="text-sm font-semibold">Fournisseur</label>
@@ -122,9 +118,9 @@ export default function Create({ suppliers, categories, units, sites = [] }: Pro
                             {data.items.map((item, index) => (
                                 <tr key={index} className="hover:bg-muted/10">
                                     <td className="p-3">
-                                        <select value={item.category_id} onChange={e => updateItemLine(index, 'category_id', e.target.value)} className="w-full bg-input border border-border rounded-md p-2">
+                                        <select value={item.item_id} onChange={e => updateItemLine(index, 'item_id', e.target.value)} className="w-full bg-input border border-border rounded-md p-2">
                                             <option value="">Sélectionner l'article</option>
-                                            {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                            {items.map(i => <option key={i.id} value={i.id}>{i.name}</option>)}
                                         </select>
                                     </td>
                                     <td className="p-3">
@@ -160,7 +156,7 @@ export default function Create({ suppliers, categories, units, sites = [] }: Pro
                 </div>
 
                 <div className="flex justify-end gap-4">
-                    <Link href={purchaseOrdersIndex.url()} className="px-5 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground">Annuler</Link>
+                    <Link href="/purchases/purchase-orders" className="px-5 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground">Annuler</Link>
                     <button type="submit" disabled={processing} className="bg-secondary text-secondary-foreground px-6 py-2.5 rounded-xl font-bold shadow-sm hover:opacity-90">Enregistrer la commande</button>
                 </div>
             </form>

@@ -17,17 +17,16 @@ class StoreDailyProductionRequest extends FormRequest
         return [
             'generation_id' => ['required', 'exists:generations,id'],
             'unit_id' => ['required', 'exists:units,id'],
-            'item_category_id' => ['nullable', 'exists:categories,id'],
+            'item_id' => ['nullable', 'exists:items,id'], // Remplacé
             'good_quantity' => ['required', 'numeric', 'min:0'],
             'broken_quantity' => ['required', 'numeric', 'min:0'],
             
-            // 🔴 BOUCLIER ANTI-DOUBLONS (Race Conditions HTTP)
             'date' => [
                 'required', 
                 'date',
                 Rule::unique('daily_productions')->where(function ($query) {
                     return $query->where('generation_id', $this->generation_id)
-                                 ->where('item_category_id', $this->item_category_id);
+                                 ->where('item_id', $this->item_id); // Remplacé
                 })
             ],
         ];

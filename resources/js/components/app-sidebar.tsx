@@ -34,14 +34,15 @@ import {
     HandCoins,
     Briefcase, 
     Banknote,
-    // --- NOUVELLES ICÔNES POUR LA COMPTABILITÉ ---
     Calculator,
     Landmark,
     BookOpen,
     BookDashed,
     CalendarDays,
     Hash,
-    Tag
+    Tag,
+    GitMerge, // Ajout de l'icône pour le Mapping
+    Box       // Ajout de l'icône pour les Articles
 } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { NavMain } from '@/components/nav-main';
@@ -63,6 +64,7 @@ import {
     sitesIndex, 
     unitsIndex, 
     categoriesIndex, 
+    itemsIndex, // <--- AJOUT
     breedStandardsIndex,
     speciesIndex,             
     breedsIndex,              
@@ -95,14 +97,15 @@ import {
     // Stocks
     stockBalancesIndex,
     stockMovementsIndex,
-    // --- NOUVELLES ROUTES COMPTABILITÉ ---
+    // Comptabilité
     accountingEntriesIndex,
     accountsIndex,
     accountingJournalsIndex,
     financialYearsIndex,
     analyticalNaturesIndex,
     analyticalCodesIndex,
-    analyticalCentersIndex
+    analyticalCentersIndex,
+    accountingMappingsIndex
 } from '@/routes';
 
 import type { NavItem } from '@/types';
@@ -174,7 +177,6 @@ const mainNavItems: NavItem[] = [
             { title: 'État des stocks', href: stockBalancesIndex(), icon: LayoutGrid },
         ],
     },
-    // ---- NOUVEAU BLOC COMPTABILITÉ (OPÉRATIONNEL) ----
     {
         title: 'Comptabilité & Finances',
         icon: Calculator,
@@ -206,10 +208,10 @@ const configNavItems: NavItem[] = [
             
             // Système
             { title: 'Unités de mesure', href: unitsIndex(), icon: Scale },
-            { title: 'Catégories & Articles', href: categoriesIndex(), icon: Tags },
+            { title: 'Familles (Catégories)', href: categoriesIndex(), icon: Tags },
+            { title: 'Articles & Produits', href: itemsIndex(), icon: Box }, // <--- AJOUT
         ],
     },
-    // ---- NOUVEAU BLOC COMPTABILITÉ (PARAMÉTRAGE) ----
     {
         title: 'Comptabilité (Configuration)',
         icon: Landmark,
@@ -221,6 +223,7 @@ const configNavItems: NavItem[] = [
             { title: 'Natures Analytiques', href: analyticalNaturesIndex(), icon: Tag },
             { title: 'Sections Analytiques', href: analyticalCodesIndex(), icon: Hash },
             { title: 'Centres Analytiques', href: analyticalCentersIndex(), icon: Target },
+            { title: 'Règles de Mapping', href: accountingMappingsIndex(), icon: GitMerge }, // <--- AJOUT
         ],
     },
 ];
@@ -241,10 +244,8 @@ export function AppSidebar() {
             </SidebarHeader>
 
             <SidebarContent>
-                {/* Menu des opérations quotidiennes */}
                 <NavMain items={mainNavItems} />
                 
-                {/* Séparateur visuel pour le Paramétrage Métier */}
                 <div className="mt-8 mb-4">
                     <div className="px-6 text-[10px] font-black tracking-widest text-muted-foreground/60 uppercase mb-2">
                         Administration

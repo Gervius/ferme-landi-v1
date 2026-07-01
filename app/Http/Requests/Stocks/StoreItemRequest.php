@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Requests\Logistics;
+namespace App\Http\Requests\Stocks;
 
 use App\Models\Item;
 use Illuminate\Foundation\Http\FormRequest;

@@ -5,6 +5,8 @@ namespace App\Models;
 use App\Traits\HasApprovalWorkflow;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class DeliveryNote extends Model
@@ -18,18 +20,23 @@ class DeliveryNote extends Model
         "approved_at" => "datetime",
     ];
 
-    public function site()
+    public function site():BelongsTo
     {
         return $this->belongsTo(Site::class);
     }
 
-    public function saleOrder()
+    public function saleOrder():BelongsTo
     {
         return $this->belongsTo(SaleOrder::class);
     }
 
-    public function items()
+    public function items(): HasMany
     {
         return $this->hasMany(DeliveryNoteItem::class);
+    }
+
+    public function invoice()
+    {
+        return $this->hasOne(Invoice::class);
     }
 }

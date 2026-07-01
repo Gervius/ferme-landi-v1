@@ -7,7 +7,7 @@ use App\Models\FinancialYear;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
-class UpdateAccountingEntryAction
+final readonly class UpdateAccountingEntryAction
 {
     public function execute(AccountingEntry $accountingEntry, array $data): AccountingEntry
     {
@@ -21,20 +21,18 @@ class UpdateAccountingEntryAction
 
         if ($financialYear->is_closed) {
             throw ValidationException::withMessages([
-                'financial_year_id' => 'Impossible de saisir une écriture dans un exercice clôturé.',
+                'financial_year_id' => 'Impossible de modifier une écriture dans un exercice clôturé.',
             ]);
         }
 
         $totalDebit = 0;
         $totalCredit = 0;
 
+        // Calcul strict sur des entiers
         foreach ($data['lines'] as $line) {
-            $totalDebit += (float) $line['debit'];
-            $totalCredit += (float) $line['credit'];
+            $totalDebit += (int) $line['debit'];
+            $totalCredit += (int) $line['credit'];
         }
-
-        $totalDebit = round($totalDebit, 2);
-        $totalCredit = round($totalCredit, 2);
 
         if ($totalDebit !== $totalCredit) {
             throw ValidationException::withMessages([
@@ -46,8 +44,9 @@ class UpdateAccountingEntryAction
             $headerData = collect($data)->except('lines')->toArray();
             $accountingEntry->update($headerData);
 
-            // Cascade rules will delete lines, or we can force sync
-            $accountingEntry->lines()->delete();
+            // Pour éviter la destruction des index, on efface uniquement si nécessaire
+            // L'idéal côté Front-end est de passer les IDs des lignes existantes pour un upsert()
+            $accountingEntry->lines()->delete(); 
             $accountingEntry->lines()->createMany($data['lines']);
 
             return $accountingEntry;

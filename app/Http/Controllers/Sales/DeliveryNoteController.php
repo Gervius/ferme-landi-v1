@@ -9,8 +9,6 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Sales\StoreDeliveryNoteRequest;
 use App\Models\DeliveryNote;
 use App\Models\SaleOrder;
-use App\Models\Category;
-use App\Models\Unit;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
@@ -22,7 +20,11 @@ class DeliveryNoteController extends Controller
     {
         Gate::authorize("viewAny", DeliveryNote::class);
 
-        $deliveryNotes = DeliveryNote::with(["saleOrder.customer"])->paginate(15);
+        // Filtrage spatial strict et Zero N+1
+        $deliveryNotes = DeliveryNote::where('site_id', auth()->user()->current_site_id)
+            ->with(["saleOrder.customer"])
+            ->latest()
+            ->paginate(15);
 
         return Inertia::render("Sales/DeliveryNotes/Index", [
             "deliveryNotes" => $deliveryNotes,
@@ -32,15 +34,17 @@ class DeliveryNoteController extends Controller
     public function create(): Response
     {
         Gate::authorize("create", DeliveryNote::class);
+        $siteId = auth()->user()->current_site_id;
 
-        $saleOrders = SaleOrder::where("status", "validated")->get(["id", "reference"]);
-        $categories = Category::get(["id", "name"]);
-        $units = Unit::get(["id", "name", "symbol"]);
+        // RAM Optimisation : Uniquement les commandes validées DE CE SITE sans BL
+        $saleOrders = SaleOrder::where("site_id", $siteId)
+            ->where("status", "validated")
+            ->doesntHave('deliveryNote') // Empêche de générer 2 BL pour la même commande
+            ->get(["id", "reference"]);
 
         return Inertia::render("Sales/DeliveryNotes/Create", [
             "saleOrders" => $saleOrders,
-            "categories" => $categories,
-            "units" => $units,
+            // Les catégories et unités globales ont été retirées.
         ]);
     }
 
@@ -66,7 +70,11 @@ class DeliveryNoteController extends Controller
     {
         Gate::authorize("view", $delivery_note);
 
-        return response()->json($delivery_note->load(["items.category", "items.unit"]));
+        // Correction de l'inventaire physique : Eager loading de "item" en amont de category et unit
+        return response()->json($delivery_note->load([
+            "items.item.category", 
+            "items.item.defaultUnit"
+        ]));
     }
 
     public function downloadPdf(DeliveryNote $delivery_note, GenerateDeliveryNotePdfAction $action)

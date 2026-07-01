@@ -9,15 +9,24 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         $this->call([
-            RolesAndPermissionsSeeder::class,
-            UserSeeder::class, // Ex-AdminUserSeeder
-            CompanySeeder::class, // Crée Ferme-Landi et les Sites (KI1, KI2, etc.)
+            // Données de base
+            CompanySeeder::class,
             UnitSeeder::class,
             CategorySeeder::class,
-            PartnerSeeder::class, // Clients & Fournisseurs
-            ZootechnieSeeder::class, // Espèces, Races, Générations
-            AccountingReferentialSeeder::class, // Moteur Comptable
-            AnalyticalReferentialSeeder::class, // Comptabilité Analytique
+            SpeciesSeeder::class,
+            BreedSeeder::class,
+            BreedStandardSeeder::class,
+            ProphylaxisProgramSeeder::class,
+
+            // Comptabilité et analytique
+            AccountingReferentialSeeder::class, // contient FinancialYear, Journals, Accounts
+            AnalyticalReferentialSeeder::class, // Natures, Codes, Centers
+            AccountingMappingSeeder::class,
+
+            // Permissions et rôles
+            PermissionSeeder::class,
+            RoleSeeder::class,
+            UserSeeder::class,
         ]);
     }
 }

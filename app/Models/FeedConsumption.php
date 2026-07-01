@@ -12,10 +12,9 @@ class FeedConsumption extends Model
 {
     use HasFactory, SoftDeletes, HasApprovalWorkflow;
 
-    // SECURITÉ & RAM : On liste explicitement les colonnes
     protected $fillable = [
         'generation_id',
-        'item_category_id',
+        'item_id', 
         'unit_id',
         'date',
         'quantity',
@@ -38,9 +37,10 @@ class FeedConsumption extends Model
         return $this->belongsTo(Generation::class);
     }
 
-    public function category(): BelongsTo
+    // Renommé et repointé vers Item
+    public function item(): BelongsTo
     {
-        return $this->belongsTo(Category::class, 'item_category_id');
+        return $this->belongsTo(Item::class);
     }
 
     public function unit(): BelongsTo

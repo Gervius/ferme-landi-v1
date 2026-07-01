@@ -17,33 +17,34 @@ class GenerateDeliveryNoteFromOrderAction
             ]);
         }
 
-        $existingNote = DeliveryNote::where('sale_order_id', $order->id)->exists();
-        if ($existingNote) {
+        if (DeliveryNote::where('sale_order_id', $order->id)->exists()) {
             throw ValidationException::withMessages([
                 'sale_order_id' => 'Un bon de livraison existe déjà pour cette commande.',
             ]);
         }
 
         return DB::transaction(function () use ($order, $userId) {
+            // Eager loading strict de la commande
+            $order->load('items');
+
+            $seq = DB::scalar("SELECT nextval('delivery_note_ref_seq')");
+            
             $deliveryNote = DeliveryNote::create([
                 'site_id' => $order->site_id,
                 'sale_order_id' => $order->id,
                 'delivery_date' => now()->format('Y-m-d'),
-                'reference' => 'BL-' . $order->reference,
+                'reference' => 'BL-' . str_pad($seq, 5, '0', STR_PAD_LEFT),
                 'status' => 'draft',
                 'prepared_by' => $userId,
             ]);
 
-            $itemsData = $order->items->map(function ($item) {
-                return [
-                    'sale_order_item_id' => $item->id,
-                    'category_id' => $item->category_id,
-                    'unit_id' => $item->unit_id,
-                    'delivered_quantity' => $item->quantity,
-                ];
-            });
+            $itemsData = $order->items->map(fn ($item) => [
+                'sale_order_item_id' => $item->id,
+                'item_id' => $item->item_id, // Ciblage physique strict
+                'delivered_quantity' => $item->quantity,
+            ])->toArray();
 
-            $deliveryNote->items()->createMany($itemsData->toArray());
+            $deliveryNote->items()->createMany($itemsData);
 
             return $deliveryNote;
         });

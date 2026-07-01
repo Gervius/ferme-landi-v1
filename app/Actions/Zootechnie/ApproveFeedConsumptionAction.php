@@ -42,7 +42,7 @@ final readonly class ApproveFeedConsumptionAction
             // Mouvement de stock SORTANT
             $this->logStockMovementAction->execute([
                 'site_id' => $consumption->generation->site_id,
-                'category_id' => $consumption->item_category_id,
+                'item_id' => $consumption->item_id, // Remplacé (item au lieu de category)
                 'unit_id' => $consumption->unit_id,
                 'type' => 'out',
                 'quantity' => $consumption->quantity,

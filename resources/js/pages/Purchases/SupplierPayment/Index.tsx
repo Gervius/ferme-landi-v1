@@ -1,18 +1,9 @@
 // pages/Purchases/SupplierPayment/Index.tsx
-import React, { useState, useMemo } from 'react';
-import { useForm, router, Link } from '@inertiajs/react';
+import React, { useMemo } from 'react';
+import { router, Link } from '@inertiajs/react';
 import { Plus, CheckCircle, Clock, Wallet, Banknote, Landmark, Smartphone, Coins } from 'lucide-react';
-import { supplierPaymentsStore, supplierPaymentsApprove } from '@/routes';
 import { PaginatedData } from '@/types/pagination';
 import { DataTable, ColumnDef } from '@/components/ui/DataTable';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
 
 interface SupplierPayment {
     id: number;
@@ -26,39 +17,14 @@ interface SupplierPayment {
 }
 
 interface Props {
-    data: PaginatedData<SupplierPayment>; // Historique paginé renvoyé par l'index backend
-    suppliers: { id: number; name: string }[]; // Injecté dans l'index pour alimenter le select de la modale
+    data: PaginatedData<SupplierPayment>;
 }
 
-export default function Index({ data, suppliers }: Props) {
-    const [isModalOpen, setIsModalOpen] = useState(false);
-
-    // Initialisation du formulaire couplé aux règles strictes du StoreSupplierPaymentRequest
-    const { data: formData, setData, post, processing, errors, reset } = useForm({
-        supplier_id: '',
-        payment_date: new Date().toISOString().split('T')[0],
-        reference: '',
-        amount: 0,
-        payment_method: 'especes',
-        notes: '',
-    });
-
-    // Soumission du paiement (Mode Brouillon initial)
-    const submitCreate = (e: React.SubmitEvent) => {
-        e.preventDefault();
-        post(supplierPaymentsStore.url(), {
-            preserveScroll: true,
-            onSuccess: () => {
-                setIsModalOpen(false);
-                reset();
-            },
-        });
-    };
-
-    // Approbation manuelle pour figer le décaissement
+export default function Index({ data }: Props) {
+    
     const handleApprove = (id: number) => {
         if (confirm("Confirmez-vous l'approbation de ce règlement ? L'argent sera définitivement déduit de votre compte financier.")) {
-            router.post(supplierPaymentsApprove.url(id), {}, { preserveScroll: true });
+            router.post(`/purchases/supplier-payments/${id}/approve`, {}, { preserveScroll: true });
         }
     };
 
@@ -67,7 +33,7 @@ export default function Index({ data, suppliers }: Props) {
         return data.data.reduce((sum, item) => sum + Number(item.amount), 0);
     }, [data.data]);
 
-    // Pattern de mapping visuel pour les méthodes de règlement (Évite les ternaires)
+    // Pattern de mapping visuel pour les méthodes de règlement
     const methodStrategy = {
         especes: { label: 'Espèces', icon: Coins, color: 'text-amber-500 bg-amber-50' },
         cheque: { label: 'Chèque', icon: Banknote, color: 'text-blue-500 bg-blue-50' },
@@ -163,113 +129,15 @@ export default function Index({ data, suppliers }: Props) {
                 </div>
             </div>
 
-            {/* Barre de contrôle avec Modale Intégrée */}
+            {/* Barre de contrôle avec Lien vers Create */}
             <div className="flex justify-end mb-2">
-                <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-                    <DialogTrigger asChild>
-                        <button className="flex items-center gap-2 bg-secondary text-secondary-foreground px-5 py-2.5 rounded-xl font-bold shadow-sm hover:opacity-90 transition-opacity">
-                            <Plus size={18} />
-                            Émettre un paiement
-                        </button>
-                    </DialogTrigger>
-                    
-                    <DialogContent className="sm:max-w-[500px]">
-                        <DialogHeader>
-                            <DialogTitle className="text-xl font-bold text-foreground">Saisir un Règlement Fournisseur</DialogTitle>
-                            <DialogDescription>
-                                Enregistrez le paiement d'une facture. Les fonds ne seront déduits de la trésorerie qu'après approbation.
-                            </DialogDescription>
-                        </DialogHeader>
-
-                        <form onSubmit={submitCreate} className="space-y-4 mt-4">
-                            <div className="space-y-1">
-                                <label className="text-sm font-semibold">Fournisseur bénéficiaire</label>
-                                <select 
-                                    value={formData.supplier_id}
-                                    onChange={e => setData('supplier_id', e.target.value)}
-                                    className="w-full bg-input border border-border rounded-lg p-2.5 text-sm"
-                                >
-                                    <option value="">Sélectionner le bénéficiaire</option>
-                                    {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                                </select>
-                                {errors.supplier_id && <span className="text-destructive text-xs font-medium">{errors.supplier_id}</span>}
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-1">
-                                    <label className="text-sm font-semibold">Référence de pièce</label>
-                                    <input 
-                                        type="text"
-                                        value={formData.reference}
-                                        onChange={e => setData('reference', e.target.value)}
-                                        className="w-full bg-input border border-border rounded-lg p-2.5"
-                                        placeholder="Ex: CHQ-BOA-045"
-                                    />
-                                    {errors.reference && <span className="text-destructive text-xs font-medium">{errors.reference}</span>}
-                                </div>
-
-                                <div className="space-y-1">
-                                    <label className="text-sm font-semibold">Date de décaissement</label>
-                                    <input 
-                                        type="date"
-                                        value={formData.payment_date}
-                                        onChange={e => setData('payment_date', e.target.value)}
-                                        className="w-full bg-input border border-border rounded-lg p-2.5"
-                                    />
-                                    {errors.payment_date && <span className="text-destructive text-xs font-medium">{errors.payment_date}</span>}
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-1">
-                                    <label className="text-sm font-semibold text-secondary">Montant à régler</label>
-                                    <input 
-                                        type="number" min="0.01" step="0.01"
-                                        value={formData.amount || ''}
-                                        onChange={e => setData('amount', Number(e.target.value))}
-                                        className="w-full bg-secondary/5 border border-secondary/30 rounded-lg p-2.5 font-bold text-secondary text-lg"
-                                        placeholder="Ex: 500000"
-                                    />
-                                    {errors.amount && <span className="text-destructive text-xs font-medium">{errors.amount}</span>}
-                                </div>
-
-                                <div className="space-y-1">
-                                    <label className="text-sm font-semibold">Mode de règlement</label>
-                                    <select 
-                                        value={formData.payment_method}
-                                        onChange={e => setData('payment_method', e.target.value as any)}
-                                        className="w-full bg-input border border-border rounded-lg p-2.5 text-sm"
-                                    >
-                                        <option value="especes">Espèces / Caisse</option>
-                                        <option value="cheque">Chèque Bancaire</option>
-                                        <option value="virement">Virement Bancaire</option>
-                                        <option value="mobile_money">Orange Money / Moov Money</option>
-                                    </select>
-                                    {errors.payment_method && <span className="text-destructive text-xs font-medium">{errors.payment_method}</span>}
-                                </div>
-                            </div>
-
-                            <div className="space-y-1">
-                                <label className="text-sm font-semibold">Notes / Justificatif (Optionnel)</label>
-                                <textarea 
-                                    value={formData.notes}
-                                    onChange={e => setData('notes', e.target.value)}
-                                    className="w-full bg-input border border-border rounded-lg p-2.5 min-h-[60px] resize-none"
-                                    placeholder="Ex: Paiement facture du maïs concassé..."
-                                />
-                            </div>
-
-                            <div className="flex justify-end gap-3 pt-6 border-t border-border mt-4">
-                                <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground">
-                                    Annuler
-                                </button>
-                                <button type="submit" disabled={processing} className="bg-secondary text-secondary-foreground px-5 py-2.5 rounded-xl font-bold disabled:opacity-50 hover:opacity-90">
-                                    Enregistrer (Brouillon)
-                                </button>
-                            </div>
-                        </form>
-                    </DialogContent>
-                </Dialog>
+                <Link 
+                    href="/purchases/supplier-payments/create"
+                    className="flex items-center gap-2 bg-secondary text-secondary-foreground px-5 py-2.5 rounded-xl font-bold shadow-sm hover:opacity-90 transition-opacity"
+                >
+                    <Plus size={18} />
+                    Émettre un paiement
+                </Link>
             </div>
 
             {/* Intégration de la table réutilisable */}

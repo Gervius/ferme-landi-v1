@@ -3,7 +3,6 @@ import React, { useMemo } from 'react';
 import { Head, useForm, Link } from '@inertiajs/react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import { Save, ArrowLeft, BookOpen, Plus, Trash2, Scale, AlertTriangle } from 'lucide-react';
-import { accountingEntriesIndex, accountingEntriesStore } from '@/routes';
 
 interface Props {
     financialYears: { id: number; year: string }[];
@@ -13,11 +12,11 @@ interface Props {
 }
 
 export default function Create({ financialYears, journals, accounts, centers }: Props) {
-    const { data, setData, post, processing, errors } = useForm({
+    // 1. SUPPRESSION du champ "reference" et AJOUT de "transform"
+    const { data, setData, post, processing, errors, transform } = useForm({
         financial_year_id: '',
         accounting_journal_id: '',
         date: new Date().toISOString().split('T')[0],
-        reference: '',
         description: '',
         lines: [
             { account_id: '', analytical_center_id: '', debit: 0, credit: 0, description: '' },
@@ -29,7 +28,6 @@ export default function Create({ financialYears, journals, accounts, centers }: 
         return errors[`lines.${index}.${field}` as keyof typeof errors];
     };
 
-    // Calculs d'équilibre comptable
     const totalDebit = useMemo(() => data.lines.reduce((acc, line) => acc + Number(line.debit || 0), 0), [data.lines]);
     const totalCredit = useMemo(() => data.lines.reduce((acc, line) => acc + Number(line.credit || 0), 0), [data.lines]);
     const isBalanced = totalDebit === totalCredit;
@@ -48,7 +46,6 @@ export default function Create({ financialYears, journals, accounts, centers }: 
     const updateLine = (index: number, field: string, value: any) => {
         const newLines = [...data.lines];
         
-        // Un compte ne peut pas être débité ET crédité sur la même ligne
         if (field === 'debit' && Number(value) > 0) newLines[index].credit = 0;
         if (field === 'credit' && Number(value) > 0) newLines[index].debit = 0;
         
@@ -58,7 +55,19 @@ export default function Create({ financialYears, journals, accounts, centers }: 
 
     const handleSubmit = (e: React.SubmitEvent) => {
         e.preventDefault();
-        post(accountingEntriesStore.url());
+
+        // 2. SÉCURISATION : On convertit strictement en entiers (FCFA bruts) avant envoi
+        transform((currentData) => ({
+            ...currentData,
+            lines: currentData.lines.map(line => ({
+                ...line,
+                debit: Math.round(Number(line.debit)),
+                credit: Math.round(Number(line.credit))
+            }))
+        }));
+
+        // 3. URL EN DUR
+        post('/accounting/accounting-entries');
     };
 
     return (
@@ -68,22 +77,21 @@ export default function Create({ financialYears, journals, accounts, centers }: 
             <div className="flex justify-between items-center text-sm">
                 <Breadcrumbs breadcrumbs={[
                     { title: 'Comptabilité', href: '#' },
-                    { title: 'Écritures', href: accountingEntriesIndex.url() },
+                    { title: 'Écritures', href: '/accounting/accounting-entries' },
                     { title: 'Saisie Manuelle', href: '#' },
                 ]} />
-                <Link href={accountingEntriesIndex.url()} className="text-muted-foreground hover:text-foreground flex items-center gap-1 transition">
+                <Link href="/accounting/accounting-entries" className="text-muted-foreground hover:text-foreground flex items-center gap-1 transition">
                     <ArrowLeft className="w-4 h-4" /> Retour
                 </Link>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={handleSubmit as unknown as React.FormEventHandler<HTMLFormElement>} className="space-y-6">
                 {Object.keys(errors).length > 0 && (
                     <div className="bg-destructive/10 border border-destructive/20 text-destructive p-4 rounded-xl text-sm font-bold flex items-center gap-2">
                         <AlertTriangle className="w-5 h-5" /> Vérifiez les champs en rouge avant de valider.
                     </div>
                 )}
 
-                {/* EN-TÊTE DE LA PIÈCE */}
                 <div className="bg-card rounded-xl border border-border shadow-lg overflow-hidden">
                     <div className="p-5 border-b border-border bg-primary/5 flex items-center gap-3">
                         <BookOpen className="w-6 h-6 text-primary" />
@@ -92,7 +100,8 @@ export default function Create({ financialYears, journals, accounts, centers }: 
                         </div>
                     </div>
 
-                    <div className="p-6 grid grid-cols-1 md:grid-cols-4 gap-6">
+                    {/* La grille passe en 3 colonnes au lieu de 4 puisque la référence disparaît */}
+                    <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div className="space-y-1.5">
                             <label className="text-xs font-bold uppercase text-muted-foreground">Exercice</label>
                             <select value={data.financial_year_id} onChange={e => setData('financial_year_id', e.target.value)} className="w-full bg-input border border-border rounded-lg px-3 py-2.5 font-bold outline-none">
@@ -117,13 +126,7 @@ export default function Create({ financialYears, journals, accounts, centers }: 
                             {errors.date && <p className="text-destructive text-[10px] font-bold">{errors.date}</p>}
                         </div>
 
-                        <div className="space-y-1.5">
-                            <label className="text-xs font-bold uppercase text-muted-foreground">N° Pièce (Réf)</label>
-                            <input type="text" value={data.reference} onChange={e => setData('reference', e.target.value)} placeholder="Ex: OD-2026-001" className="w-full bg-input border border-border rounded-lg px-3 py-2.5 font-mono font-bold" />
-                            {errors.reference && <p className="text-destructive text-[10px] font-bold">{errors.reference}</p>}
-                        </div>
-
-                        <div className="md:col-span-4 space-y-1.5">
+                        <div className="md:col-span-3 space-y-1.5">
                             <label className="text-xs font-bold uppercase text-muted-foreground">Libellé général de l'opération</label>
                             <input type="text" value={data.description} onChange={e => setData('description', e.target.value)} placeholder="Ex: Achat de vaccins, Paiement fournisseur X..." className="w-full bg-input border border-border rounded-lg px-3 py-2.5 outline-none" />
                             {errors.description && <p className="text-destructive text-[10px] font-bold">{errors.description}</p>}
@@ -131,7 +134,6 @@ export default function Create({ financialYears, journals, accounts, centers }: 
                     </div>
                 </div>
 
-                {/* LIGNES D'ÉCRITURE */}
                 <div className="bg-card rounded-xl border border-border shadow-lg overflow-hidden">
                     <div className="p-4 border-b border-border bg-muted/30 flex justify-between items-center">
                         <h3 className="font-bold text-foreground text-sm uppercase tracking-widest">Détail des imputations</h3>
@@ -172,11 +174,13 @@ export default function Create({ financialYears, journals, accounts, centers }: 
                                             <input type="text" value={line.description} onChange={e => updateLine(index, 'description', e.target.value)} placeholder="Libellé spécifique..." className="w-full bg-transparent border-none text-sm focus:ring-0" />
                                         </td>
                                         <td className="px-4 py-2 align-top">
-                                            <input type="number" min="0" step="0.01" value={line.debit || ''} onChange={e => updateLine(index, 'debit', e.target.value)} className="w-full bg-emerald-500/5 border border-emerald-500/20 rounded px-2 py-1.5 text-sm font-bold text-emerald-600 text-right focus:bg-background" placeholder="0" />
+                                            {/* 4. PASSAGE EN ENTIERS : step="1" */}
+                                            <input type="number" min="0" step="1" value={line.debit || ''} onChange={e => updateLine(index, 'debit', e.target.value)} className="w-full bg-emerald-500/5 border border-emerald-500/20 rounded px-2 py-1.5 text-sm font-bold text-emerald-600 text-right focus:bg-background" placeholder="0" />
                                             {getLineError(index, 'debit') && <p className="text-destructive text-[10px] font-bold px-2 text-right">{getLineError(index, 'debit')}</p>}
                                         </td>
                                         <td className="px-4 py-2 align-top">
-                                            <input type="number" min="0" step="0.01" value={line.credit || ''} onChange={e => updateLine(index, 'credit', e.target.value)} className="w-full bg-destructive/5 border border-destructive/20 rounded px-2 py-1.5 text-sm font-bold text-destructive text-right focus:bg-background" placeholder="0" />
+                                            {/* 4. PASSAGE EN ENTIERS : step="1" */}
+                                            <input type="number" min="0" step="1" value={line.credit || ''} onChange={e => updateLine(index, 'credit', e.target.value)} className="w-full bg-destructive/5 border border-destructive/20 rounded px-2 py-1.5 text-sm font-bold text-destructive text-right focus:bg-background" placeholder="0" />
                                             {getLineError(index, 'credit') && <p className="text-destructive text-[10px] font-bold px-2 text-right">{getLineError(index, 'credit')}</p>}
                                         </td>
                                         <td className="px-4 py-2 align-top pt-3 text-right">
@@ -192,7 +196,6 @@ export default function Create({ financialYears, journals, accounts, centers }: 
                         </table>
                     </div>
 
-                    {/* PIED DE TABLEAU - ÉQUILIBRE COMPTABLE */}
                     <div className="p-4 bg-muted/20 border-t border-border flex justify-between items-center">
                         <div className="flex items-center gap-2">
                             <Scale className={`w-6 h-6 ${isBalanced ? 'text-emerald-500' : 'text-destructive'}`} />

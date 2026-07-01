@@ -4,11 +4,18 @@ import { useForm, Link } from '@inertiajs/react';
 import { Trash2, ClipboardList, ArrowLeft, ShoppingBag } from 'lucide-react';
 import { purchaseOrdersIndex, purchaseOrdersUpdate } from '@/routes';
 
+interface FormItem {
+    item_id: number | string; // Accepte les ID existants (number) et les nouveaux (string vide)
+    unit_id: number | string;
+    quantity: number;
+    unit_price: number;
+}
+
 interface SelectionItem { id: number; name: string; symbol?: string }
 
 interface BackendOrderItem {
     id: number;
-    category_id: number;
+    item_id: number;
     unit_id: number;
     quantity: string | number;
     unit_price: string | number;
@@ -26,27 +33,27 @@ interface PurchaseOrderProps {
 interface Props {
     purchaseOrder: PurchaseOrderProps;
     suppliers: SelectionItem[];
-    categories: SelectionItem[];
+    items: SelectionItem[];
     units: SelectionItem[];
     sites?: SelectionItem[];
 }
 
-export default function Edit({ purchaseOrder, suppliers, categories, units, sites = [] }: Props) {
+export default function Edit({ purchaseOrder, suppliers, items: catalogItems, units, sites = [] }: Props) {
     const { data, setData, put, processing, errors } = useForm({
         site_id: purchaseOrder.site_id || '',
         supplier_id: purchaseOrder.supplier_id,
         order_date: purchaseOrder.order_date.split('T')[0],
         reference: purchaseOrder.reference,
         items: purchaseOrder.items.map(item => ({
-            category_id: item.category_id,
+            item_id: item.item_id, 
             unit_id: item.unit_id,
             quantity: Number(item.quantity),
             unit_price: Number(item.unit_price)
-        }))
+        })) as FormItem[]
     });
 
     const addItemLine = () => {
-        setData('items', [...data.items, { category_id: '', unit_id: '', quantity: 1, unit_price: 0 }]);
+        setData('items', [...data.items, { item_id: '', unit_id: '', quantity: 1, unit_price: 0 }]);
     };
 
     const removeItemLine = (index: number) => {
@@ -131,8 +138,18 @@ export default function Edit({ purchaseOrder, suppliers, categories, units, site
                             {data.items.map((item, index) => (
                                 <tr key={index} className="hover:bg-muted/10">
                                     <td className="p-3">
-                                        <select value={item.category_id} onChange={e => updateItemLine(index, 'category_id', Number(e.target.value))} className="w-full bg-input border border-border rounded-md p-2">
-                                            {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                        <select 
+                                            value={item.item_id} 
+                                            onChange={e => updateItemLine(index, 'item_id', Number(e.target.value))} 
+                                            className="w-full bg-input border border-border rounded-md p-2"
+                                        >
+                                            <option value="">Sélectionner l'article</option>
+                                            {/* Utilisation de l'alias pour éviter le conflit */}
+                                            {catalogItems.map(catalogItem => (
+                                                <option key={catalogItem.id} value={catalogItem.id}>
+                                                    {catalogItem.name}
+                                                </option>
+                                            ))}
                                         </select>
                                     </td>
                                     <td className="p-3">

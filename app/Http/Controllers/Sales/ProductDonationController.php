@@ -17,7 +17,9 @@ class ProductDonationController extends Controller
     public function index()
     {
         Gate::authorize('viewAny', ProductDonation::class);
-        $data = ProductDonation::with('category')->paginate(15);
+        $data = ProductDonation::where('site_id', auth()->user()->current_site_id)
+            ->with('item') // Correction : Eager loading de l'entité physique
+            ->paginate(15);
         return Inertia::render('Sales/ProductDonation/Index', ['data' => $data]);
     }
 

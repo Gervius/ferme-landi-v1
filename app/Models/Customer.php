@@ -16,7 +16,10 @@ class Customer extends Model
         'is_active' => 'boolean',
     ];
 
-    protected $appends = ['outstanding_balance'];
+    public function site()
+    {
+        return $this->belongsTo(Site::class);
+    }
 
     public function invoices()
     {
@@ -26,18 +29,5 @@ class Customer extends Model
     public function payments()
     {
         return $this->hasMany(CustomerPayment::class);
-    }
-
-    public function getOutstandingBalanceAttribute(): float
-    {
-        $totalInvoices = $this->invoices()
-            ->whereIn('status', ['validated', 'partially_paid', 'paid']) // assuming validated means it's due
-            ->sum('total_amount');
-
-        $totalPayments = $this->payments()
-            ->where('status', 'approved')
-            ->sum('amount');
-
-        return (float) ($totalInvoices - $totalPayments);
     }
 }

@@ -21,6 +21,10 @@ interface HealthTreatment {
     veterinarian_name?: string;
     status: 'draft' | 'approved';
     generation: { id: number; code: string; type: string };
+    // NOUVEAUX CHAMPS OPTIONNELS (Stock physique)
+    item?: { id: number; name: string };
+    quantity?: number;
+    unit?: { id: number; symbol: string };
 }
 
 interface Generation {
@@ -29,15 +33,23 @@ interface Generation {
     type: string;
 }
 
+interface SelectionItem { 
+    id: number; 
+    name: string; 
+    symbol?: string; 
+}
+
 interface Props {
     data: PaginatedData<HealthTreatment>;
     generations: Generation[];
+    items: SelectionItem[]; // Ajouté pour le stock
+    units: SelectionItem[]; // Ajouté pour le stock
 }
 
-export default function Index({ data, generations }: Props) {
+export default function Index({ data, generations, items, units }: Props) {
     const [isModalOpen, setIsModalOpen] = useState(false);
 
-    // Initialisation du formulaire selon StoreHealthTreatmentRequest
+    // Initialisation du formulaire
     const { data: formData, setData, post, processing, errors, reset, clearErrors } = useForm({
         generation_id: '',
         date: new Date().toISOString().split('T')[0],
@@ -45,6 +57,9 @@ export default function Index({ data, generations }: Props) {
         medication_name: '',
         dosage_description: '',
         veterinarian_name: '',
+        item_id: '',
+        quantity: '',
+        unit_id: '',
     });
 
     const openModal = () => {
@@ -54,7 +69,7 @@ export default function Index({ data, generations }: Props) {
     };
 
     // Soumission de la création (Brouillon)
-    const submitCreate = (e: React.FormEvent) => {
+    const submitCreate = (e: React.SubmitEvent) => {
         e.preventDefault();
         // ROUTAGE STRICT : URI en dur
         post('/zootechnie/health-treatments', {
@@ -114,6 +129,12 @@ export default function Index({ data, generations }: Props) {
                         <Pill size={14} /> {item.medication_name}
                     </span>
                     <span className="text-xs text-muted-foreground mt-0.5">{item.dosage_description}</span>
+                    {/* Affichage de l'impact sur le stock si applicable */}
+                    {item.item && item.quantity && item.unit && (
+                        <span className="text-[10px] uppercase font-bold text-secondary bg-secondary/10 px-1.5 py-0.5 rounded w-fit mt-1">
+                            - {item.quantity} {item.unit.symbol} {item.item.name}
+                        </span>
+                    )}
                 </div>
             )
         },
@@ -271,6 +292,52 @@ export default function Index({ data, generations }: Props) {
                                     placeholder="Ex: 1g / L d'eau pendant 5 jours"
                                 />
                                 {errors.dosage_description && <span className="text-destructive text-xs">{errors.dosage_description}</span>}
+                            </div>
+
+                            {/* NOUVEAU BLOC : Impact sur l'inventaire physique */}
+                            <div className="space-y-2 col-span-2 mt-4 p-4 border border-border bg-muted/20 rounded-xl">
+                                <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">
+                                    Impact sur les stocks (Optionnel)
+                                </h4>
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div className="space-y-1">
+                                        <label className="text-xs font-medium text-foreground">Article (Pharmacie)</label>
+                                        <select 
+                                            value={formData.item_id}
+                                            onChange={e => setData('item_id', e.target.value)}
+                                            className="w-full bg-input border border-border rounded-md p-2 text-sm focus:ring-primary"
+                                        >
+                                            <option value="">Ne pas déduire du stock</option>
+                                            {items.map(i => <option key={i.id} value={i.id}>{i.name}</option>)}
+                                        </select>
+                                        {errors.item_id && <span className="text-destructive text-xs">{errors.item_id}</span>}
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-xs font-medium text-foreground">Quantité consommée</label>
+                                        <input 
+                                            type="number" 
+                                            step="0.01"
+                                            value={formData.quantity}
+                                            onChange={e => setData('quantity', e.target.value)}
+                                            className="w-full bg-input border border-border rounded-md p-2 text-sm focus:ring-primary"
+                                            disabled={!formData.item_id}
+                                        />
+                                        {errors.quantity && <span className="text-destructive text-xs">{errors.quantity}</span>}
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-xs font-medium text-foreground">Unité</label>
+                                        <select 
+                                            value={formData.unit_id}
+                                            onChange={e => setData('unit_id', e.target.value)}
+                                            className="w-full bg-input border border-border rounded-md p-2 text-sm focus:ring-primary"
+                                            disabled={!formData.item_id}
+                                        >
+                                            <option value="">Sélectionnez</option>
+                                            {units.map(u => <option key={u.id} value={u.id}>{u.symbol}</option>)}
+                                        </select>
+                                        {errors.unit_id && <span className="text-destructive text-xs">{errors.unit_id}</span>}
+                                    </div>
+                                </div>
                             </div>
 
                             <div className="space-y-2 col-span-2">

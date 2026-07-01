@@ -13,7 +13,7 @@ final readonly class LogFeedConsumptionAction
             return FeedConsumption::create([
                 'generation_id' => $data['generation_id'],
                 'date' => $data['date'],
-                'item_category_id' => $data['item_category_id'],
+                'item_id' => $data['item_id'], // Remplacé
                 'unit_id' => $data['unit_id'],
                 'quantity' => $data['quantity'],
                 'prepared_by' => $userId,

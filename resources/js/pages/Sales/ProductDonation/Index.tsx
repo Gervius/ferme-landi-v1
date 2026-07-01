@@ -1,35 +1,36 @@
-// pages/Sales/ProductDonation/Index.tsx
 import React from 'react';
 import { Link, router } from '@inertiajs/react';
-import { Plus, CheckCircle, Clock, HeartHandshake, Gift } from 'lucide-react';
-import { productDonationsCreate, productDonationsApprove } from '@/routes';
+import { Plus, CheckCircle, Clock, HeartHandshake, Gift, Hash } from 'lucide-react';
 import { PaginatedData } from '@/types/pagination';
 import { DataTable, ColumnDef } from '@/components/ui/DataTable';
 
 interface ProductDonation {
     id: number;
+    reference: string; // Ajout de la référence générée
     date: string;
     beneficiary_name: string;
     quantity: number;
     valorization_price: number;
     status: 'draft' | 'approved';
-    category: { id: number; name: string };
+    item: { id: number; name: string; category?: { name: string } }; // Ciblage physique strict
 }
 
 interface Props {
-    data: PaginatedData<ProductDonation>; //[cite: 37]
+    data: PaginatedData<ProductDonation>;
 }
 
 export default function Index({ data }: Props) {
     
-    // Validation du don (Décrémente le stock)[cite: 37]
+    // Validation du don (Décrémente le stock)
     const handleApprove = (id: number) => {
         if (confirm("Confirmez-vous ce don ? La quantité sera définitivement déduite du stock physique.")) {
-            router.post(productDonationsApprove.url(id), {}, { preserveScroll: true });
+            // Remplacement Wayfinder par l'URI en dur
+            router.post(`/sales/product-donations/${id}/approve`, {}, { preserveScroll: true });
         }
     };
 
     const columns: ColumnDef<ProductDonation>[] = [
+        { header: 'Référence', cell: (item) => <span className="font-bold text-foreground">{item.reference}</span> },
         { header: 'Date', cell: (item) => new Date(item.date).toLocaleDateString() },
         { 
             header: 'Bénéficiaire', 
@@ -40,7 +41,14 @@ export default function Index({ data }: Props) {
                 </div>
             ) 
         },
-        { header: 'Produit (Catégorie)', cell: (item) => <span className="font-medium text-card-foreground">{item.category.name}</span> },
+        { 
+            header: 'Produit (Physique)', 
+            cell: (item) => (
+                <span className="font-medium text-card-foreground">
+                    {item.item?.name} {item.item?.category && <span className="text-xs text-muted-foreground">({item.item.category.name})</span>}
+                </span>
+            ) 
+        },
         { 
             header: 'Quantité Offerte', 
             className: 'text-center',
@@ -91,7 +99,7 @@ export default function Index({ data }: Props) {
                     </p>
                 </div>
 
-                <Link href={productDonationsCreate.url()} className="flex items-center gap-2 bg-primary text-primary-foreground px-5 py-2.5 rounded-xl font-bold shadow-sm hover:opacity-90 transition-opacity">
+                <Link href="/sales/product-donations/create" className="flex items-center gap-2 bg-primary text-primary-foreground px-5 py-2.5 rounded-xl font-bold shadow-sm hover:opacity-90 transition-opacity">
                     <Plus size={18} /> Nouveau Don
                 </Link>
             </div>

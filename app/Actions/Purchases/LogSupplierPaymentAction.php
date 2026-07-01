@@ -11,14 +11,15 @@ class LogSupplierPaymentAction
     {
         return DB::transaction(function () use ($data, $userId) {
             return SupplierPayment::create([
-                'supplier_id'    => $data['supplier_id'],
-                'payment_date'   => $data['payment_date'],
-                'reference'      => $data['reference'],
-                'amount'         => $data['amount'],
-                'payment_method' => $data['payment_method'],
-                'notes'          => $data['notes'] ?? null,
-                'status'         => 'draft',
-                'prepared_by'    => $userId,
+                'supplier_id'         => $data['supplier_id'],
+                'supplier_invoice_id' => $data['supplier_invoice_id'] ?? null, // AJOUT : Sauvegarde du lettrage
+                'payment_date'        => $data['payment_date'],
+                'reference'           => $data['reference'],
+                'amount'              => $data['amount'],
+                'payment_method'      => $data['payment_method'],
+                'notes'               => $data['notes'] ?? null,
+                'status'              => 'draft',
+                'prepared_by'         => $userId,
             ]);
         });
     }

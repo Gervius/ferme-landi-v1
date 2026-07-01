@@ -16,8 +16,10 @@ class StoreSupplierInvoiceRequest extends FormRequest
     public function rules(): array
     {
         return [
+            // AJOUT : On valide la référence pour qu'elle passe dans $request->validated()
+            'reference'                => ['required', 'string', 'max:255', 'unique:supplier_invoices,reference'],
+            
             'supplier_id'              => ['required', 'exists:suppliers,id'],
-            // 🛡️ Le bouclier était déjà parfait ici
             'purchase_receipt_id'      => ['required', 'exists:purchase_receipts,id', 'unique:supplier_invoices,purchase_receipt_id'],
             'invoice_date'             => ['required', 'date'],
             'due_date'                 => ['nullable', 'date'],

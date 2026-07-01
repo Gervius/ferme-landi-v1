@@ -14,7 +14,11 @@ class StockBalanceController extends Controller
     {
         Gate::authorize('viewAny', StockBalance::class);
 
-        $stockBalances = StockBalance::with(['site', 'category', 'unit'])->paginate(15); // <-- CORRECTION ICI
+        $stockBalances = StockBalance::with([
+            'site:id,name', 
+            'item:id,name', // Remplacement de category par item
+            'unit:id,name,symbol'
+        ])->paginate(15);
 
         return Inertia::render('Stocks/StockBalances/Index', [
             'stockBalances' => $stockBalances,

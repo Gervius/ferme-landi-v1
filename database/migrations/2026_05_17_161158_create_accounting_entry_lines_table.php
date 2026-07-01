@@ -16,8 +16,11 @@ return new class extends Migration
             $table->foreignId('accounting_entry_id')->constrained('accounting_entries')->cascadeOnDelete();
             $table->foreignId('account_id')->constrained('accounts');
             $table->foreignId('analytical_center_id')->nullable()->constrained('analytical_centers');
-            $table->decimal('debit', 12, 2)->default(0);
-            $table->decimal('credit', 12, 2)->default(0);
+            
+            // Modification ICI : Remplacement strict par des entiers
+            $table->bigInteger('debit')->default(0);
+            $table->bigInteger('credit')->default(0);
+            
             $table->string('description')->nullable();
             $table->timestamps();
         });

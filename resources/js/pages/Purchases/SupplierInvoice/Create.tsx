@@ -2,7 +2,6 @@
 import React, { useMemo } from 'react';
 import { useForm, Link } from '@inertiajs/react';
 import { Plus, Trash2, ArrowLeft, Receipt, ListPlus } from 'lucide-react';
-import { supplierInvoicesIndex, supplierInvoicesStore } from '@/routes';
 
 interface SelectionItem { id: number; name: string; reference?: string }
 
@@ -54,13 +53,13 @@ export default function Create({ suppliers, receipts }: Props) {
 
     const handleSubmit = (e: React.SubmitEvent) => {
         e.preventDefault();
-        post(supplierInvoicesStore.url());
+        post('/purchases/supplier-invoices');
     };
 
     return (
         <div className="p-6 max-w-6xl mx-auto space-y-6 bg-background text-foreground">
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Link href={supplierInvoicesIndex.url()} className="hover:text-foreground flex items-center gap-1">
+                <Link href="/purchases/supplier-invoices" className="hover:text-foreground flex items-center gap-1">
                     <ArrowLeft size={14} /> Factures
                 </Link>
                 <span>/</span><span className="text-foreground font-medium">Nouvel enregistrement</span>
@@ -229,7 +228,7 @@ export default function Create({ suppliers, receipts }: Props) {
 
                 {/* Validation */}
                 <div className="flex justify-end gap-4">
-                    <Link href={supplierInvoicesIndex.url()} className="px-5 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground">
+                    <Link href="/purchases/supplier-invoices" className="px-5 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground">
                         Annuler
                     </Link>
                     <button 

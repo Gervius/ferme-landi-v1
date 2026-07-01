@@ -1,8 +1,7 @@
 // pages/Sales/Customer/Index.tsx
 import React, { useState } from 'react';
-import { router, useForm } from '@inertiajs/react';
+import { router, useForm, usePage } from '@inertiajs/react';
 import { Plus, Edit2, Trash2, Users, User, Phone, Mail, MapPin } from 'lucide-react';
-import { customersStore, customersUpdate, customersDestroy } from '@/routes';
 import { PaginatedData } from '@/types/pagination';
 import { DataTable, ColumnDef } from '@/components/ui/DataTable';
 import { 
@@ -27,10 +26,12 @@ interface Props {
 }
 
 export default function Index({ data }: Props) {
+    
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingId, setEditingId] = useState<number | null>(null);
 
     const { data: formData, setData, post, put, processing, errors, reset } = useForm({
+        // site_id: auth.user.current_site_id, <-- À SUPPRIMER
         name: '',
         phone: '',
         email: '',
@@ -41,12 +42,14 @@ export default function Index({ data }: Props) {
     const openCreateModal = () => {
         setEditingId(null);
         reset();
+        // setData('site_id', auth.user.current_site_id); <-- À SUPPRIMER
         setIsModalOpen(true);
     };
 
     const openEditModal = (customer: Customer) => {
         setEditingId(customer.id);
         setData({
+            // site_id: auth.user.current_site_id, <-- À SUPPRIMER
             name: customer.name,
             phone: customer.phone,
             email: customer.email || '',
@@ -56,18 +59,22 @@ export default function Index({ data }: Props) {
         setIsModalOpen(true);
     };
 
+
     const handleDelete = (id: number) => {
         if (confirm("Supprimer ce client ?")) {
-            router.delete(customersDestroy.url(id), { preserveScroll: true });
+            // Lien en dur
+            router.delete(`/sales/customers/${id}`, { preserveScroll: true });
         }
     };
 
     const handleSubmit = (e: React.SubmitEvent) => {
         e.preventDefault();
         if (editingId) {
-            put(customersUpdate.url(editingId), { onSuccess: () => { setIsModalOpen(false); reset(); }});
+            // Lien en dur
+            put(`/sales/customers/${editingId}`, { onSuccess: () => { setIsModalOpen(false); reset(); }});
         } else {
-            post(customersStore.url(), { onSuccess: () => { setIsModalOpen(false); reset(); }});
+            // Lien en dur
+            post('/sales/customers', { onSuccess: () => { setIsModalOpen(false); reset(); }});
         }
     };
 
@@ -128,6 +135,13 @@ export default function Index({ data }: Props) {
                     </DialogHeader>
 
                     <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+                        {/* Bloc d'erreur global (pour capter les échecs liés au site_id) */}
+                        {Object.keys(errors).length > 0 && (
+                            <div className="bg-destructive/10 text-destructive text-xs font-bold p-3 rounded-lg">
+                                {errors.name && <p>Erreur Nom : {errors.name}</p>}
+                            </div>
+                        )}
+
                         <div className="space-y-1">
                             <label className="text-sm font-semibold">Nom complet</label>
                             <input type="text" value={formData.name} onChange={e => setData('name', e.target.value)} className="w-full bg-input border border-border rounded-lg p-2.5 focus:ring-secondary" placeholder="Ex: Marché Central..." />
@@ -141,6 +155,8 @@ export default function Index({ data }: Props) {
                         <div className="space-y-1">
                             <label className="text-sm font-semibold">E-mail</label>
                             <input type="email" value={formData.email} onChange={e => setData('email', e.target.value)} className="w-full bg-input border border-border rounded-lg p-2.5 focus:ring-secondary" />
+                            {/* Ajout du retour d'erreur pour l'email */}
+                            {errors.email && <span className="text-destructive text-xs">{errors.email}</span>}
                         </div>
                         <div className="space-y-1">
                             <label className="text-sm font-semibold">Adresse</label>

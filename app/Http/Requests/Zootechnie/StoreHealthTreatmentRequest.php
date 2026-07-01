@@ -17,13 +17,16 @@ class StoreHealthTreatmentRequest extends FormRequest
         return [
             'generation_id' => ['required', 'exists:generations,id'],
             'disease_description' => ['required', 'string'],
+            
+            // Nouveaux champs d'inventaire (Optionnels si on n'utilise pas le stock physique)
+            'item_id' => ['nullable', 'exists:items,id'],
+            'quantity' => ['nullable', 'numeric', 'min:0.01', 'required_with:item_id'],
+            'unit_id' => ['nullable', 'exists:units,id', 'required_with:item_id'],
+            
             'medication_name' => ['required', 'string', 'max:255'],
             'dosage_description' => ['required', 'string', 'max:255'],
             'veterinarian_name' => ['nullable', 'string', 'max:255'],
             
-            // 🔴 BOUCLIER ANTI-DOUBLONS (Race Conditions HTTP)
-            // On empêche de saisir deux fois le MÊME médicament pour le même lot le même jour.
-            // En revanche, il peut saisir un autre médicament le même jour.
             'date' => [
                 'required', 
                 'date',

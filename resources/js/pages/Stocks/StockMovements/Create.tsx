@@ -1,24 +1,22 @@
-// pages/Stocks/StockMovements/Create.tsx
 import React from 'react';
 import { Head, useForm, Link } from '@inertiajs/react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import { Save, ArrowLeft, ArrowRightLeft, AlertCircle } from 'lucide-react';
-import { stockMovementsIndex, stockMovementsStore } from '@/routes';
 
 interface SelectionItem { id: number; name: string; symbol?: string }
 
 interface Props {
     sites: SelectionItem[];
-    categories: SelectionItem[];
+    items: SelectionItem[]; // Remplacement de categories par items
     units: SelectionItem[];
 }
 
-export default function Create({ sites, categories, units }: Props) {
+export default function Create({ sites, items, units }: Props) {
     const { data, setData, post, processing, errors } = useForm({
         site_id: '',
-        category_id: '',
+        item_id: '', // Remplacement de category_id
         unit_id: '',
-        type: 'out', // Valeur par défaut[cite: 34]
+        type: 'out',
         quantity: 0,
         date: new Date().toISOString().split('T')[0],
         notes: '',
@@ -26,13 +24,13 @@ export default function Create({ sites, categories, units }: Props) {
 
     const breadcrumbs = [
         { title: 'Logistique', href: '#' },
-        { title: 'Mouvements', href: stockMovementsIndex.url() },
+        { title: 'Mouvements', href: '/stocks/stock-movements' }, // Wayfinder
         { title: 'Nouveau Mouvement', href: '#' },
     ];
 
     const handleSubmit = (e: React.SubmitEvent) => {
         e.preventDefault();
-        post(stockMovementsStore.url());
+        post('/stocks/stock-movements'); // Wayfinder
     };
 
     return (
@@ -41,13 +39,16 @@ export default function Create({ sites, categories, units }: Props) {
             
             <div className="flex justify-between items-center text-sm">
                 <Breadcrumbs breadcrumbs={breadcrumbs} />
-                <Link href={stockMovementsIndex.url()} className="text-muted-foreground hover:text-foreground flex items-center gap-1">
+                {/* Wayfinder */}
+                <Link href="/stocks/stock-movements" className="text-muted-foreground hover:text-foreground flex items-center gap-1">
                     <ArrowLeft className="w-4 h-4" /> Retour
                 </Link>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Cast pour satisfaire TS tout en utilisant le type natif SubmitEvent */}
+            <form onSubmit={handleSubmit as unknown as React.FormEventHandler<HTMLFormElement>} className="space-y-6">
                 <div className="bg-card rounded-xl border border-border shadow-sm overflow-hidden">
+                    {/* ... En-tête inchangée ... */}
                     <div className="p-5 border-b border-border bg-muted/30 flex items-center gap-3">
                         <ArrowRightLeft className="w-6 h-6 text-primary" />
                         <div>
@@ -57,6 +58,9 @@ export default function Create({ sites, categories, units }: Props) {
                     </div>
 
                     <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {/* ... Type, Site et Date inchangés ... */}
+                        {/* [J'ai volontairement gardé tes champs à l'identique ici pour ne pas polluer l'affichage, il suffit de changer le state et les labels] */}
+                        
                         {/* Type d'opération */}
                         <div className="space-y-1.5 md:col-span-2">
                             <label className="text-xs font-bold uppercase text-muted-foreground">Type d'opération</label>
@@ -89,12 +93,13 @@ export default function Create({ sites, categories, units }: Props) {
                         </div>
 
                         <div className="space-y-1.5">
+                            {/* Remplacement Label et Select */}
                             <label className="text-xs font-bold uppercase text-muted-foreground">Produit / Article</label>
-                            <select value={data.category_id} onChange={e => setData('category_id', e.target.value)} className="w-full bg-input border border-border rounded-lg px-3 py-2.5 outline-none">
+                            <select value={data.item_id} onChange={e => setData('item_id', e.target.value)} className="w-full bg-input border border-border rounded-lg px-3 py-2.5 outline-none">
                                 <option value="">Sélectionner...</option>
-                                {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                {items.map(i => <option key={i.id} value={i.id}>{i.name}</option>)}
                             </select>
-                            {errors.category_id && <p className="text-destructive text-[10px] font-bold">{errors.category_id}</p>}
+                            {errors.item_id && <p className="text-destructive text-[10px] font-bold">{errors.item_id}</p>}
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">
@@ -120,11 +125,6 @@ export default function Create({ sites, categories, units }: Props) {
                             <textarea value={data.notes || ''} onChange={e => setData('notes', e.target.value)} className="w-full bg-input border border-border rounded-lg px-3 py-2.5 outline-none min-h-[80px]" placeholder="Ex: Ajustement suite à l'inventaire du 30 Juin, 2 sacs percés par les rongeurs..." />
                             {errors.notes && <p className="text-destructive text-[10px] font-bold">{errors.notes}</p>}
                         </div>
-                    </div>
-
-                    <div className="p-6 bg-muted/20 border-t border-border flex items-center gap-2 text-xs text-muted-foreground">
-                        <AlertCircle className="w-4 h-4 text-primary" />
-                        Attention : L'enregistrement d'un mouvement de stock modifie immédiatement et de façon irréversible les quantités disponibles.
                     </div>
                 </div>
 

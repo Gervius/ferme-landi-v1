@@ -20,12 +20,18 @@ class StockMovementController extends Controller
     {
         Gate::authorize('viewAny', StockMovement::class);
 
-        // Remplacement de 'category' par 'item'
-        $stockMovements = StockMovement::with(['site', 'item', 'unit', 'creator'])
+        // Optimisation RAM : on ne charge que les colonnes strictement nécessaires
+        $stockMovements = StockMovement::with([
+            'site:id,name', 
+            'item:id,name', 
+            'unit:id,name,symbol', 
+            'creator:id,name'
+        ])
             ->orderByDesc('date')
             ->paginate(15);
 
-        return Inertia::render('StockMovements/StockMovementsIndex', [
+        // Reflète ton arborescence de dossiers
+        return Inertia::render('Stocks/StockMovements/Index', [
             'stockMovements' => $stockMovements,
         ]);
     }
@@ -35,11 +41,10 @@ class StockMovementController extends Controller
         Gate::authorize('create', StockMovement::class);
 
         $sites = Site::select('id', 'name')->get();
-        // On charge les Items actifs au lieu des Categories
         $items = Item::where('is_active', true)->select('id', 'name', 'default_unit_id')->get();
         $units = Unit::where('is_active', true)->get(['id', 'name', 'symbol']);
 
-        return Inertia::render('StockMovements/StockMovementsCreate', [
+        return Inertia::render('Stocks/StockMovements/Create', [
             'sites' => $sites,
             'items' => $items,
             'units' => $units,
@@ -50,8 +55,7 @@ class StockMovementController extends Controller
     {
         $action->execute($request->validated(), $request->user()->id);
 
-        // Routage Wayfinder strict en dur
-        return redirect('/stock-movements')
+        return redirect('/stocks/stock-movements')
             ->with('success', 'Mouvement de stock enregistré avec succès.');
     }
 }

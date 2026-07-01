@@ -38,7 +38,7 @@ class SupplierInvoiceController extends Controller
     {
         $action->execute($request->validated(), $request->user()->id);
         // Routage Wayfinder
-        return redirect('/supplier-invoices')->with('success', 'Facture fournisseur créée en brouillon.');
+        return redirect('/purchases/supplier-invoices')->with('success', 'Facture fournisseur créée en brouillon.');
     }
 
     public function approve(SupplierInvoice $supplierInvoice, ApproveSupplierInvoiceAction $action)
@@ -46,6 +46,6 @@ class SupplierInvoiceController extends Controller
         Gate::authorize('manage purchases');
         $action->execute($supplierInvoice, request()->user()->id);
         // Routage Wayfinder
-        return redirect('/supplier-invoices')->with('success', 'Facture fournisseur validée (Écriture comptable générée).');
+        return redirect('/purchases/supplier-invoices')->with('success', 'Facture fournisseur validée (Écriture comptable générée).');
     }
 }

@@ -21,11 +21,10 @@ final readonly class LogProductionAction
                 'generation_id' => $data['generation_id'],
                 'date' => $data['date'],
                 'unit_id' => $data['unit_id'],
-                'item_category_id' => $data['item_category_id'] ?? null,
+                'item_id' => $data['item_id'] ?? null, // Remplacé
                 'good_quantity' => $data['good_quantity'],
                 'broken_quantity' => $data['broken_quantity'],
                 'prepared_by' => $userId,
-                // L'idéal serait d'avoir une constante dans ton modèle : DailyProduction::STATUS_DRAFT
                 'status' => 'draft', 
             ]);
         });

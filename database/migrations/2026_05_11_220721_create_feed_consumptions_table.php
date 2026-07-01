@@ -15,13 +15,15 @@ return new class extends Migration
             $table->id();
             $table->foreignId('generation_id')->constrained()->cascadeOnDelete();
             $table->date('date');
-            $table->foreignId('item_category_id')->constrained('categories');
+            
+            
+            $table->foreignId('item_id')->constrained('items');
+            
             $table->foreignId('unit_id')->constrained();
 
             $table->decimal('quantity', 10, 2);
             $table->decimal('total_base_quantity', 10, 2)->default(0);
 
-            // Workflow columns
             $table->string('status')->default('draft');
             $table->foreignId('prepared_by')->constrained('users');
             $table->foreignId('approved_by')->nullable()->constrained('users');
@@ -30,7 +32,8 @@ return new class extends Migration
             $table->timestamps();
             $table->softDeletes();
 
-            $table->unique(['generation_id', 'date', 'item_category_id'], 'unique_feed_consumption');
+            
+            $table->unique(['generation_id', 'date', 'item_id'], 'unique_feed_consumption');
         });
     }
 

@@ -12,10 +12,9 @@ final class DailyProduction extends Model
 {
     use HasFactory, SoftDeletes, HasApprovalWorkflow;
 
-    // VERROUILLAGE SÉCURITÉ & RAM : Déclaration explicite au lieu de $guarded
     protected $fillable = [
         'generation_id',
-        'item_category_id',
+        'item_id', // Remplacé
         'unit_id',
         'date',
         'good_quantity',
@@ -35,7 +34,6 @@ final class DailyProduction extends Model
         'approved_at' => 'datetime',
     ];
 
-    // TYPAGE STRICT DES RELATIONS (PHP 8.4+)
     public function generation(): BelongsTo
     {
         return $this->belongsTo(Generation::class);
@@ -46,8 +44,9 @@ final class DailyProduction extends Model
         return $this->belongsTo(Unit::class);
     }
 
-    public function category(): BelongsTo
+    // Renommé et repointé vers Item
+    public function item(): BelongsTo
     {
-        return $this->belongsTo(Category::class, 'item_category_id');
+        return $this->belongsTo(Item::class);
     }
 }

@@ -1,10 +1,9 @@
 import React, { useMemo, useEffect, useState } from 'react';
-import { Head, useForm, Link } from '@inertiajs/react';
+import { Head, useForm, Link, usePage } from '@inertiajs/react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import { 
     Save, ArrowLeft, FileText, Plus, Trash2, Info, Calculator, Loader2 
 } from 'lucide-react';
-import { invoicesIndex, invoicesStore } from '@/routes';
 import axios from 'axios';
 
 interface Props {
@@ -13,14 +12,15 @@ interface Props {
 }
 
 export default function CreateInvoice({ customers, deliveryNotes }: Props) {
+    const { auth } = usePage<any>().props;
     const [isLoadingItems, setIsLoadingItems] = useState(false);
 
     const { data, setData, post, processing, errors } = useForm({
+        site_id: auth.user.current_site_id,
         customer_id: '',
         delivery_note_id: '',
         invoice_date: new Date().toISOString().split('T')[0],
         due_date: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-        reference: `FACT-${Date.now().toString().slice(-6)}`,
         items: [
             { delivery_note_item_id: '', description: '', quantity: 0, unit_price: 0 }
         ],
@@ -37,22 +37,21 @@ export default function CreateInvoice({ customers, deliveryNotes }: Props) {
         const fetchBLDetails = async () => {
             setIsLoadingItems(true);
             try {
-                // Appel à l'API pour récupérer les lignes du BL
                 const response = await axios.get(`/api/delivery-notes/${data.delivery_note_id}`);
                 const bl = response.data;
 
-                // On mappe les lignes du BL vers la structure de la facture
                 const newItems = bl.items.map((item: any) => ({
                     delivery_note_item_id: item.id,
-                    description: `${item.category.name} (Livraison ${bl.reference})`,
+                    // Utilisation de l'inventaire physique (item.item) chargé via Eager Loading
+                    description: `${item.item?.name} (${item.item?.category?.name}) - BL ${bl.reference}`,
                     quantity: item.delivered_quantity,
-                    unit_price: 0, // Le comptable n'a plus qu'à saisir le prix
+                    unit_price: 0,
                 }));
 
                 setData(prev => ({
                     ...prev,
                     items: newItems,
-                    customer_id: bl.sale_order?.customer_id || prev.customer_id // On lie aussi le client si possible
+                    customer_id: bl.sale_order?.customer_id || prev.customer_id
                 }));
             } catch (error) {
                 console.error("Erreur lors de la récupération du BL", error);
@@ -76,7 +75,7 @@ export default function CreateInvoice({ customers, deliveryNotes }: Props) {
 
     const handleSubmit = (e: React.SubmitEvent) => {
         e.preventDefault();
-        post(invoicesStore.url());
+        post('/sales/invoices');
     };
 
     return (
@@ -86,10 +85,10 @@ export default function CreateInvoice({ customers, deliveryNotes }: Props) {
             <div className="flex justify-between items-center text-sm">
                 <Breadcrumbs breadcrumbs={[
                     { title: 'Ventes', href: '#' },
-                    { title: 'Facturation', href: invoicesIndex.url() },
+                    { title: 'Facturation', href: '/sales/invoices' },
                     { title: 'Éditer Facture', href: '#' }
                 ]} />
-                <Link href={invoicesIndex.url()} className="text-muted-foreground hover:text-foreground flex items-center gap-1 transition">
+                <Link href="/sales/invoices" className="text-muted-foreground hover:text-foreground flex items-center gap-1 transition">
                     <ArrowLeft className="w-4 h-4" /> Retour
                 </Link>
             </div>
@@ -100,6 +99,7 @@ export default function CreateInvoice({ customers, deliveryNotes }: Props) {
                         Certaines lignes ou certains champs contiennent des erreurs de saisie. Veuillez vérifier les éléments indiqués en rouge.
                     </div>
                 )}
+                
                 <div className="bg-card rounded-xl border border-border shadow-lg overflow-hidden">
                     <div className="p-5 border-b border-border bg-primary/5 flex items-center gap-3">
                         <FileText className="w-6 h-6 text-primary" />
@@ -109,8 +109,8 @@ export default function CreateInvoice({ customers, deliveryNotes }: Props) {
                         </div>
                     </div>
 
-                    <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                        <div className="space-y-1.5 lg:col-span-2">
+                    <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-1.5">
                             <label className="text-xs font-bold uppercase text-muted-foreground tracking-tighter italic">Bon de Livraison Source</label>
                             <select
                                 value={data.delivery_note_id}
@@ -137,17 +137,11 @@ export default function CreateInvoice({ customers, deliveryNotes }: Props) {
                         </div>
 
                         <div className="space-y-1.5">
-                            <label className="text-xs font-bold uppercase text-muted-foreground tracking-tighter">Réf. Facture</label>
-                            <input type="text" value={data.reference} onChange={e => setData('reference', e.target.value)} className="w-full bg-background border border-border rounded-lg px-3 py-2.5 font-mono font-bold" />
-                            {errors.reference && <p className="text-destructive text-[10px] font-bold">{errors.reference}</p>}
-                        </div>
-
-                        <div className="space-y-1.5 lg:col-span-2">
                             <label className="text-xs font-bold uppercase text-muted-foreground tracking-tighter">Date d'émission</label>
                             <input type="date" value={data.invoice_date} onChange={e => setData('invoice_date', e.target.value)} className="w-full bg-background border border-border rounded-lg px-3 py-2.5 outline-none" />
                         </div>
 
-                        <div className="space-y-1.5 lg:col-span-2">
+                        <div className="space-y-1.5">
                             <label className="text-xs font-bold uppercase text-muted-foreground tracking-tighter">Échéance de paiement</label>
                             <input type="date" value={data.due_date} onChange={e => setData('due_date', e.target.value)} className="w-full bg-background border border-border rounded-lg px-3 py-2.5 outline-none focus:ring-2 focus:ring-destructive/20" />
                         </div>

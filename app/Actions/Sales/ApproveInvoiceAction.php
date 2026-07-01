@@ -2,30 +2,23 @@
 
 namespace App\Actions\Sales;
 
-use App\Actions\Accounting\LogAccountingEntryAction;
-use App\Models\Account;
-use App\Models\AccountingJournal;
+use App\Actions\Accounting\MapAndLogAccountingEntryAction;
+use App\Models\AccountingMapping;
 use App\Models\AnalyticalCenter;
-use App\Models\AnalyticalNature;
-use App\Models\FinancialYear;
 use App\Models\Invoice;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\ValidationException;
+use InvalidArgumentException;
 
-class ApproveInvoiceAction
+final readonly class ApproveInvoiceAction
 {
     public function __construct(
-        private readonly LogAccountingEntryAction $logAccountingEntryAction
-    ) {
-    }
+        private MapAndLogAccountingEntryAction $mapAndLogAccountingEntryAction
+    ) {}
 
-    /**
-     * Approve an invoice (validates it).
-     */
     public function execute(Invoice $invoice, int $approverId): Invoice
     {
         if (! $invoice->isDraft()) {
-            throw new \InvalidArgumentException("Only draft invoices can be approved.");
+            throw new InvalidArgumentException("Seules les factures en brouillon peuvent être validées.");
         }
 
         return DB::transaction(function () use ($invoice, $approverId) {
@@ -35,67 +28,50 @@ class ApproveInvoiceAction
                 'approved_at' => now(),
             ]);
 
-            $financialYear = FinancialYear::where('is_closed', false)
-                ->where('start_date', '<=', $invoice->invoice_date)
-                ->where('end_date', '>=', $invoice->invoice_date)
-                ->first();
+            // Eager Loading ultra-strict (zéro N+1)
+            $invoice->loadMissing(['items.deliveryNoteItem.item.category']);
 
-            if (! $financialYear) {
-                throw ValidationException::withMessages([
-                    'invoice_date' => 'Aucun exercice comptable actif trouvé pour la date de cette facture.',
-                ]);
-            }
+            // 1. Récupération du Mapping pour connaître la Nature Analytique des Ventes
+            $mapping = AccountingMapping::where('event_type', 'customer_invoice')->firstOrFail();
+            
+            // 2. Pré-chargement des centres analytiques de cette nature pour éviter les requêtes dans la boucle
+            $centers = AnalyticalCenter::where('analytical_nature_id', $mapping->analytical_nature_id)
+                ->pluck('id', 'analytical_code_id');
 
-            $journal = AccountingJournal::where('code', AccountingJournal::CODE_SALES)->firstOrFail();
-
-            $clientAccount = Account::where('number', Account::CODE_CLIENTS)->firstOrFail();
-            $salesAccount = Account::where('number', Account::CODE_SALES)->firstOrFail();
-
-            $salesNature = AnalyticalNature::where('code', AnalyticalNature::CODE_SALES)->firstOrFail();
-
-            $lines = [];
-
-            // Debit Line (Client)
-            $lines[] = [
-                'account_id' => $clientAccount->id,
-                'debit' => $invoice->total_amount,
-                'credit' => 0,
+            $movements = [];
+            
+            // 3. Créance globale du client (Débit) - Typage strict Entier
+            $movements[] = [
+                'type' => 'debit',
+                'amount' => (int) $invoice->total_amount,
                 'analytical_center_id' => null,
             ];
 
-            // Credit Lines (Sales)
+            // 4. Ventilation du Chiffre d'Affaires par produit (Crédit)
             foreach ($invoice->items as $item) {
-                $amountHt = round($item->quantity * $item->unit_price, 2);
-
+                $amountHt = (int) round($item->quantity * $item->unit_price, 0);
                 $centerId = null;
-                if ($item->category && $item->category->analytical_code_id) {
-                    $center = AnalyticalCenter::where('analytical_nature_id', $salesNature->id)
-                        ->where('analytical_code_id', $item->category->analytical_code_id)
-                        ->first();
 
-                    if ($center) {
-                        $centerId = $center->id;
-                    }
+                $category = $item->deliveryNoteItem?->item?->category;
+                
+                if ($category && $category->analytical_code_id) {
+                    $centerId = $centers[$category->analytical_code_id] ?? null;
                 }
 
-                $lines[] = [
-                    'account_id' => $salesAccount->id,
-                    'debit' => 0,
-                    'credit' => $amountHt,
+                $movements[] = [
+                    'type' => 'credit',
+                    'amount' => $amountHt,
                     'analytical_center_id' => $centerId,
                 ];
             }
 
-            $entryData = [
-                'financial_year_id' => $financialYear->id,
-                'accounting_journal_id' => $journal->id,
-                'date' => $invoice->invoice_date->format('Y-m-d'),
-                'reference' => $invoice->reference ?? 'INV-' . $invoice->id,
-                'description' => 'Facture Client ' . ($invoice->reference ?? $invoice->id),
-                'lines' => $lines,
-            ];
-
-            $this->logAccountingEntryAction->execute($entryData);
+            $this->mapAndLogAccountingEntryAction->execute(
+                eventType: 'customer_invoice',
+                reference: $invoice->reference ?? 'FAC-' . $invoice->id,
+                description: 'Facture Client ' . ($invoice->reference ?? $invoice->id),
+                date: $invoice->invoice_date->format('Y-m-d'),
+                movements: $movements
+            );
 
             return $invoice;
         });

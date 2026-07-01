@@ -10,8 +10,6 @@ use App\Http\Requests\Sales\StoreInvoiceRequest;
 use App\Models\Invoice;
 use App\Models\Customer;
 use App\Models\DeliveryNote;
-use App\Models\Category;
-use App\Models\Unit;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
@@ -23,7 +21,11 @@ class InvoiceController extends Controller
     {
         Gate::authorize("viewAny", Invoice::class);
 
-        $invoices = Invoice::with(["customer", "deliveryNote"])->paginate(15);
+        // Filtrage spatial strict et Zero N+1
+        $invoices = Invoice::where('site_id', auth()->user()->current_site_id)
+            ->with(["customer", "deliveryNote"])
+            ->latest()
+            ->paginate(15);
 
         return Inertia::render("Sales/Invoices/Index", [
             "invoices" => $invoices,
@@ -33,17 +35,24 @@ class InvoiceController extends Controller
     public function create(): Response
     {
         Gate::authorize("create", Invoice::class);
+        $siteId = auth()->user()->current_site_id;
 
-        $customers = Customer::where("is_active", true)->get(["id", "name"]);
-        $deliveryNotes = DeliveryNote::where("status", "approved")->get(["id", "reference"]);
-        $categories = Category::get(["id", "name"]);
-        $units = Unit::get(["id", "name", "symbol"]);
+        // Scoping Spatial : Uniquement les clients actifs de ce site
+        $customers = Customer::where("site_id", $siteId)
+            ->where("is_active", true)
+            ->get(["id", "name"]);
+
+        // RAM Optimisation : Uniquement les BL approuvés DE CE SITE qui n'ont pas encore de facture
+        $deliveryNotes = DeliveryNote::where("site_id", $siteId)
+            ->where("status", "approved")
+            ->doesntHave('invoice') // Respect de la contrainte unique (1 BL = 1 Facture)
+            ->get(["id", "reference"]);
 
         return Inertia::render("Sales/Invoices/Create", [
             "customers" => $customers,
             "deliveryNotes" => $deliveryNotes,
-            "categories" => $categories,
-            "units" => $units,
+            // Les catégories et unités ont été retirées. 
+            // Le front-end devra utiliser l'API showApi du DeliveryNote pour récupérer les Items.
         ]);
     }
 

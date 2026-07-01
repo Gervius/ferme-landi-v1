@@ -2,14 +2,14 @@
 import React, { useMemo } from 'react';
 import { useForm, Link } from '@inertiajs/react';
 import { Trash2, ArrowLeft, PackageOpen, ArrowDownToLine } from 'lucide-react';
-import { purchaseReceiptsIndex, purchaseReceiptsUpdate } from '@/routes';
+
 
 interface SelectionItem { id: number; name: string; symbol?: string; reference?: string }
 
 interface BackendReceiptItem {
     id: number;
     purchase_order_item_id: number | null;
-    category_id: number;
+    item_id: number; // Au lieu de category_id
     unit_id: number;
     received_quantity: string | number;
 }
@@ -26,27 +26,34 @@ interface PurchaseReceiptStructure {
 interface Props {
     purchaseReceipt: PurchaseReceiptStructure;
     purchaseOrders: SelectionItem[];
-    categories: SelectionItem[];
+    items: SelectionItem[]; // Remplacement
     units: SelectionItem[];
     sites?: SelectionItem[];
 }
 
-export default function Edit({ purchaseReceipt, purchaseOrders, categories, units, sites = [] }: Props) {
+interface FormReceiptItem {
+    purchase_order_item_id: number | null;
+    item_id: string | number;
+    unit_id: string | number;
+    received_quantity: number;
+}
+
+export default function Edit({ purchaseReceipt, purchaseOrders, items: catalogItems, units, sites = [] }: Props) {
     const { data, setData, put, processing, errors } = useForm({
         site_id: purchaseReceipt.site_id || '',
         purchase_order_id: purchaseReceipt.purchase_order_id || '',
         receipt_date: purchaseReceipt.receipt_date.split('T')[0],
-        reference: purchaseReceipt.reference,
+        reference: purchaseReceipt.reference, // On garde la référence ici car c'est en lecture seule
         items: purchaseReceipt.items.map(item => ({
             purchase_order_item_id: item.purchase_order_item_id,
-            category_id: item.category_id,
+            item_id: item.item_id,
             unit_id: item.unit_id,
             received_quantity: Number(item.received_quantity)
-        }))
+        })) as FormReceiptItem[]
     });
 
     const addLine = () => {
-        setData('items', [...data.items, { purchase_order_item_id: null, category_id: '', unit_id: '', received_quantity: 1 }]);
+        setData('items', [...data.items, { purchase_order_item_id: null, item_id: '', unit_id: '', received_quantity: 1 }]);
     };
 
     const removeLine = (index: number) => {
@@ -69,13 +76,13 @@ export default function Edit({ purchaseReceipt, purchaseOrders, categories, unit
 
     const handleSubmit = (e: React.SubmitEvent) => {
         e.preventDefault();
-        put(purchaseReceiptsUpdate.url(purchaseReceipt.id));
+        put(`/purchases/purchase-receipts/${purchaseReceipt.id}`);
     };
 
     return (
         <div className="p-6 max-w-6xl mx-auto space-y-6 bg-background text-foreground">
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Link href={purchaseReceiptsIndex.url()} className="hover:text-foreground flex items-center gap-1">
+                <Link href="/purchases/purchase-receipts" className="hover:text-foreground flex items-center gap-1">
                     <ArrowLeft size={14} /> Réceptions
                 </Link>
                 <span>/</span><span className="text-foreground font-medium">Modifier #{purchaseReceipt.reference}</span>
@@ -139,8 +146,13 @@ export default function Edit({ purchaseReceipt, purchaseOrders, categories, unit
                             {data.items.map((item, index) => (
                                 <tr key={index} className="hover:bg-muted/10">
                                     <td className="p-3">
-                                        <select value={item.category_id} onChange={e => updateLine(index, 'category_id', Number(e.target.value))} className="w-full bg-input border border-border rounded-md p-2">
-                                            {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                        <select 
+                                            value={item.item_id} 
+                                            onChange={e => updateLine(index, 'item_id', e.target.value)} 
+                                            className="w-full bg-input border border-border rounded-md p-2"
+                                        >
+                                            <option value="">Sélectionner l'article</option>
+                                            {catalogItems.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                                         </select>
                                     </td>
                                     <td className="p-3">
@@ -169,7 +181,7 @@ export default function Edit({ purchaseReceipt, purchaseOrders, categories, unit
                 </div>
 
                 <div className="flex justify-end gap-4">
-                    <Link href={purchaseReceiptsIndex.url()} className="px-5 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground">Annuler</Link>
+                    <Link href="/purchases/purchase-receipts" className="px-5 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground">Annuler</Link>
                     <button type="submit" disabled={processing} className="bg-secondary text-secondary-foreground px-6 py-2.5 rounded-xl font-bold shadow-sm hover:opacity-90">
                         Sauvegarder les modifications
                     </button>

@@ -2,7 +2,6 @@
 import React from 'react';
 import { Link, router } from '@inertiajs/react';
 import { Plus, CheckCircle, Clock, FileDown, Receipt, FileText } from 'lucide-react';
-import { invoicesCreate, invoicesApprove, invoicesPdf } from '@/routes';
 import { PaginatedData } from '@/types/pagination';
 import { DataTable, ColumnDef } from '@/components/ui/DataTable';
 
@@ -24,7 +23,7 @@ export default function Index({ invoices }: Props) {
     
     const handleApprove = (id: number) => {
         if (confirm("Confirmez-vous la validation comptable de cette facture ?")) {
-            router.post(invoicesApprove.url(id), {}, { preserveScroll: true });
+            router.post(`/sales/invoices/${id}/approve`, {}, { preserveScroll: true });
         }
     };
 
@@ -49,7 +48,7 @@ export default function Index({ invoices }: Props) {
             className: 'text-right',
             cell: (item) => (
                 <div className="flex items-center justify-end gap-2">
-                    <a href={invoicesPdf.url(item.id)} target="_blank" className="p-1.5 hover:bg-muted text-muted-foreground rounded-lg">
+                    <a href={`/sales/invoices/${item.id}/pdf`} target="_blank" className="p-1.5 hover:bg-muted text-muted-foreground rounded-lg">
                         <FileDown size={16} />
                     </a>
                     {item.status === 'draft' && (
@@ -69,7 +68,7 @@ export default function Index({ invoices }: Props) {
                     <h1 className="text-2xl font-bold flex items-center gap-2"><Receipt className="text-secondary" /> Factures Clients</h1>
                     <p className="text-muted-foreground text-sm">Suivi et comptabilisation des factures de vente.</p>
                 </div>
-                <Link href={invoicesCreate.url()} className="bg-secondary text-secondary-foreground px-5 py-2.5 rounded-xl font-bold hover:opacity-90">
+                <Link href="/sales/invoices/create" className="bg-secondary text-secondary-foreground px-5 py-2.5 rounded-xl font-bold hover:opacity-90">
                     <Plus size={18} /> Nouvelle Facture
                 </Link>
             </div>

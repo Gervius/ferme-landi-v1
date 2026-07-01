@@ -1,33 +1,31 @@
 import React from 'react';
-import { Head, useForm, Link } from '@inertiajs/react';
+import { Head, useForm, Link, usePage } from '@inertiajs/react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import { 
-    Save, 
-    ArrowLeft, 
-    Truck, 
-    Plus, 
-    Trash2, 
-    Package, 
-    Info,
-    Hash
+    Save, ArrowLeft, Truck, Plus, Trash2, Package, Info
 } from 'lucide-react';
-import { deliveryNotesIndex, deliveryNotesStore } from '@/routes';
+
+interface ItemResource {
+    id: number;
+    name: string;
+    category: { id: number; name: string };
+    default_unit: { id: number; symbol: string };
+}
 
 interface Props {
     saleOrders: { id: number; reference: string }[];
-    categories: { id: number; name: string }[];
-    units: { id: number; name: string; symbol: string }[];
-    sites?: { id: number; name: string; symbol?: string; reference?: string }[];
+    items: ItemResource[]; // Remplacement de categories et units
 }
 
-export default function CreateDeliveryNote({ saleOrders, categories, units, sites = [] }: Props) {
+export default function CreateDeliveryNote({ saleOrders, items }: Props) {
+    const { auth } = usePage<any>().props;
+
     const { data, setData, post, processing, errors } = useForm({
-        site_id: '',
+        site_id: auth.user.current_site_id, // Injecté silencieusement
         sale_order_id: '',
         delivery_date: new Date().toISOString().split('T')[0],
-        reference: `BL-${Date.now().toString().slice(-6)}`,
         items: [
-            { category_id: '', unit_id: '', delivered_quantity: 1 }
+            { item_id: '', delivered_quantity: 1 } // Pointage physique direct
         ],
     });
 
@@ -37,12 +35,12 @@ export default function CreateDeliveryNote({ saleOrders, categories, units, site
 
     const breadcrumbs = [
         { title: 'Ventes', href: '#' },
-        { title: 'Livraisons', href: deliveryNotesIndex.url() },
+        { title: 'Livraisons', href: '/sales/delivery-notes' },
         { title: 'Créer Bon', href: '#' },
     ];
 
     const addItem = () => {
-        setData('items', [...data.items, { category_id: '', unit_id: '', delivered_quantity: 1 }]);
+        setData('items', [...data.items, { item_id: '', delivered_quantity: 1 }]);
     };
 
     const removeItem = (index: number) => {
@@ -57,7 +55,7 @@ export default function CreateDeliveryNote({ saleOrders, categories, units, site
 
     const handleSubmit = (e: React.SubmitEvent) => {
         e.preventDefault();
-        post(deliveryNotesStore.url());
+        post('/sales/delivery-notes');
     };
 
     return (
@@ -66,7 +64,7 @@ export default function CreateDeliveryNote({ saleOrders, categories, units, site
             
             <div className="flex justify-between items-center text-sm">
                 <Breadcrumbs breadcrumbs={breadcrumbs} />
-                <Link href={deliveryNotesIndex.url()} className="text-muted-foreground hover:text-foreground flex items-center gap-1 transition">
+                <Link href="/sales/delivery-notes" className="text-muted-foreground hover:text-foreground flex items-center gap-1 transition">
                     <ArrowLeft className="w-4 h-4" /> Retour
                 </Link>
             </div>
@@ -77,6 +75,7 @@ export default function CreateDeliveryNote({ saleOrders, categories, units, site
                         Certaines lignes ou certains champs contiennent des erreurs de saisie. Veuillez vérifier les éléments indiqués en rouge.
                     </div>
                 )}
+                
                 {/* Entête du BL */}
                 <div className="bg-card rounded-xl border border-border shadow-lg overflow-hidden">
                     <div className="p-5 border-b border-border bg-secondary/5 flex items-center gap-3">
@@ -87,18 +86,7 @@ export default function CreateDeliveryNote({ saleOrders, categories, units, site
                         </div>
                     </div>
 
-                    <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <div className="space-y-1.5">
-                            <label className="text-xs font-bold uppercase text-muted-foreground">Référence du Bon</label>
-                            <input
-                                type="text"
-                                value={data.reference}
-                                onChange={e => setData('reference', e.target.value)}
-                                className="w-full bg-background border border-border rounded-lg px-3 py-2.5 font-mono font-bold"
-                            />
-                            {errors.reference && <p className="text-destructive text-[10px] font-bold">{errors.reference}</p>}
-                        </div>
-
+                    <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-1.5">
                             <label className="text-xs font-bold uppercase text-muted-foreground">Lier à une Commande (Optionnel)</label>
                             <select
@@ -110,19 +98,6 @@ export default function CreateDeliveryNote({ saleOrders, categories, units, site
                                 {saleOrders.map(so => <option key={so.id} value={so.id}>{so.reference}</option>)}
                             </select>
                             {errors.sale_order_id && <p className="text-destructive text-[10px] font-bold">{errors.sale_order_id}</p>}
-                        </div>
-
-                        <div className="space-y-1">
-                            <label className="text-sm font-semibold">Magasin / Site de stockage d'arrivée</label>
-                            <select 
-                                value={data.site_id} 
-                                onChange={e => setData('site_id', e.target.value)} 
-                                className="w-full bg-input border border-border rounded-lg p-2.5 text-sm"
-                            >
-                                <option value="">Sélectionner le dépôt de destination</option>
-                                {sites.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                            </select>
-                            {errors.site_id && <span className="text-destructive text-xs font-medium">{errors.site_id}</span>}
                         </div>
 
                         <div className="space-y-1.5">
@@ -150,7 +125,7 @@ export default function CreateDeliveryNote({ saleOrders, categories, units, site
                     <table className="w-full text-left border-collapse text-sm">
                         <thead className="bg-muted/10 text-[10px] uppercase font-bold text-muted-foreground border-b border-border">
                             <tr>
-                                <th className="px-6 py-3">Produit</th>
+                                <th className="px-6 py-3 w-1/2">Produit (Physique)</th>
                                 <th className="px-4 py-3">Unité</th>
                                 <th className="px-4 py-3">Quantité Livrée</th>
                                 <th className="px-4 py-3 w-10"></th>
@@ -161,34 +136,30 @@ export default function CreateDeliveryNote({ saleOrders, categories, units, site
                                 <tr key={index}>
                                     <td className="px-6 py-3 border-b border-border align-top">
                                         <select
-                                            value={item.category_id}
-                                            onChange={e => updateItem(index, 'category_id', e.target.value)}
-                                            className={`w-full bg-transparent border-none focus:ring-0 font-semibold ${getLineError(index, 'category_id') ? 'text-destructive' : ''}`}
+                                            value={item.item_id}
+                                            onChange={e => updateItem(index, 'item_id', e.target.value)}
+                                            className={`w-full bg-transparent border-none focus:ring-0 font-semibold ${getLineError(index, 'item_id') ? 'text-destructive' : ''}`}
                                         >
-                                            <option value="">Sélectionner...</option>
-                                            {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                            <option value="">Sélectionner un produit...</option>
+                                            {items?.map(i => (
+                                                <option key={i.id} value={i.id}>
+                                                    {i.name} ({i.category?.name})
+                                                </option>
+                                            ))}
                                         </select>
-                                        {getLineError(index, 'category_id') && (
-                                            <p className="text-destructive text-[10px] font-bold mt-1 px-1">{getLineError(index, 'category_id')}</p>
+                                        {getLineError(index, 'item_id') && (
+                                            <p className="text-destructive text-[10px] font-bold mt-1 px-1">{getLineError(index, 'item_id')}</p>
                                         )}
                                     </td>
-                                    <td className="px-4 py-3 border-b border-border align-top">
-                                        <select
-                                            value={item.unit_id}
-                                            onChange={e => updateItem(index, 'unit_id', e.target.value)}
-                                            className="w-full bg-transparent border-none focus:ring-0"
-                                        >
-                                            <option value="">Unité...</option>
-                                            {units.map(u => <option key={u.id} value={u.id}>{u.symbol}</option>)}
-                                        </select>
-                                        {getLineError(index, 'unit_id') && (
-                                            <p className="text-destructive text-[10px] font-bold mt-1 px-1">{getLineError(index, 'unit_id')}</p>
-                                        )}
+                                    <td className="px-4 py-3 border-b border-border align-top pt-4 text-muted-foreground font-medium">
+                                        {/* Affichage automatique de l'unité liée au produit sélectionné */}
+                                        {item.item_id ? items.find(i => i.id === Number(item.item_id))?.default_unit?.symbol || '-' : '-'}
                                     </td>
                                     <td className="px-4 py-3 border-b border-border align-top">
                                         <input
                                             type="number"
                                             step="0.01"
+                                            min="0.01"
                                             value={item.delivered_quantity}
                                             onChange={e => updateItem(index, 'delivered_quantity', Number(e.target.value))}
                                             className={`w-24 bg-muted/30 border rounded px-2 py-1 font-bold text-secondary-foreground text-right ${getLineError(index, 'delivered_quantity') ? 'border-destructive' : 'border-border'}`}

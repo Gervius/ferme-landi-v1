@@ -8,16 +8,17 @@ use App\Http\Controllers\Zootechnie\GenerationController;
 use App\Http\Controllers\SiteController;
 use App\Http\Controllers\UnitController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\Stocks\ItemController;
 
-Route::inertia('/', 'welcome', [
-    'canRegister' => Features::enabled(Features::registration()),
-])->name('home');
-
+Route::get('/', function () {
+    if (auth()->check()) {
+        return redirect()->route('dashboard');
+    }
+    return redirect()->route('login');
+})->name('home');
 
 
 require __DIR__.'/settings.php';
-
-
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::resource('companies', CompanyController::class)->only(['show', 'edit', 'update']);
@@ -38,7 +39,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
         'destroy' => 'unitsDestroy'
     ]);
 
-
     Route::resource('categories', CategoryController::class)->names([
         'index' => 'categoriesIndex',
         'create' => 'categoriesCreate',
@@ -47,7 +47,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
         'update' => 'categoriesUpdate',
         'destroy' => 'categoriesDestroy']);
 
-        
+    Route::resource('items', ItemController::class)->names([
+        'index'   => 'itemsIndex',
+        'create'  => 'itemsCreate',
+        'store'   => 'itemsStore',
+        'edit'    => 'itemsEdit',
+        'update'  => 'itemsUpdate',
+        'destroy' => 'itemsDestroy',
+    ]);
+
     // Sales Endpoints
     Route::prefix('sales')->group(function () {
         Route::resource('customers', \App\Http\Controllers\Sales\CustomerController::class)->names([
@@ -140,6 +148,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             'destroy' => 'purchaseOrdersDestroy',
         ]);
         Route::post('purchase-orders/{purchase_order}/generate-receipt', [\App\Http\Controllers\Purchases\PurchaseOrderController::class, 'generateReceipt'])->name('purchaseOrdersGenerateReceipt');
+        Route::post('purchase-orders/{purchase_order}/approve', [\App\Http\Controllers\Purchases\PurchaseOrderController::class, 'approve'])->name('purchaseOrdersApprove');
         Route::get('api/purchase-orders/{purchase_order}', [\App\Http\Controllers\Purchases\PurchaseOrderController::class, 'showApi'])->name('apiPurchaseOrdersShow');
 
         Route::resource('purchase-receipts', \App\Http\Controllers\Purchases\PurchaseReceiptController::class)->only(['index', 'create', 'store', 'edit', 'update'])->names([
@@ -169,6 +178,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // Accounting Endpoints
     Route::prefix('accounting')->group(function () {
+        
+        // AJOUT : Les routes pour le Mapping Comptable
+        Route::resource('accounting-mappings', \App\Http\Controllers\Accounting\AccountingMappingController::class)->only(['index', 'create', 'store'])->names([
+            'index'   => 'accountingMappingsIndex',
+            'create'  => 'accountingMappingsCreate',
+            'store'   => 'accountingMappingsStore',
+        ]);
+
         Route::resource('financial-years', \App\Http\Controllers\Accounting\FinancialYearController::class)->names([
             'index'   => 'financialYearsIndex',
             'create'  => 'financialYearsCreate',

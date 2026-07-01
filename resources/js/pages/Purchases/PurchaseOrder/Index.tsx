@@ -2,7 +2,6 @@
 import React from 'react';
 import { Link, router } from '@inertiajs/react';
 import { Plus, Edit2, FileText, ClipboardList, Receipt, Truck, Download } from 'lucide-react';
-import { purchaseOrdersCreate, purchaseOrdersEdit, purchaseOrdersGenerateReceipt, purchaseOrdersPdf } from '@/routes';
 import { PaginatedData } from '@/types/pagination';
 import { DataTable, ColumnDef } from '@/components/ui/DataTable';
 
@@ -23,7 +22,13 @@ export default function Index({ data }: Props) {
     // Déclenche la génération du bon de réception depuis la commande (Bouton d'action direct façon Odoo)
     const handleGenerateReceipt = (id: number) => {
         if (confirm("Générer le Bon de Réception pour cette commande ?")) {
-            router.post(purchaseOrdersGenerateReceipt.url(id));
+            router.post(`/purchases/purchase-orders/${id}/generate-receipt`);
+        }
+    };
+
+    const handleApproveOrder = (id: number) => {
+        if (confirm("Valider cette commande ? Elle ne sera plus modifiable.")) {
+            router.post(`/purchases/purchase-orders/${id}/approve`, {}, { preserveScroll: true });
         }
     };
 
@@ -74,7 +79,7 @@ export default function Index({ data }: Props) {
                 <div className="flex items-center justify-end gap-2">
                     {/* Lien direct pour télécharger le PDF généré par le backend */}
                     <a 
-                        href={purchaseOrdersPdf.url(item.id)} 
+                        href={`/purchases/purchase-orders/${item.id}/pdf`} 
                         target="_blank" 
                         rel="noreferrer"
                         className="p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground rounded-lg transition-colors"
@@ -95,11 +100,19 @@ export default function Index({ data }: Props) {
                     
                     {['draft', 'validated'].includes(item.status) && (
                         <Link 
-                            href={purchaseOrdersEdit.url(item.id)} 
+                            href={`/purchases/purchase-orders/${item.id}/edit`} 
                             className="p-1.5 hover:bg-muted text-muted-foreground hover:text-primary rounded-lg transition-colors"
                         >
                             <Edit2 size={16} />
                         </Link>
+                    )}
+                    {item.status === 'draft' && (
+                        <button
+                            onClick={() => handleApproveOrder(item.id)}
+                            className="bg-primary text-primary-foreground text-xs font-bold px-3 py-1.5 rounded-md hover:bg-primary/90 transition-colors shadow-sm"
+                        >
+                            Valider
+                        </button>
                     )}
                 </div>
             )
@@ -116,7 +129,7 @@ export default function Index({ data }: Props) {
                     <p className="text-muted-foreground text-sm mt-1">Planifiez vos ordres d'approvisionnement auprès de vos fournisseurs.</p>
                 </div>
                 <Link 
-                    href={purchaseOrdersCreate.url()} 
+                    href="/purchases/purchase-orders/create"
                     className="flex items-center gap-2 bg-secondary text-secondary-foreground px-5 py-2.5 rounded-xl font-bold shadow-sm hover:opacity-90 transition-opacity"
                 >
                     <Plus size={18} /> Créer une commande

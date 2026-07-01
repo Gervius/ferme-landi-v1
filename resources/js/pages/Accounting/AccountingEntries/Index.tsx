@@ -2,7 +2,6 @@
 import React from 'react';
 import { Link, router } from '@inertiajs/react';
 import { Plus, Edit2, Trash2, CheckCircle, Clock, BookOpen, Fingerprint, CalendarDays } from 'lucide-react';
-import { accountingEntriesCreate, accountingEntriesEdit, accountingEntriesDestroy, accountingEntriesApprove } from '@/routes';
 import { PaginatedData } from '@/types/pagination';
 import { DataTable, ColumnDef } from '@/components/ui/DataTable';
 
@@ -11,7 +10,7 @@ interface AccountingEntry {
     reference: string;
     date: string;
     description: string;
-    status: 'draft' | 'approved'; // J'assume qu'il y a un statut via l'action Approve
+    status: 'draft' | 'approved';
     financialYear: { id: number; year: string };
     accountingJournal: { id: number; code: string; name: string };
 }
@@ -23,13 +22,15 @@ interface Props {
 export default function Index({ accountingEntries }: Props) {
     const handleApprove = (id: number) => {
         if (confirm("Valider cette écriture ? Une écriture validée ne peut plus être modifiée ni supprimée (principe comptable d'intangibilité).")) {
-            router.post(accountingEntriesApprove.url(id), {}, { preserveScroll: true });
+            // Remplacement par l'URL en dur
+            router.post(`/accounting/accounting-entries/${id}/approve`, {}, { preserveScroll: true });
         }
     };
 
     const handleDelete = (id: number) => {
         if (confirm("Supprimer ce brouillon d'écriture comptable ?")) {
-            router.delete(accountingEntriesDestroy.url(id), { preserveScroll: true });
+            // Remplacement par l'URL en dur
+            router.delete(`/accounting/accounting-entries/${id}`, { preserveScroll: true });
         }
     };
 
@@ -83,7 +84,8 @@ export default function Index({ accountingEntries }: Props) {
                     <button onClick={() => handleApprove(item.id)} className="bg-primary text-primary-foreground text-xs font-bold px-3 py-1.5 rounded-md hover:bg-primary/90 transition-colors shadow-sm">
                         Approuver
                     </button>
-                    <Link href={accountingEntriesEdit.url(item.id)} className="p-1.5 text-muted-foreground hover:text-primary transition-colors">
+                    {/* Remplacement par l'URL en dur */}
+                    <Link href={`/accounting/accounting-entries/${item.id}/edit`} className="p-1.5 text-muted-foreground hover:text-primary transition-colors">
                         <Edit2 size={16} />
                     </Link>
                     <button onClick={() => handleDelete(item.id)} className="p-1.5 text-muted-foreground hover:text-destructive transition-colors">
@@ -105,7 +107,8 @@ export default function Index({ accountingEntries }: Props) {
                     </h1>
                     <p className="text-muted-foreground text-sm mt-1">Saisie et consultation du journal des écritures (Grand Livre).</p>
                 </div>
-                <Link href={accountingEntriesCreate.url()} className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2.5 rounded-xl font-bold hover:bg-primary/90 transition-colors shadow-sm">
+                {/* Remplacement par l'URL en dur */}
+                <Link href="/accounting/accounting-entries/create" className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2.5 rounded-xl font-bold hover:bg-primary/90 transition-colors shadow-sm">
                     <Plus size={18} /> Nouvelle Écriture
                 </Link>
             </div>

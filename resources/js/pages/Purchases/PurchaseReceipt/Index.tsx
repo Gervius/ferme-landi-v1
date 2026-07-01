@@ -2,7 +2,6 @@
 import React from 'react';
 import { Link, router } from '@inertiajs/react';
 import { Plus, Edit2, PackageOpen, CheckCircle, Clock, FileDown, ArrowDownToLine } from 'lucide-react';
-import { purchaseReceiptsCreate, purchaseReceiptsEdit, purchaseReceiptsApprove, purchaseReceiptsPdf } from '@/routes';
 import { PaginatedData } from '@/types/pagination';
 import { DataTable, ColumnDef } from '@/components/ui/DataTable';
 
@@ -23,7 +22,8 @@ export default function Index({ data }: Props) {
     // Déclenche l'action d'approbation et l'incrémentation physique des stocks
     const handleApprove = (id: number) => {
         if (confirm("Confirmez-vous la réception de ces marchandises ? Cette action mettra immédiatement à jour vos niveaux de stocks réels.")) {
-            router.post(purchaseReceiptsApprove.url(id), {}, { preserveScroll: true });
+            // URL absolue Wayfinder avec le préfixe
+            router.post(`/purchases/purchase-receipts/${id}/approve`, {}, { preserveScroll: true });
         }
     };
 
@@ -66,7 +66,7 @@ export default function Index({ data }: Props) {
                 <div className="flex items-center justify-end gap-2">
                     {/* Lien PDF natif */}
                     <a 
-                        href={purchaseReceiptsPdf.url(item.id)} 
+                        href={`/purchases/purchase-receipts/${item.id}/pdf`} 
                         target="_blank" 
                         rel="noreferrer"
                         className="p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground rounded-lg transition-colors"
@@ -84,7 +84,7 @@ export default function Index({ data }: Props) {
                                 Valider Stock
                             </button>
                             <Link 
-                                href={purchaseReceiptsEdit.url(item.id)} 
+                                href={`/purchases/purchase-receipts/${item.id}/edit`}
                                 className="p-1.5 hover:bg-muted text-muted-foreground hover:text-secondary rounded-lg transition-colors"
                             >
                                 <Edit2 size={16} />
@@ -110,7 +110,7 @@ export default function Index({ data }: Props) {
                     </p>
                 </div>
                 <Link 
-                    href={purchaseReceiptsCreate.url()} 
+                    href="/purchases/purchase-receipts/create" 
                     className="flex items-center gap-2 bg-secondary text-secondary-foreground px-5 py-2.5 rounded-xl font-bold shadow-sm hover:opacity-90 transition-opacity"
                 >
                     <Plus size={18} /> Réceptionner Marchandise

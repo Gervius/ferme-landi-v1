@@ -17,8 +17,12 @@ return new class extends Migration
             $table->date('date');
 
             $table->text('disease_description');
-            $table->string('medication_name');
-            $table->string('dosage_description');
+            
+            // MODIFIÉ : Lien physique avec l'inventaire au lieu du texte libre
+            $table->foreignId('item_id')->nullable()->constrained('items');
+            $table->decimal('quantity', 10, 2)->nullable();
+            $table->foreignId('unit_id')->nullable()->constrained('units');
+            
             $table->string('veterinarian_name')->nullable();
 
             // Workflow columns
